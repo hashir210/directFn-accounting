@@ -2,6 +2,9 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
+import authRoutes from './modules/auth/auth.routes';
+import dashboardRoutes from './modules/dashboard/dashboard.routes';
+
 const app = express();
 
 // Standard Middlewares
@@ -22,14 +25,19 @@ app.get('/api/v1/health', (req: Request, res: Response) => {
   });
 });
 
+// Mounted Routes
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
+
 // Centralized Error Handler (empty shell placeholder)
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  const status = err.status || 500;
+  const status = err.statusCode || err.status || 500;
   const message = err.message || 'Internal Server Error';
   res.status(status).json({
     success: false,
     message,
     code: err.code || 'INTERNAL_ERROR',
+    details: err.details || null,
   });
 });
 
