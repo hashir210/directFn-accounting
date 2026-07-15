@@ -1,0 +1,101 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import { Mail, ArrowLeft, Activity } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+
+export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      setSuccess(true);
+    }, 1000);
+  };
+
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-background relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.08),transparent_50%)]" />
+
+      <Card className="w-full max-w-md relative z-10">
+        <CardHeader className="text-center items-center space-y-3 pb-2">
+          <div className="h-11 w-11 rounded-xl bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center shadow-sm">
+            <div className="h-full w-full rounded-[10px] bg-[#1B3530] flex items-center justify-center">
+              <Activity className="h-5 w-5 text-emerald-400" />
+            </div>
+          </div>
+          <div>
+            <CardTitle className="text-xl">Recover password</CardTitle>
+            <CardDescription className="mt-1">
+              Enter your corporate email to receive a recovery link
+            </CardDescription>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {success ? (
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 rounded-lg space-y-3">
+              <h4 className="text-sm font-semibold">Reset link sent!</h4>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                If the email exists in our database, you will receive reset instructions shortly.
+              </p>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:underline"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Return to Sign In
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Corporate Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    className="pl-9 h-10"
+                  />
+                </div>
+              </div>
+
+              <Button type="submit" disabled={isLoading} className="w-full h-10 cursor-pointer" size="lg">
+                {isLoading ? (
+                  <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                ) : (
+                  "Send Recovery Instructions"
+                )}
+              </Button>
+
+              <div className="text-center">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Return to Login
+                </Link>
+              </div>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
