@@ -8,8 +8,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:generate": "npx --no-install prisma generate --schema=src/prisma/schema.prisma",
+    "prisma:migrate": "npx --no-install prisma migrate dev --schema=src/prisma/schema.prisma"
   },
   "keywords": [],
   "author": "",
