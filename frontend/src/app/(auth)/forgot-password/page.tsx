@@ -1,25 +1,35 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { Mail, ArrowLeft, Activity } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { Mail, ArrowLeft, Activity } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { apiFetch, ApiError } from '@/lib/api';
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setError('');
+    try {
+      await apiFetch('/api/v1/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
       setSuccess(true);
-    }, 1000);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -29,7 +39,7 @@ export default function ForgotPasswordPage() {
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center items-center space-y-3 pb-2">
           <div className="h-11 w-11 rounded-xl bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center shadow-sm">
-            <div className="h-full w-full rounded-[10px] bg-[#1B3530] flex items-center justify-center">
+            <div className="h-full w-full rounded-[10px] bg-[#7c3aed] flex items-center justify-center">
               <Activity className="h-5 w-5 text-emerald-400" />
             </div>
           </div>
@@ -42,6 +52,12 @@ export default function ForgotPasswordPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
+          {error && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-lg flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-ping" />
+              {error}
+            </div>
+          )}
           {success ? (
             <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 rounded-lg space-y-3">
               <h4 className="text-sm font-semibold">Reset link sent!</h4>
@@ -79,7 +95,7 @@ export default function ForgotPasswordPage() {
                 {isLoading ? (
                   <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                 ) : (
-                  "Send Recovery Instructions"
+                  'Send Recovery Instructions'
                 )}
               </Button>
 

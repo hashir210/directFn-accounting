@@ -15,14 +15,23 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       throw new UnauthorizedError('Access token is missing');
     }
 
+    let decoded;
     try {
-      const decoded = verifyAccessToken(token);
-      req.user = decoded;
-      next();
+      decoded = verifyAccessToken(token);
     } catch (jwtError: any) {
       logger.warn('[auth-middleware]: JWT validation failed: %s', jwtError.message);
       throw new UnauthorizedError('Invalid or expired access token');
     }
+
+    // Reject pre-authentication tokens (issued mid-2FA login). These are
+    // signed with the same secret as access tokens but must NOT grant access
+    // to protected resources until the 2FA step is completed.
+    if (decoded.isPreAuth) {
+      throw new UnauthorizedError('Two-factor authentication is not complete');
+    }
+
+    req.user = { id: decoded.id, email: decoded.email, role: decoded.role };
+    next();
   } catch (error) {
     next(error);
   }

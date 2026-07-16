@@ -1,53 +1,56 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Activity, ShieldCheck, UserCog, Users } from "lucide-react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-
-const roles = [
-  { id: "staff", label: "Staff", desc: "View access only", icon: Users },
-  { id: "manager", label: "Manager", desc: "Approve + manage", icon: UserCog },
-  { id: "admin", label: "Admin", desc: "Full control", icon: ShieldCheck },
-] as const;
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Activity } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/features/auth/useAuth';
+import { ApiError } from '@/lib/api';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const { register, logout, isAuthenticated } = useAuth();
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState("staff");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Only run on initial mount to clear existing session
+    logout();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError("");
+    setError('');
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError('Password must be at least 8 characters.');
       setIsLoading(false);
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError('Passwords do not match.');
       setIsLoading(false);
       return;
     }
 
-    setTimeout(() => {
+    try {
+      await register({ email, password, name: fullName });
+      router.push('/verify-email');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Registration failed. Please try again.');
       setIsLoading(false);
-      router.push("/login");
-    }, 800);
+    }
   };
 
   return (
@@ -57,7 +60,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center items-center space-y-3 pb-2">
           <div className="h-11 w-11 rounded-xl bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center shadow-sm">
-            <div className="h-full w-full rounded-[10px] bg-[#1B3530] flex items-center justify-center">
+            <div className="h-full w-full rounded-[10px] bg-[#7c3aed] flex items-center justify-center">
               <Activity className="h-5 w-5 text-emerald-400" />
             </div>
           </div>
@@ -119,7 +122,7 @@ export default function RegisterPage() {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
-                    type={showPassword ? "text" : "password"}
+                    type={showPassword ? 'text' : 'password'}
                     required
                     placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
                     value={password}
@@ -155,32 +158,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Administrative Role</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {roles.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setRole(item.id)}
-                    className={`p-2.5 rounded-lg border text-left cursor-pointer transition-all flex flex-col items-center text-center gap-1.5 ${
-                      role === item.id
-                        ? "border-primary bg-primary/5 ring-1 ring-primary"
-                        : "border-input bg-card hover:bg-muted"
-                    }`}
-                  >
-                    <item.icon className={`h-4 w-4 ${role === item.id ? "text-primary" : "text-muted-foreground"}`} />
-                    <span className={`text-xs font-semibold ${role === item.id ? "text-primary" : "text-foreground"}`}>
-                      {item.label}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground leading-tight">
-                      {item.desc}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -208,7 +185,7 @@ export default function RegisterPage() {
 
         <CardFooter className="justify-center">
           <p className="text-xs text-muted-foreground">
-            Already have an account?{" "}
+            Already have an account?{' '}
             <Link
               href="/login"
               className="font-semibold text-primary hover:text-primary/80 transition-colors underline underline-offset-4"

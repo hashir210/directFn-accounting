@@ -1,42 +1,58 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Lock, ArrowRight, Activity } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import React, { useState, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { Lock, ArrowRight, Activity } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { apiFetch, ApiError } from '@/lib/api';
 
-export default function ResetPasswordPage() {
+function ResetInner() {
   const router = useRouter();
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const params = useSearchParams();
+  const token = params.get('token') || '';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError("");
+    setError('');
 
+    if (!token) {
+      setError('Missing or invalid reset token.');
+      setIsLoading(false);
+      return;
+    }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+      setError('Password must be at least 8 characters long.');
       setIsLoading(false);
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError('Passwords do not match.');
       setIsLoading(false);
       return;
     }
 
-    setTimeout(() => {
+    try {
+      await apiFetch('/api/v1/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, password }),
+      });
+      setSuccess('Password updated! Redirecting...');
+      setTimeout(() => router.push('/login'), 1500);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Password reset failed. The link may have expired.');
       setIsLoading(false);
-      setSuccess("Password updated! Redirecting...");
-      setTimeout(() => router.push("/login"), 1500);
-    }, 1000);
+    }
   };
 
   return (
@@ -46,7 +62,7 @@ export default function ResetPasswordPage() {
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center items-center space-y-3 pb-2">
           <div className="h-11 w-11 rounded-xl bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center shadow-sm">
-            <div className="h-full w-full rounded-[10px] bg-[#1B3530] flex items-center justify-center">
+            <div className="h-full w-full rounded-[10px] bg-[#7c3aed] flex items-center justify-center">
               <Activity className="h-5 w-5 text-emerald-400" />
             </div>
           </div>
@@ -121,5 +137,19 @@ export default function ResetPasswordPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen w-full flex items-center justify-center text-muted-foreground">
+          Loading...
+        </div>
+      }
+    >
+      <ResetInner />
+    </Suspense>
   );
 }

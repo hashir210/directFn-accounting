@@ -9,17 +9,17 @@ You mentioned there are more modules beyond these two — only Authentication an
 **Owner split (2 people):** see earlier discussion — recommended one person owns Auth end-to-end (backend + frontend), the other owns Dashboard end-to-end, working off a mocked authenticated user until Auth merges.
 
 **Scope:**
-- [ ] Project scaffold (Next.js + Express monorepo, pushed to `main`)
-- [ ] Prisma schema: `User`, `RefreshToken`, `Role` (+ `PasswordResetToken`, `EmailVerificationToken`)
-- [ ] Register (with email verification flow)
-- [ ] Login (issues access + refresh token)
-- [ ] Forgot Password (emailed reset link)
-- [ ] Reset Password (single-use token, expires)
-- [ ] Email Verification (link-based, resend option)
-- [ ] JWT Access Token issuing + verification middleware
-- [ ] Refresh Token flow (rotation + revoke-on-logout)
+- [x] Project scaffold (Next.js + Express monorepo, pushed to `main`)
+- [x] Prisma schema: `User`, `RefreshToken`, `Role` (+ `PasswordResetToken`, `EmailVerificationToken`)
+- [x] Register (with email verification flow)
+- [x] Login (issues access + refresh token)
+- [x] Forgot Password (emailed reset link)
+- [x] Reset Password (single-use token, expires)
+- [x] Email Verification (link-based, resend option)
+- [x] JWT Access Token issuing + verification middleware
+- [x] Refresh Token flow (rotation + revoke-on-logout)
 - [ ] Session Management (list/revoke active sessions — can be v1.1 if time-constrained)
-- [ ] Two-Factor Authentication — optional, mark as stretch goal, not blocking
+- [x] Two-Factor Authentication — optional, mark as stretch goal, not blocking
 
 **Branches (example):**
 ```
@@ -37,17 +37,17 @@ feature/auth-ui-forms
 ## Phase 1 (parallel) — Dashboard
 
 **Scope:**
-- [ ] Revenue widget
-- [ ] Expenses widget
-- [ ] Profit & Loss summary
-- [ ] Cash Flow chart (Recharts)
-- [ ] Pending Payments list
-- [ ] Bank Balance card
-- [ ] Monthly Sales chart
-- [ ] Monthly Expenses chart
-- [ ] Top Customers list
-- [ ] Low Stock alert widget
-- [ ] Notifications panel (can start REST-based, upgrade to Socket.IO live push once Auth's session handling is stable)
+- [x] Revenue widget
+- [x] Expenses widget
+- [x] Profit & Loss summary
+- [x] Cash Flow chart (Recharts)
+- [x] Pending Payments list
+- [x] Bank Balance card
+- [x] Monthly Sales chart
+- [x] Monthly Expenses chart
+- [x] Top Customers list
+- [x] Low Stock alert widget
+- [x] Notifications panel (can start REST-based, upgrade to Socket.IO live push once Auth's session handling is stable)
 
 **Branches (example):**
 ```

@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 
 import authRoutes from './modules/auth/auth.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
+import logger from './utils/logger';
 
 const app = express();
 
@@ -29,10 +30,26 @@ app.get('/api/v1/health', (req: Request, res: Response) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 
-// Centralized Error Handler (empty shell placeholder)
+// Centralized Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   const status = err.statusCode || err.status || 500;
   const message = err.message || 'Internal Server Error';
+
+  // Log every error funneled through here. Unexpected (5xx) errors are logged
+  // at 'error' level with a stack trace; expected client (4xx) errors are
+  // logged at 'warn' level. Sensitive request bodies are intentionally omitted.
+  const logMeta = {
+    method: req.method,
+    path: req.originalUrl,
+    status,
+    code: err.code || 'INTERNAL_ERROR',
+  };
+  if (status >= 500) {
+    logger.error(`[error-handler]: ${message}`, { ...logMeta, stack: err.stack });
+  } else {
+    logger.warn(`[error-handler]: ${message}`, logMeta);
+  }
+
   res.status(status).json({
     success: false,
     message,

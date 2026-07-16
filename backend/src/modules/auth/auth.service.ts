@@ -26,8 +26,8 @@ export class AuthService {
   /**
    * Registers a new user and sends an email verification link
    */
-  static async register(data: { email: string; password?: string; name?: string; role?: string }) {
-    const { email, password, name, role } = data;
+  static async register(data: { email: string; password?: string; name?: string }) {
+    const { email, password, name } = data;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -45,7 +45,9 @@ export class AuthService {
         email,
         password: hashedPassword,
         name,
-        role: role || 'staff',
+        // Public registration always creates a low-privilege account.
+        // Elevated roles must be granted through an admin-only flow.
+        role: 'staff',
         emailVerified: false,
       },
       select: {
@@ -58,13 +60,15 @@ export class AuthService {
       },
     });
 
-    // Create an email verification token (expires in 24 hours)
+    // Create an email verification token (expires in 24 hours). The raw token
+    // is emailed to the user; only its hash is persisted so a DB leak cannot be
+    // used to verify/hijack accounts.
     const verificationToken = generateRefreshToken(); // Secure random bytes
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await prisma.emailVerificationToken.create({
       data: {
-        token: verificationToken,
+        token: hashToken(verificationToken),
         userId: user.id,
         expiresAt,
       },
@@ -83,7 +87,7 @@ export class AuthService {
    */
   static async verifyEmail(token: string) {
     const verificationTokenRecord = await prisma.emailVerificationToken.findUnique({
-      where: { token },
+      where: { token: hashToken(token) },
     });
 
     if (!verificationTokenRecord || verificationTokenRecord.expiresAt < new Date()) {
@@ -101,6 +105,43 @@ export class AuthService {
     });
 
     return { message: 'Email verified successfully' };
+  }
+
+  /**
+   * Resends the email verification link
+   */
+  static async resendVerification(email: string) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Don't leak user existence
+      return { message: 'If the email exists and is unverified, a new link has been sent' };
+    }
+    
+    if (user.emailVerified) {
+      return { message: 'Email is already verified' };
+    }
+
+    const verificationToken = generateRefreshToken();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Clean up existing tokens for this user
+    await prisma.emailVerificationToken.deleteMany({
+      where: { userId: user.id },
+    });
+
+    await prisma.emailVerificationToken.create({
+      data: {
+        token: hashToken(verificationToken),
+        userId: user.id,
+        expiresAt,
+      },
+    });
+
+    sendVerificationEmail(user.email, verificationToken).catch((err) => {
+      logger.error(`[auth-service]: Async resend verification email failed for ${user.email}`, err);
+    });
+
+    return { message: 'If the email exists and is unverified, a new link has been sent' };
   }
 
   /**
@@ -290,15 +331,34 @@ export class AuthService {
       include: { user: true },
     });
 
-    if (!tokenRecord || tokenRecord.expiresAt < new Date() || tokenRecord.revokedAt) {
+    if (!tokenRecord) {
+      throw new UnauthorizedError('Invalid or expired refresh token');
+    }
+
+    // Reuse detection: a token that was already rotated/revoked is being
+    // presented again — likely a stolen token. Revoke the whole token family
+    // (all of the user's active sessions) to be safe.
+    if (tokenRecord.revokedAt) {
+      await prisma.refreshToken.updateMany({
+        where: { userId: tokenRecord.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      logger.warn(`[auth-service]: Refresh token reuse detected for user ${tokenRecord.userId}; all sessions revoked`);
+      throw new UnauthorizedError('Invalid or expired refresh token');
+    }
+
+    if (tokenRecord.expiresAt < new Date()) {
       throw new UnauthorizedError('Invalid or expired refresh token');
     }
 
     // Generate new pair
     const tokens = await this.createSession(tokenRecord.userId, tokenRecord.user.email, tokenRecord.user.role);
 
-    // Delete current token (invalidate it)
-    await prisma.refreshToken.delete({ where: { id: tokenRecord.id } });
+    // Rotate: revoke the current token (kept for reuse detection instead of deleted)
+    await prisma.refreshToken.update({
+      where: { id: tokenRecord.id },
+      data: { revokedAt: new Date() },
+    });
 
     return tokens;
   }
@@ -308,11 +368,12 @@ export class AuthService {
    */
   static async logout(refreshToken: string) {
     const hashedToken = hashToken(refreshToken);
-    try {
-      await prisma.refreshToken.delete({ where: { token: hashedToken } });
-    } catch (error) {
-      // Token might not exist, ignore and return success
-    }
+    // Revoke rather than delete so the token can still be recognised for reuse
+    // detection. updateMany is a no-op (no throw) if the token doesn't exist.
+    await prisma.refreshToken.updateMany({
+      where: { token: hashedToken, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
     return { message: 'Logged out successfully' };
   }
 
@@ -331,7 +392,7 @@ export class AuthService {
 
     await prisma.passwordResetToken.create({
       data: {
-        token: resetToken,
+        token: hashToken(resetToken),
         userId: user.id,
         expiresAt,
       },
@@ -354,7 +415,7 @@ export class AuthService {
     }
 
     const resetTokenRecord = await prisma.passwordResetToken.findUnique({
-      where: { token },
+      where: { token: hashToken(token) },
     });
 
     if (!resetTokenRecord || resetTokenRecord.expiresAt < new Date()) {

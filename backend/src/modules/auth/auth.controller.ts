@@ -29,6 +29,19 @@ export class AuthController {
     }
   }
 
+  static async resendVerification(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      const result = await AuthService.resendVerification(email);
+      res.status(200).json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async login(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await AuthService.login(req.body);
@@ -48,7 +61,7 @@ export class AuthController {
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
@@ -58,7 +71,6 @@ export class AuthController {
         data: {
           twoFactorRequired: false,
           accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
           user: result.user,
         },
       });
@@ -113,7 +125,7 @@ export class AuthController {
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
@@ -122,7 +134,6 @@ export class AuthController {
         message: 'Two-factor authentication successful',
         data: {
           accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
           user: result.user,
         },
       });
@@ -144,7 +155,7 @@ export class AuthController {
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
@@ -153,7 +164,6 @@ export class AuthController {
         message: 'Token refreshed successfully',
         data: {
           accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
         },
       });
     } catch (error) {

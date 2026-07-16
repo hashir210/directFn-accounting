@@ -8,7 +8,7 @@ Reference inspiration: modern SaaS fintech/dashboard aesthetic (rounded cards, b
 
 ## 1. Typography
 
-**Primary typeface:** Space Grotesk (Regular / Medium / Bold)
+**Primary typeface:** Plus Jakarta Sans (Regular / Medium / Bold)
 
 - Use Space Grotesk for headings, numbers, and stat displays — it's geometric and gives that premium fintech look.
 - For long body copy / paragraphs / table content, pair it with **Inter** (or Space Grotesk Regular if you want single-font consistency). Space Grotesk at small sizes in dense tables can feel a bit tight — Inter reads cleaner there.
@@ -35,7 +35,7 @@ Base palette (from reference):
 
 | Token | Hex | Role |
 |---|---|---|
-| `--primary` | `#1B3530` | Primary brand color — buttons, active nav, accents |
+| `--primary` | `#7c3aed` | Primary brand color (violet) — buttons, active nav, accents |
 | `--background` | `#FFFFFF` | App background |
 | `--ink` | `#14081E` | Near-black text / dark sections / footer bg |
 | `--muted` | `#DADADA` | Borders, disabled states, secondary text bg |

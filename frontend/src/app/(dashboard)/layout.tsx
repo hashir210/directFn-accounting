@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -60,6 +60,24 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/features/auth/useAuth";
+import { apiFetch } from "@/lib/api";
+
+interface Notification {
+  id: string;
+  title: string;
+  desc: string;
+  type: "warning" | "success" | "info" | "error" | "system";
+  time: string;
+}
+
+interface NotificationApiData {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  createdAt: string;
+}
 
 export default function DashboardLayout({
   children,
@@ -68,16 +86,79 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading, isAuthenticated, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const notifications = [
-    { id: 1, title: "Low Stock Warning", desc: "FinFlow POS Terminal below reorder level (5 remaining).", time: "10m ago", type: "warning" },
-    { id: 2, title: "Invoice Paid", desc: "Acme Corp completed payment for Invoice #INV-2026-004.", time: "1h ago", type: "success" },
-    { id: 3, title: "Expense Pending", desc: "Manager approval required for travel expense $450.00.", time: "4h ago", type: "info" },
-    { id: 4, title: "System Update", desc: "Platform migrated to Core Engine v1.0.", time: "1d ago", type: "system" },
-  ];
+  // Auth guard: redirect unauthenticated users to /login
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [loading, isAuthenticated, router]);
 
-  const handleLogout = () => router.push("/login");
+  // Load notifications for the current user
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    apiFetch<{ data: NotificationApiData[] }>("/api/v1/dashboard/notifications?limit=10")
+      .then((d) => {
+        setNotifications(
+          d.data.map((n: NotificationApiData) => ({
+            id: n.id,
+            title: n.title,
+            desc: n.message,
+            type: (n.type === "system" ? "system" : n.type) as Notification["type"],
+            time: new Date(n.createdAt).toLocaleDateString(),
+          }))
+        );
+      })
+      .catch(() => {});
+  }, [isAuthenticated]);
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
+
+  const handleMarkAllRead = async () => {
+    await Promise.allSettled(
+      notifications.map((n) =>
+        apiFetch(`/api/v1/dashboard/notifications/${n.id}/read`, { method: "PATCH" })
+      )
+    );
+    apiFetch<{ data: NotificationApiData[] }>("/api/v1/dashboard/notifications?limit=10")
+      .then((d) =>
+        setNotifications(
+          d.data.map((n: NotificationApiData) => ({
+            id: n.id,
+            title: n.title,
+            desc: n.message,
+            type: (n.type === "system" ? "system" : n.type) as Notification["type"],
+            time: new Date(n.createdAt).toLocaleDateString(),
+          }))
+        )
+      )
+      .catch(() => {});
+  };
+
+  const initials = (user?.name || user?.email || "U")
+    .split(" ")
+    .map((s) => s[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  if (loading) {
+    return (
+      <div className="min-h-svh flex items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const overviewItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -114,7 +195,7 @@ export default function DashboardLayout({
                   <SidebarMenuButton size="lg" className="cursor-pointer" />
                 }>
                     <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center">
-                      <div className="h-full w-full rounded-[6px] bg-[#1B3530] flex items-center justify-center">
+                      <div className="h-full w-full rounded-[6px] bg-[#7c3aed] flex items-center justify-center">
                         <Activity className="h-4 w-4 text-emerald-400" />
                       </div>
                     </div>
@@ -249,6 +330,12 @@ export default function DashboardLayout({
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
+              <SidebarMenuButton className="text-destructive cursor-pointer" onClick={handleLogout} tooltip="Logout">
+                <LogOut />
+                <span>Logout</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
               <SidebarMenuButton render={<Link href="#" />} tooltip="Invite teams">
                 <Users />
                 <span>Invite teams</span>
@@ -264,18 +351,18 @@ export default function DashboardLayout({
                 }>
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-gradient-to-tr from-primary to-emerald-400 text-white text-xs font-bold">
-                        KB
+                        {initials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col gap-0.5 leading-none">
-                      <span className="font-semibold text-sm">Kamil Bachanek</span>
-                      <span className="text-xs text-muted-foreground">kamil@directfn.com</span>
+                      <span className="font-semibold text-sm">{user?.name || "User"}</span>
+                      <span className="text-xs text-muted-foreground">{user?.email}</span>
                     </div>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" side="top" align="start">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="cursor-pointer">
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/dashboard/settings")}>
                     <Settings className="h-4 w-4 mr-2" />
                     Settings
                   </DropdownMenuItem>
@@ -350,7 +437,9 @@ export default function DashboardLayout({
                   />
                 }>
                     <Bell className="h-4 w-4" />
-                    <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
+                    {notifications.length > 0 && (
+                      <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
+                    )}
                 </TooltipTrigger>
                 <TooltipContent>Notifications</TooltipContent>
               </Tooltip>
@@ -359,32 +448,36 @@ export default function DashboardLayout({
                 <div className="absolute right-0 mt-2 w-80 bg-card border rounded-xl shadow-lg z-50 overflow-hidden">
                   <div className="px-4 py-3 border-b flex items-center justify-between bg-muted/50">
                     <span className="text-sm font-semibold">Notifications</span>
-                    <button className="text-xs text-primary font-medium cursor-pointer hover:underline">Mark all read</button>
+                    <button onClick={handleMarkAllRead} className="text-xs text-primary font-medium cursor-pointer hover:underline">Mark all read</button>
                   </div>
                   <div className="max-h-72 overflow-y-auto divide-y">
-                    {notifications.map((notif) => (
-                      <div key={notif.id} className="p-3 hover:bg-muted/50 transition-colors">
-                        <div className="flex justify-between items-start mb-1">
-                          <Badge variant={
-                            notif.type === "warning" ? "destructive" :
-                            notif.type === "success" ? "secondary" :
-                            "outline"
-                          } className="text-[10px] h-5">
-                            {notif.type}
-                          </Badge>
-                          <span className="text-[10px] text-muted-foreground">{notif.time}</span>
+                    {notifications.length === 0 ? (
+                      <div className="p-4 text-xs text-muted-foreground text-center">No notifications</div>
+                    ) : (
+                      notifications.map((notif) => (
+                        <div key={notif.id} className="p-3 hover:bg-muted/50 transition-colors">
+                          <div className="flex justify-between items-start mb-1">
+                            <Badge variant={
+                              notif.type === "warning" ? "destructive" :
+                              notif.type === "success" ? "secondary" :
+                              "outline"
+                            } className="text-[10px] h-5">
+                              {notif.type}
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground">{notif.time}</span>
+                          </div>
+                          <h4 className="text-xs font-semibold mt-1">{notif.title}</h4>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{notif.desc}</p>
                         </div>
-                        <h4 className="text-xs font-semibold mt-1">{notif.title}</h4>
-                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{notif.desc}</p>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               )}
             </div>
 
             {/* Primary CTA */}
-            <Button id="global-invoice-btn" size="sm" className="cursor-pointer">
+            <Button size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-transaction-modal'))}>
               <Plus className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">New Transaction</span>
             </Button>

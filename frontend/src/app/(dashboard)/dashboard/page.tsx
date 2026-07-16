@@ -57,6 +57,26 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { apiFetch } from "@/lib/api";
+import { useAuth } from "@/features/auth/useAuth";
+
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+interface PendingInvoice {
+  id: string;
+  invoiceNo: string;
+  customer: { id: string; name: string; email: string };
+  amount: number;
+  status: "pending" | "paid" | "overdue";
+  dueAt: string;
+  issuedAt: string;
+}
+
+function normalizeStatus(s: string): "Paid" | "Pending" | "Overdue" {
+  if (s === "paid") return "Paid";
+  if (s === "overdue") return "Overdue";
+  return "Pending";
+}
 
 interface Transaction {
   id: string;
@@ -98,70 +118,142 @@ export default function DashboardPage() {
   const [txStatus, setTxStatus] = useState<"Paid" | "Pending">("Pending");
   const [txDueDate, setTxDueDate] = useState("");
 
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: "tx-1", invoiceNo: "INV-2026-001", customer: "Apex Global Systems", type: "Invoice", date: "2026-07-02", dueDate: "2026-08-02", status: "Paid", amount: 24500 },
-    { id: "tx-2", invoiceNo: "EXP-2026-020", customer: "Direct Hosting AWS", type: "Expense", date: "2026-07-04", dueDate: "2026-07-15", status: "Paid", amount: 4800 },
-    { id: "tx-3", invoiceNo: "INV-2026-002", customer: "Horizon Ventures", type: "Invoice", date: "2026-07-08", dueDate: "2026-07-28", status: "Overdue", amount: 18700 },
-    { id: "tx-4", invoiceNo: "EXP-2026-021", customer: "Vercel Enterprise Billing", type: "Expense", date: "2026-07-10", dueDate: "2026-07-24", status: "Paid", amount: 1200 },
-    { id: "tx-5", invoiceNo: "INV-2026-003", customer: "Acme Corporation", type: "Invoice", date: "2026-07-11", dueDate: "2026-08-11", status: "Pending", amount: 15300 },
-    { id: "tx-6", invoiceNo: "INV-2026-004", customer: "Initech LLC", type: "Invoice", date: "2026-07-12", dueDate: "2026-08-12", status: "Pending", amount: 8900 },
-    { id: "tx-7", invoiceNo: "EXP-2026-022", customer: "HQ Office Co-working Rent", type: "Expense", date: "2026-07-13", dueDate: "2026-07-20", status: "Pending", amount: 3500 },
-    { id: "tx-8", invoiceNo: "INV-2026-005", customer: "Stark Industries", type: "Invoice", date: "2026-07-14", dueDate: "2026-08-14", status: "Paid", amount: 42000 },
-  ]);
+  const { user } = useAuth();
 
-  const [stockItems] = useState<StockItem[]>([
-    { id: "st-1", name: "FinFlow POS Terminal V2", sku: "FF-POS-V2", stock: 3, minLevel: 10, status: "Critically Low" },
-    { id: "st-2", name: "Thermal Receipt Paper Roll", sku: "FF-TRP-80", stock: 8, minLevel: 25, status: "Low" },
-    { id: "st-3", name: "FinFlow QR Stand Metallic", sku: "FF-QRS-MET", stock: 12, minLevel: 15, status: "Low" },
-    { id: "st-4", name: "Backup Battery Pack Pro", sku: "FF-BBP-PRO", stock: 45, minLevel: 15, status: "In Stock" },
-  ]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [stockItems, setStockItems] = useState<StockItem[]>([]);
+  const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([
-    { id: "c-1", name: "Stark Industries", email: "pepper@stark.com", billing: 87500, salesCount: 5, avatarColor: "bg-red-500" },
-    { id: "c-2", name: "Apex Global Systems", email: "billing@apexglobal.com", billing: 54200, salesCount: 3, avatarColor: "bg-blue-500" },
-    { id: "c-3", name: "Horizon Ventures", email: "finance@horizon.vc", billing: 36800, salesCount: 2, avatarColor: "bg-amber-500" },
-    { id: "c-4", name: "Acme Corporation", email: "accounting@acme.com", billing: 29500, salesCount: 2, avatarColor: "bg-emerald-500" },
-  ]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  const [netProfit, setNetProfit] = useState(0);
+  const [totalBalance, setTotalBalance] = useState(0);
+  const [bankAccounts, setBankAccounts] = useState<{ id: string; name: string; bankName: string; balance: number; currency: string }[]>([]);
+  const [cashFlowData, setCashFlowData] = useState<{ name: string; Inflow: number; Outflow: number }[]>([]);
+  const [salesExpensesData, setSalesExpensesData] = useState<{ name: string; Sales: number; Expenses: number }[]>([]);
 
   useEffect(() => {
     setMounted(true);
-    const btn = document.getElementById("global-invoice-btn");
-    if (btn) {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        openModal();
-      };
-    }
+    const handleOpen = () => openModal();
+    window.addEventListener('open-transaction-modal', handleOpen);
+    return () => window.removeEventListener('open-transaction-modal', handleOpen);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      const year = new Date().getFullYear();
+      try {
+        const summary = await apiFetch<{
+          totalRevenue: number;
+          totalExpenses: number;
+          netProfit: number;
+          cashFlow: { month: number; revenue: number; expenses: number; net: number }[];
+        }>(`/api/v1/dashboard/summary?year=${year}`);
+        const bank = await apiFetch<{ totalBalance: number; accounts: { id: string; name: string; bankName: string; balance: number; currency: string }[] }>(`/api/v1/dashboard/bank-balance`);
+        const pending = await apiFetch<{ data: PendingInvoice[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(`/api/v1/dashboard/pending-payments?page=1&limit=10`);
+        const sales = await apiFetch<{ year: number; data: { month: number; revenue: number; invoiceCount: number }[] }>(`/api/v1/dashboard/monthly-sales?year=${year}`);
+        const expenses = await apiFetch<{ year: number; data: { month: number; expenses: number; expenseCount: number }[] }>(`/api/v1/dashboard/monthly-expenses?year=${year}`);
+        const lowStock = await apiFetch<{
+          count: number;
+          products: { id: string; name: string; sku: string; category: string; stockQuantity: number; lowStockThreshold: number; unitPrice: number }[];
+        }>(`/api/v1/dashboard/low-stock`);
+
+        if (cancelled) return;
+
+        setTotalRevenue(summary.totalRevenue);
+        setTotalExpenses(summary.totalExpenses);
+        setNetProfit(summary.netProfit);
+        setTotalBalance(bank.totalBalance);
+        setBankAccounts(bank.accounts);
+        setCashFlowData(
+          summary.cashFlow.map((m) => ({ name: MONTH_SHORT[m.month - 1], Inflow: m.revenue, Outflow: m.expenses })),
+        );
+        const salesMap = new Map(sales.data.map((s) => [s.month, s.revenue]));
+        const expMap = new Map(expenses.data.map((e) => [e.month, e.expenses]));
+        setSalesExpensesData(
+          Array.from({ length: 12 }, (_, i) => {
+            const m = i + 1;
+            return { name: MONTH_SHORT[i], Sales: salesMap.get(m) || 0, Expenses: expMap.get(m) || 0 };
+          }),
+        );
+        setTransactions(
+          pending.data.map((inv) => ({
+            id: inv.id,
+            invoiceNo: inv.invoiceNo,
+            customer: inv.customer.name,
+            type: "Invoice",
+            date: (inv.issuedAt || "").slice(0, 10),
+            dueDate: (inv.dueAt || "").slice(0, 10),
+            status: normalizeStatus(inv.status),
+            amount: inv.amount,
+          })),
+        );
+        setStockItems(
+          lowStock.products.map((p) => ({
+            id: p.id,
+            name: p.name,
+            sku: p.sku,
+            stock: p.stockQuantity,
+            minLevel: p.lowStockThreshold,
+            status:
+              p.stockQuantity <= 0
+                ? "Critically Low"
+                : p.stockQuantity <= p.lowStockThreshold
+                  ? "Low"
+                  : "In Stock",
+          })),
+        );
+
+        if (user && (user.role === "admin" || user.role === "manager")) {
+          try {
+            const top = await apiFetch<{ customer: { id: string; name: string; email: string }; totalRevenue: number; invoiceCount: number }[]>(
+              `/api/v1/dashboard/top-customers?limit=5`,
+            );
+            if (!cancelled) {
+              const colors = ["bg-purple-500", "bg-emerald-500", "bg-blue-500", "bg-amber-500", "bg-rose-500"];
+              setTopCustomers(
+                top.map((c, i) => ({
+                  id: c.customer.id,
+                  name: c.customer.name,
+                  email: c.customer.email,
+                  billing: c.totalRevenue,
+                  salesCount: c.invoiceCount,
+                  avatarColor: colors[i % colors.length],
+                })),
+              );
+            }
+          } catch (err) {
+            console.error("Failed to load top customers", err);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard data", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const openModal = () => {
     setIsModalOpen(true);
     setTxDueDate(new Date().toISOString().split("T")[0]);
   };
 
-  const totalRevenue = transactions.filter(t => t.type === "Invoice" && t.status === "Paid").reduce((s, t) => s + t.amount, 0);
   const pendingRevenue = transactions.filter(t => t.type === "Invoice" && t.status !== "Paid").reduce((s, t) => s + t.amount, 0);
-  const totalExpenses = transactions.filter(t => t.type === "Expense").reduce((s, t) => s + t.amount, 0);
-  const netProfit = totalRevenue - totalExpenses;
   const netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-  const bankBalance = 248500 + netProfit;
-
-  const multiplier = dateFilter === "90" ? 1.8 : dateFilter === "365" ? 4.5 : 1.0;
-  const cashFlowData = [
-    { name: "Wk 1", Inflow: Math.round(18000 * multiplier), Outflow: Math.round(11000 * multiplier) },
-    { name: "Wk 2", Inflow: Math.round(24000 * multiplier), Outflow: Math.round(16000 * multiplier) },
-    { name: "Wk 3", Inflow: Math.round(31000 * multiplier), Outflow: Math.round(15000 * multiplier) },
-    { name: "Wk 4", Inflow: Math.round(42000 * multiplier), Outflow: Math.round(18000 * multiplier) },
-  ];
-
-  const salesExpensesData = [
-    { name: "Feb", Sales: 42000, Expenses: 22000 },
-    { name: "Mar", Sales: 58000, Expenses: 29000 },
-    { name: "Apr", Sales: 69000, Expenses: 31000 },
-    { name: "May", Sales: 52000, Expenses: 41000 },
-    { name: "Jun", Sales: 88000, Expenses: 36000 },
-    { name: "Jul", Sales: Math.round(totalRevenue), Expenses: Math.round(totalExpenses) },
-  ];
+  // Bank liquidity is the actual aggregated balance from the API — do NOT add
+  // netProfit on top of it (that double-counts revenue already reflected in
+  // the account balances).
+  const bankBalance = totalBalance;
 
   const handleCreateTransaction = (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,6 +276,8 @@ export default function DashboardPage() {
     setTransactions([newTx, ...transactions]);
 
     if (txType === "Invoice") {
+      setTotalRevenue(prev => prev + amountNum);
+      setNetProfit(prev => prev + amountNum);
       const existing = topCustomers.find(c => c.name.toLowerCase() === customerName.toLowerCase());
       if (existing) {
         setTopCustomers(topCustomers.map(c => c.id === existing.id ? { ...c, billing: c.billing + amountNum, salesCount: c.salesCount + 1 } : c));
@@ -198,6 +292,9 @@ export default function DashboardPage() {
           avatarColor: colors[Math.floor(Math.random() * colors.length)],
         }]);
       }
+    } else if (txType === "Expense") {
+      setTotalExpenses(prev => prev + amountNum);
+      setNetProfit(prev => prev - amountNum);
     }
 
     setCustomerName("");
@@ -317,7 +414,7 @@ export default function DashboardPage() {
               ${netProfit.toLocaleString("en-US")}
             </div>
             <div className="flex items-center gap-2 mt-1 text-xs">
-              <Progress value={Math.min(100, netProfitMargin)} className="h-1.5 flex-1" />
+              <Progress value={Math.max(0, Math.min(100, netProfitMargin))} className="h-1.5 flex-1" />
               <span className="font-semibold text-primary">{netProfitMargin.toFixed(0)}%</span>
             </div>
           </CardContent>
@@ -334,8 +431,8 @@ export default function DashboardPage() {
               ${bankBalance.toLocaleString("en-US")}
             </div>
             <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-              <span>Checking: $185K</span>
-              <span>Savings: $63K</span>
+              <span>{bankAccounts.length} account{bankAccounts.length === 1 ? "" : "s"}</span>
+              <span>{bankAccounts[0]?.currency || "USD"}</span>
             </div>
           </CardContent>
         </Card>
@@ -364,8 +461,8 @@ export default function DashboardPage() {
             </CardAction>
           </CardHeader>
           <CardContent>
-            <div className="h-64 w-full">
-              {mounted ? (
+          <div className="h-64 w-full">
+            {mounted && !loading ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={cashFlowData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
@@ -402,8 +499,8 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-64 w-full">
-              {mounted ? (
+          <div className="h-64 w-full">
+            {mounted && !loading ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={salesExpensesData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />

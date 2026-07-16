@@ -5,6 +5,11 @@ interface UserPayload {
   id: string;
   email: string;
   role: string;
+  /**
+   * Present (and true) only on short-lived pre-authentication tokens issued
+   * mid-2FA login. Full access tokens never carry this claim.
+   */
+  isPreAuth?: boolean;
 }
 
 const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'fallback_access_secret';

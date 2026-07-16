@@ -5,7 +5,9 @@ export const registerSchema = z.object({
     email: z.string().email('Invalid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters long'),
     name: z.string().optional(),
-    role: z.enum(['admin', 'manager', 'staff']).default('staff'),
+    // NOTE: `role` is intentionally NOT accepted here. Public self-registration
+    // must never let a user choose their own role (privilege escalation).
+    // Role assignment is performed server-side / via an admin-only flow.
   }),
 });
 

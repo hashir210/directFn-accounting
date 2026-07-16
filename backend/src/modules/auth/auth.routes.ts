@@ -19,6 +19,7 @@ router.get('/verify-email', validate(verifyEmailSchema), AuthController.verifyEm
 router.post('/login', validate(loginSchema), AuthController.login);
 router.post('/refresh', AuthController.refresh);
 router.post('/logout', AuthController.logout);
+router.post('/resend-verification', validate(forgotPasswordSchema), AuthController.resendVerification);
 router.post('/forgot-password', validate(forgotPasswordSchema), AuthController.forgotPassword);
 router.post('/reset-password', validate(resetPasswordSchema), AuthController.resetPassword);
 
