@@ -266,7 +266,8 @@ export class DashboardService {
         count: products.length,
         products: products.map((p) => ({
           ...p,
-          unitPrice: toNumber(p.unitPrice),
+          sellingPrice: toNumber(p.sellingPrice),
+          purchasePrice: toNumber(p.purchasePrice),
         })),
       };
     }

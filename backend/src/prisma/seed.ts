@@ -204,11 +204,11 @@ async function main() {
   console.log('[seed]: creating products...');
   await prisma.product.createMany({
     data: [
-      { organizationId: orgId, name: 'FinFlow POS Terminal V2', sku: 'FF-POS-V2', category: 'Hardware', stockQuantity: 3, lowStockThreshold: 10, unitPrice: 349.0 },
-      { organizationId: orgId, name: 'Thermal Receipt Paper Roll', sku: 'FF-TRP-80', category: 'Consumables', stockQuantity: 8, lowStockThreshold: 25, unitPrice: 12.5 },
-      { organizationId: orgId, name: 'FinFlow QR Stand Metallic', sku: 'FF-QRS-MET', category: 'Hardware', stockQuantity: 12, lowStockThreshold: 15, unitPrice: 24.0 },
-      { organizationId: orgId, name: 'Backup Battery Pack Pro', sku: 'FF-BBP-PRO', category: 'Hardware', stockQuantity: 45, lowStockThreshold: 15, unitPrice: 59.0 },
-      { organizationId: orgId, name: 'FinFlow NFC Reader', sku: 'FF-NFC-R1', category: 'Hardware', stockQuantity: 0, lowStockThreshold: 8, unitPrice: 89.0 },
+      { organizationId: orgId, name: 'FinFlow POS Terminal V2', sku: 'FF-POS-V2', category: 'Hardware', stockQuantity: 3, lowStockThreshold: 10, purchasePrice: 220.0, sellingPrice: 349.0 },
+      { organizationId: orgId, name: 'Thermal Receipt Paper Roll', sku: 'FF-TRP-80', category: 'Consumables', stockQuantity: 8, lowStockThreshold: 25, purchasePrice: 5.0, sellingPrice: 12.5 },
+      { organizationId: orgId, name: 'FinFlow QR Stand Metallic', sku: 'FF-QRS-MET', category: 'Hardware', stockQuantity: 12, lowStockThreshold: 15, purchasePrice: 10.0, sellingPrice: 24.0 },
+      { organizationId: orgId, name: 'Backup Battery Pack Pro', sku: 'FF-BBP-PRO', category: 'Hardware', stockQuantity: 45, lowStockThreshold: 15, purchasePrice: 30.0, sellingPrice: 59.0 },
+      { organizationId: orgId, name: 'FinFlow NFC Reader', sku: 'FF-NFC-R1', category: 'Hardware', stockQuantity: 0, lowStockThreshold: 8, purchasePrice: 45.0, sellingPrice: 89.0 },
     ],
   });
 

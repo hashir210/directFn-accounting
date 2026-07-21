@@ -145,9 +145,9 @@ beforeAll(async () => {
   // ── Seed Products ───────────────────────────────────────────────────────
   await prisma.product.createMany({
     data: [
-      { name: 'Widget A', sku: 'TEST-WA1', stockQuantity: 3, lowStockThreshold: 10, unitPrice: 49.99, organizationId: orgId },
-      { name: 'Widget B', sku: 'TEST-WB2', stockQuantity: 50, lowStockThreshold: 10, unitPrice: 19.99, organizationId: orgId },
-      { name: 'Widget C', sku: 'TEST-WC3', stockQuantity: 0, lowStockThreshold: 5, unitPrice: 9.99, organizationId: orgId },
+      { name: 'Widget A', sku: 'TEST-WA1', stockQuantity: 3, lowStockThreshold: 10, sellingPrice: 49.99, organizationId: orgId },
+      { name: 'Widget B', sku: 'TEST-WB2', stockQuantity: 50, lowStockThreshold: 10, sellingPrice: 19.99, organizationId: orgId },
+      { name: 'Widget C', sku: 'TEST-WC3', stockQuantity: 0, lowStockThreshold: 5, sellingPrice: 9.99, organizationId: orgId },
     ],
   });
 
