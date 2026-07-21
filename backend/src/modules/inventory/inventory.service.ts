@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../../config/db';
 
 export class InventoryService {
   static async list(organizationId: string, options: { page?: number; limit?: number; search?: string; type?: string }) {
@@ -48,7 +46,6 @@ export class InventoryService {
     quantity: number;
     warehouse?: string;
   }) {
-    // Check if product exists in org
     const product = await prisma.product.findFirst({
       where: { organizationId, sku: data.sku },
     });
@@ -66,7 +63,6 @@ export class InventoryService {
       },
     });
 
-    // Automatically update product stock quantity if product exists
     if (product) {
       let stockChange = 0;
       if (data.type === 'Stock In' || data.type === 'Adjustment') {
@@ -78,11 +74,7 @@ export class InventoryService {
       if (stockChange !== 0) {
         await prisma.product.update({
           where: { id: product.id },
-          data: {
-            stockQuantity: {
-              increment: stockChange,
-            },
-          },
+          data: { stockQuantity: { increment: stockChange } },
         });
       }
     }

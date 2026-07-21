@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Decimal } from '@prisma/client/runtime/library';
+import prisma from '../../config/db';
+import { NotFoundError, ConflictError } from '../../utils/errors';
 
 export class ProductsService {
   static async list(organizationId: string, options: { page?: number; limit?: number; search?: string; category?: string }) {
@@ -47,12 +47,7 @@ export class ProductsService {
       include: { stockMovements: { orderBy: { createdAt: 'desc' }, take: 10 } },
     });
 
-    if (!product) {
-      const err: any = new Error('Product not found');
-      err.statusCode = 404;
-      throw err;
-    }
-
+    if (!product) throw new NotFoundError('Product not found');
     return product;
   }
 
@@ -71,11 +66,7 @@ export class ProductsService {
     const existing = await prisma.product.findFirst({
       where: { organizationId, sku: data.sku },
     });
-    if (existing) {
-      const err: any = new Error('Product with this SKU already exists');
-      err.statusCode = 409;
-      throw err;
-    }
+    if (existing) throw new ConflictError('Product with this SKU already exists');
 
     return prisma.product.create({
       data: {
@@ -87,9 +78,9 @@ export class ProductsService {
         unit: data.unit || 'Unit',
         stockQuantity: data.stockQuantity || 0,
         lowStockThreshold: data.lowStockThreshold || 10,
-        purchasePrice: data.purchasePrice !== undefined ? data.purchasePrice : 0,
-        sellingPrice: data.sellingPrice,
-        taxRate: data.taxRate !== undefined ? data.taxRate : 0,
+        purchasePrice: data.purchasePrice !== undefined ? new Decimal(data.purchasePrice) : 0,
+        sellingPrice: new Decimal(data.sellingPrice),
+        taxRate: data.taxRate !== undefined ? new Decimal(data.taxRate) : 0,
       },
     });
   }
@@ -108,17 +99,16 @@ export class ProductsService {
   }>) {
     await this.getById(organizationId, id);
 
-    return prisma.product.update({
-      where: { id },
-      data,
-    });
+    const updateData: any = { ...data };
+    if (data.purchasePrice !== undefined) updateData.purchasePrice = new Decimal(data.purchasePrice);
+    if (data.sellingPrice !== undefined) updateData.sellingPrice = new Decimal(data.sellingPrice);
+    if (data.taxRate !== undefined) updateData.taxRate = new Decimal(data.taxRate);
+
+    return prisma.product.update({ where: { id }, data: updateData });
   }
 
   static async delete(organizationId: string, id: string) {
     await this.getById(organizationId, id);
-
-    return prisma.product.delete({
-      where: { id },
-    });
+    return prisma.product.delete({ where: { id } });
   }
 }

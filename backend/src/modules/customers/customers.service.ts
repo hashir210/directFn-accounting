@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../../config/db';
+import { NotFoundError, ConflictError } from '../../utils/errors';
 
 export class CustomersService {
   static async list(organizationId: string, options: { page?: number; limit?: number; search?: string }) {
@@ -43,12 +42,7 @@ export class CustomersService {
       include: { invoices: { orderBy: { createdAt: 'desc' } } },
     });
 
-    if (!customer) {
-      const err: any = new Error('Customer not found');
-      err.statusCode = 404;
-      throw err;
-    }
-
+    if (!customer) throw new NotFoundError('Customer not found');
     return customer;
   }
 
@@ -57,11 +51,7 @@ export class CustomersService {
       const existing = await prisma.customer.findFirst({
         where: { organizationId, email: data.email },
       });
-      if (existing) {
-        const err: any = new Error('Customer with this email already exists in organization');
-        err.statusCode = 409;
-        throw err;
-      }
+      if (existing) throw new ConflictError('Customer with this email already exists in organization');
     }
 
     return prisma.customer.create({
@@ -77,18 +67,11 @@ export class CustomersService {
 
   static async update(organizationId: string, id: string, data: { name?: string; email?: string; phone?: string; address?: string }) {
     await this.getById(organizationId, id);
-
-    return prisma.customer.update({
-      where: { id },
-      data,
-    });
+    return prisma.customer.update({ where: { id }, data });
   }
 
   static async delete(organizationId: string, id: string) {
     await this.getById(organizationId, id);
-
-    return prisma.customer.delete({
-      where: { id },
-    });
+    return prisma.customer.delete({ where: { id } });
   }
 }

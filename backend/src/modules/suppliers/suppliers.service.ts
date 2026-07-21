@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../../config/db';
+import { NotFoundError, ConflictError } from '../../utils/errors';
 
 export class SuppliersService {
   static async list(organizationId: string, options: { page?: number; limit?: number; search?: string }) {
@@ -44,12 +43,7 @@ export class SuppliersService {
       include: { payments: { orderBy: { createdAt: 'desc' } } },
     });
 
-    if (!supplier) {
-      const err: any = new Error('Supplier not found');
-      err.statusCode = 404;
-      throw err;
-    }
-
+    if (!supplier) throw new NotFoundError('Supplier not found');
     return supplier;
   }
 
@@ -57,11 +51,7 @@ export class SuppliersService {
     const existing = await prisma.supplier.findFirst({
       where: { organizationId, name: data.name },
     });
-    if (existing) {
-      const err: any = new Error('Supplier with this name already exists in organization');
-      err.statusCode = 409;
-      throw err;
-    }
+    if (existing) throw new ConflictError('Supplier with this name already exists in organization');
 
     return prisma.supplier.create({
       data: {
@@ -78,18 +68,11 @@ export class SuppliersService {
 
   static async update(organizationId: string, id: string, data: Partial<{ name: string; category: string; contactEmail: string; phone: string; paymentTerms: string; dueAmount: number; status: string }>) {
     await this.getById(organizationId, id);
-
-    return prisma.supplier.update({
-      where: { id },
-      data,
-    });
+    return prisma.supplier.update({ where: { id }, data });
   }
 
   static async delete(organizationId: string, id: string) {
     await this.getById(organizationId, id);
-
-    return prisma.supplier.delete({
-      where: { id },
-    });
+    return prisma.supplier.delete({ where: { id } });
   }
 }
