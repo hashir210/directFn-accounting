@@ -10,28 +10,102 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model shell
-model User {
-  id                     String                   @id @default(uuid())
-  email                  String                   @unique
-  password               String
-  name                   String?
-  role                   String                   @default("staff") // admin, manager, staff
-  emailVerified          Boolean                  @default(false)
-  twoFactorEnabled       Boolean                  @default(false)
-  twoFactorSecret        String?
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  refreshTokens          RefreshToken[]
-  passwordResetTokens    PasswordResetToken[]
-  emailVerificationTokens EmailVerificationToken[]
-  notifications          Notification[]
+model Organization {
+  id         String   @id @default(cuid())
+  name       String
+  ownerId    String
+  owner      User     @relation("OrgOwner", fields: [ownerId], references: [id])
+  planId          String?
+  plan            SubscriptionPlan? @relation(fields: [planId], references: [id])
+  status          String   @default("active")
+  isPlatform      Boolean  @default(false)
+  disabledScreens String?  @db.Text
+  contactEmail    String?
+  maxUsers        Int      @default(5)
+  createdAt       DateTime @default(now())
+
+  users         User[]          @relation("OrgUsers")
+  roles         Role[]
+  customers     Customer[]
+  invoices      Invoice[]
+  expenses      Expense[]
+  products      Product[]
+  bankAccounts  BankAccount[]
+  notifications Notification[]
 }
 
-// RefreshToken model shell
+model Role {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  isSystemRole   Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  users           User[]
+  rolePermissions RolePermission[]
+
+  @@unique([organizationId, name])
+}
+
+model Permission {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  description String?
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  role         Role   @relation(fields: [roleId], references: [id])
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation("OrgUsers", fields: [organizationId], references: [id])
+  roleId             String?
+  role               Role?    @relation(fields: [roleId], references: [id])
+  ownedOrgs          Organization[] @relation("OrgOwner")
+
+  email              String
+  password           String
+  name               String?
+  emailVerified      Boolean  @default(false)
+  twoFactorEnabled   Boolean  @default(false)
+  twoFactorSecret    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  refreshTokens           RefreshToken[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  notifications           Notification[]
+  screenBlocks            UserScreenBlock[]
+
+  @@unique([organizationId, email])
+  @@index([roleId])
+}
+
+model UserScreenBlock {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  screenKey String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, screenKey])
+}
+
 model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique // Store hashed token
+  id        String   @id @default(cuid())
+  token     String   @unique
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
@@ -40,7 +114,7 @@ model RefreshToken {
 }
 
 model PasswordResetToken {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   token     String   @unique
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -49,7 +123,7 @@ model PasswordResetToken {
 }
 
 model EmailVerificationToken {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   token     String   @unique
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -60,71 +134,117 @@ model EmailVerificationToken {
 // --- Dashboard Domain Models ---
 
 model Customer {
-  id        String    @id @default(uuid())
-  name      String
-  email     String?   @unique
-  phone     String?
-  address   String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  invoices  Invoice[]
+  id             String    @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  invoices       Invoice[]
+
+  @@unique([organizationId, email])
 }
 
 model Invoice {
-  id          String        @id @default(uuid())
-  invoiceNo   String        @unique
-  customerId  String
-  customer    Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  amount      Decimal       @db.Decimal(12, 2)
-  status      String        @default("pending") // pending, paid, overdue, cancelled
-  issuedAt    DateTime      @default(now())
-  dueAt       DateTime
-  paidAt      DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  invoiceNo      String
+  customerId     String
+  customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  amount         Decimal       @db.Decimal(12, 2)
+  status         String        @default("pending")
+  issuedAt       DateTime      @default(now())
+  dueAt          DateTime
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([organizationId, invoiceNo])
+  @@index([organizationId, status, paidAt])
 }
 
 model Expense {
-  id          String   @id @default(uuid())
-  category    String   // e.g. Rent, Salaries, Utilities, Marketing
-  description String?
-  amount      Decimal  @db.Decimal(12, 2)
-  date        DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  category       String
+  description    String?
+  amount         Decimal  @db.Decimal(12, 2)
+  date           DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, date])
 }
 
 model Product {
-  id           String   @id @default(uuid())
-  name         String
-  sku          String   @unique
-  category     String?
-  stockQuantity Int     @default(0)
-  lowStockThreshold Int @default(10)
-  unitPrice    Decimal  @db.Decimal(10, 2)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String   @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  name              String
+  sku               String
+  category          String?
+  stockQuantity     Int      @default(0)
+  lowStockThreshold Int      @default(10)
+  unitPrice         Decimal  @db.Decimal(10, 2)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([organizationId, sku])
 }
 
 model BankAccount {
-  id            String   @id @default(uuid())
-  name          String
-  accountNumber String   @unique
-  bankName      String
-  balance       Decimal  @db.Decimal(14, 2) @default(0)
-  currency      String   @default("USD")
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  accountNumber  String   @unique
+  bankName       String
+  balance        Decimal  @db.Decimal(14, 2) @default(0)
+  currency       String   @default("USD")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, isActive])
 }
 
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  message   String
-  type      String   @default("info") // info, warning, success, error
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  message        String
+  type           String   @default("info")
+  read           Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  organizations Organization[]
+  features      PlanFeature[]
+}
+
+model PlanFeature {
+  id         String   @id @default(cuid())
+  planId     String
+  plan       SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  featureKey String
+  createdAt  DateTime @default(now())
+
+  @@unique([planId, featureKey])
 }

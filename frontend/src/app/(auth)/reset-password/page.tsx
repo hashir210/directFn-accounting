@@ -61,8 +61,8 @@ function ResetInner() {
 
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center items-center space-y-3 pb-2">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center shadow-sm">
-            <div className="h-full w-full rounded-[10px] bg-[#7c3aed] flex items-center justify-center">
+          <div className="h-11 w-11 rounded-lg bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center shadow-sm">
+            <div className="h-full w-full rounded-md bg-primary flex items-center justify-center">
               <Activity className="h-5 w-5 text-emerald-400" />
             </div>
           </div>
@@ -76,13 +76,13 @@ function ResetInner() {
 
         <CardContent className="space-y-4">
           {error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-lg flex items-center gap-2">
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-ping" />
               {error}
             </div>
           )}
           {success && (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-xs rounded-lg flex items-center gap-2">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-xs rounded-md flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
               {success}
             </div>
@@ -118,12 +118,12 @@ function ResetInner() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={isLoading}
-                  className="pl-9 h-10"
+                  className="pl-9"
                 />
               </div>
             </div>
 
-            <Button type="submit" disabled={isLoading} className="w-full h-10 cursor-pointer" size="lg">
+            <Button type="submit" disabled={isLoading} className="w-full cursor-pointer">
               {isLoading ? (
                 <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (

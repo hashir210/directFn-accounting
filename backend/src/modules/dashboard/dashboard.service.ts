@@ -21,55 +21,62 @@ export class DashboardService {
    * Summary: total revenue, total expenses, net profit/loss, and
    * monthly cash-flow array for the current (or given) year.
    */
-  static async getSummary(year?: number) {
+  /**
+   * Summary: total revenue, total expenses, net profit/loss, and
+   * monthly cash-flow array for the current (or given) year.
+   */
+  static async getSummary(organizationId: string, year?: number) {
     const targetYear = year ?? new Date().getFullYear();
     const yearStart = new Date(targetYear, 0, 1);
     const yearEnd = new Date(targetYear + 1, 0, 1);
 
-    // Total revenue: sum of paid invoices this year
-    const revenueResult = await prisma.invoice.aggregate({
-      _sum: { amount: true },
-      where: {
-        status: 'paid',
-        paidAt: { gte: yearStart, lt: yearEnd },
-      },
-    });
-    const totalRevenue = toNumber(revenueResult._sum.amount);
+    // Fetch paid invoices and expenses for the whole year in 2 queries total
+    const [paidInvoices, expenses] = await Promise.all([
+      prisma.invoice.findMany({
+        where: {
+          organizationId,
+          status: 'paid',
+          paidAt: { gte: yearStart, lt: yearEnd },
+        },
+        select: { amount: true, paidAt: true },
+      }),
+      prisma.expense.findMany({
+        where: {
+          organizationId,
+          date: { gte: yearStart, lt: yearEnd },
+        },
+        select: { amount: true, date: true },
+      }),
+    ]);
 
-    // Total expenses this year
-    const expenseResult = await prisma.expense.aggregate({
-      _sum: { amount: true },
-      where: { date: { gte: yearStart, lt: yearEnd } },
-    });
-    const totalExpenses = toNumber(expenseResult._sum.amount);
-
+    const totalRevenue = paidInvoices.reduce((acc, inv) => acc + toNumber(inv.amount), 0);
+    const totalExpenses = expenses.reduce((acc, exp) => acc + toNumber(exp.amount), 0);
     const netProfit = totalRevenue - totalExpenses;
 
-    // Monthly cash flow: revenue - expenses per month
-    const months = Array.from({ length: 12 }, (_, i) => i + 1);
-    const cashFlow = await Promise.all(
-      months.map(async (month) => {
-        const { start, end } = monthRange(targetYear, month);
+    // Build 12-month cash flow array in memory
+    const monthlyRev = new Array(12).fill(0);
+    const monthlyExp = new Array(12).fill(0);
 
-        const [rev, exp] = await Promise.all([
-          prisma.invoice.aggregate({
-            _sum: { amount: true },
-            where: { status: 'paid', paidAt: { gte: start, lt: end } },
-          }),
-          prisma.expense.aggregate({
-            _sum: { amount: true },
-            where: { date: { gte: start, lt: end } },
-          }),
-        ]);
+    for (const inv of paidInvoices) {
+      if (inv.paidAt) {
+        const m = inv.paidAt.getMonth(); // 0-indexed
+        monthlyRev[m] += toNumber(inv.amount);
+      }
+    }
 
-        return {
-          month,
-          revenue: toNumber(rev._sum.amount),
-          expenses: toNumber(exp._sum.amount),
-          net: toNumber(rev._sum.amount) - toNumber(exp._sum.amount),
-        };
-      })
-    );
+    for (const exp of expenses) {
+      if (exp.date) {
+        const m = exp.date.getMonth(); // 0-indexed
+        monthlyExp[m] += toNumber(exp.amount);
+      }
+    }
+
+    const cashFlow = Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      revenue: monthlyRev[i],
+      expenses: monthlyExp[i],
+      net: monthlyRev[i] - monthlyExp[i],
+    }));
 
     return {
       year: targetYear,
@@ -83,9 +90,9 @@ export class DashboardService {
   /**
    * Bank Balance: sum of all active bank account balances.
    */
-  static async getBankBalance() {
+  static async getBankBalance(organizationId: string) {
     const accounts = await prisma.bankAccount.findMany({
-      where: { isActive: true },
+      where: { organizationId, isActive: true },
       select: {
         id: true,
         name: true,
@@ -112,12 +119,12 @@ export class DashboardService {
   /**
    * Pending Payments: paginated list of invoices with status 'pending' or 'overdue'.
    */
-  static async getPendingPayments(page: number = 1, limit: number = 10) {
+  static async getPendingPayments(organizationId: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
 
     const [invoices, total] = await Promise.all([
       prisma.invoice.findMany({
-        where: { status: { in: ['pending', 'overdue'] } },
+        where: { organizationId, status: { in: ['pending', 'overdue'] } },
         include: {
           customer: { select: { id: true, name: true, email: true } },
         },
@@ -126,7 +133,7 @@ export class DashboardService {
         take: limit,
       }),
       prisma.invoice.count({
-        where: { status: { in: ['pending', 'overdue'] } },
+        where: { organizationId, status: { in: ['pending', 'overdue'] } },
       }),
     ]);
 
@@ -147,25 +154,36 @@ export class DashboardService {
   /**
    * Monthly Sales: revenue grouped by month for a given year.
    */
-  static async getMonthlySales(year?: number) {
+  static async getMonthlySales(organizationId: string, year?: number) {
     const targetYear = year ?? new Date().getFullYear();
-    const months = Array.from({ length: 12 }, (_, i) => i + 1);
+    const yearStart = new Date(targetYear, 0, 1);
+    const yearEnd = new Date(targetYear + 1, 0, 1);
 
-    const data = await Promise.all(
-      months.map(async (month) => {
-        const { start, end } = monthRange(targetYear, month);
-        const result = await prisma.invoice.aggregate({
-          _sum: { amount: true },
-          _count: { id: true },
-          where: { status: 'paid', paidAt: { gte: start, lt: end } },
-        });
-        return {
-          month,
-          revenue: toNumber(result._sum.amount),
-          invoiceCount: result._count.id,
-        };
-      })
-    );
+    const invoices = await prisma.invoice.findMany({
+      where: {
+        organizationId,
+        status: 'paid',
+        paidAt: { gte: yearStart, lt: yearEnd },
+      },
+      select: { amount: true, paidAt: true },
+    });
+
+    const monthlyRevenue = new Array(12).fill(0);
+    const monthlyCount = new Array(12).fill(0);
+
+    for (const inv of invoices) {
+      if (inv.paidAt) {
+        const m = inv.paidAt.getMonth();
+        monthlyRevenue[m] += toNumber(inv.amount);
+        monthlyCount[m] += 1;
+      }
+    }
+
+    const data = Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      revenue: monthlyRevenue[i],
+      invoiceCount: monthlyCount[i],
+    }));
 
     return { year: targetYear, data };
   }
@@ -173,25 +191,35 @@ export class DashboardService {
   /**
    * Monthly Expenses: expenses grouped by month for a given year.
    */
-  static async getMonthlyExpenses(year?: number) {
+  static async getMonthlyExpenses(organizationId: string, year?: number) {
     const targetYear = year ?? new Date().getFullYear();
-    const months = Array.from({ length: 12 }, (_, i) => i + 1);
+    const yearStart = new Date(targetYear, 0, 1);
+    const yearEnd = new Date(targetYear + 1, 0, 1);
 
-    const data = await Promise.all(
-      months.map(async (month) => {
-        const { start, end } = monthRange(targetYear, month);
-        const result = await prisma.expense.aggregate({
-          _sum: { amount: true },
-          _count: { id: true },
-          where: { date: { gte: start, lt: end } },
-        });
-        return {
-          month,
-          expenses: toNumber(result._sum.amount),
-          expenseCount: result._count.id,
-        };
-      })
-    );
+    const expenses = await prisma.expense.findMany({
+      where: {
+        organizationId,
+        date: { gte: yearStart, lt: yearEnd },
+      },
+      select: { amount: true, date: true },
+    });
+
+    const monthlyExpenses = new Array(12).fill(0);
+    const monthlyCount = new Array(12).fill(0);
+
+    for (const exp of expenses) {
+      if (exp.date) {
+        const m = exp.date.getMonth();
+        monthlyExpenses[m] += toNumber(exp.amount);
+        monthlyCount[m] += 1;
+      }
+    }
+
+    const data = Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      expenses: monthlyExpenses[i],
+      expenseCount: monthlyCount[i],
+    }));
 
     return { year: targetYear, data };
   }
@@ -199,10 +227,10 @@ export class DashboardService {
   /**
    * Top Customers: ranked by total invoiced (paid) amount.
    */
-  static async getTopCustomers(limit: number = 5) {
+  static async getTopCustomers(organizationId: string, limit: number = 5) {
     const results = await prisma.invoice.groupBy({
       by: ['customerId'],
-      where: { status: 'paid' },
+      where: { organizationId, status: 'paid' },
       _sum: { amount: true },
       _count: { id: true },
       orderBy: { _sum: { amount: 'desc' } },
@@ -227,11 +255,11 @@ export class DashboardService {
   /**
    * Low Stock: products where stockQuantity <= lowStockThreshold.
    */
-  static async getLowStockProducts(threshold?: number) {
+  static async getLowStockProducts(organizationId: string, threshold?: number) {
     if (threshold !== undefined) {
       // Filter by an explicit numeric threshold across all products
       const products = await prisma.product.findMany({
-        where: { stockQuantity: { lte: threshold } },
+        where: { organizationId, stockQuantity: { lte: threshold } },
         orderBy: { stockQuantity: 'asc' },
       });
       return {
@@ -257,7 +285,7 @@ export class DashboardService {
     >`
       SELECT id, name, sku, category, stockQuantity, lowStockThreshold, unitPrice
       FROM Product
-      WHERE stockQuantity <= lowStockThreshold
+      WHERE stockQuantity <= lowStockThreshold AND organizationId = ${organizationId}
       ORDER BY stockQuantity ASC
     `;
 
@@ -315,5 +343,69 @@ export class DashboardService {
       where: { id: notificationId },
       data: { read: true },
     });
+  }
+
+  /**
+   * Create a transaction (Invoice or Expense)
+   */
+  static async createTransaction(organizationId: string, data: {
+    type: string;
+    customerName: string;
+    amount: number;
+    dueDate: string;
+    status: string;
+  }) {
+    if (data.type === 'Invoice') {
+      // Find or create customer
+      let customer = await prisma.customer.findFirst({
+        where: { organizationId, name: data.customerName }
+      });
+
+      if (!customer) {
+        const email = `${data.customerName.toLowerCase().replace(/\s+/g, '')}@example.com`;
+        customer = await prisma.customer.create({
+          data: {
+            organizationId,
+            name: data.customerName,
+            email,
+          }
+        });
+      }
+
+      const invoiceCount = await prisma.invoice.count({ where: { organizationId } });
+      const invoiceNo = `INV-2026-${String(invoiceCount + 1).padStart(4, '0')}`;
+
+      // If the status is Paid, set paidAt to now
+      const isPaid = data.status.toLowerCase() === 'paid';
+      const paidAt = isPaid ? new Date() : null;
+
+      const invoice = await prisma.invoice.create({
+        data: {
+          organizationId,
+          customerId: customer.id,
+          invoiceNo,
+          amount: new Decimal(data.amount),
+          dueAt: new Date(data.dueDate || new Date()),
+          status: data.status.toLowerCase(),
+          paidAt,
+        }
+      });
+
+      return { type: 'Invoice', data: invoice };
+    } else if (data.type === 'Expense') {
+      const expense = await prisma.expense.create({
+        data: {
+          organizationId,
+          category: 'General',
+          description: `Payment to ${data.customerName}`,
+          amount: new Decimal(data.amount),
+          date: new Date(data.dueDate || new Date()),
+        }
+      });
+
+      return { type: 'Expense', data: expense };
+    }
+
+    throw new Error('Invalid transaction type');
   }
 }

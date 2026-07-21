@@ -14,8 +14,8 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <Badge variant="secondary">Coming soon</Badge>
           <p className="text-sm text-muted-foreground">This module is planned for a future phase.</p>
-          <Button render={<Link href="/dashboard" />} className="w-full">
-            Back to Dashboard
+          <Button asChild className="w-full">
+            <Link href="/dashboard">Back to Dashboard</Link>
           </Button>
         </CardContent>
       </Card>

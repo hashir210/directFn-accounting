@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { DashboardController } from './dashboard.controller';
 import { authenticate } from '../../middleware/authenticate';
-import { authorize } from '../../middleware/authorize';
+import { requirePermission } from '../../middleware/requirePermission';
 
 const router = Router();
 
@@ -9,28 +9,31 @@ const router = Router();
 router.use(authenticate);
 
 // Summary: revenue, expenses, P&L, cash flow
-router.get('/summary', DashboardController.getSummary);
+router.get('/summary', requirePermission('dashboard.view'), DashboardController.getSummary);
 
 // Bank balance card
-router.get('/bank-balance', DashboardController.getBankBalance);
+router.get('/bank-balance', requirePermission('dashboard.view'), DashboardController.getBankBalance);
 
 // Pending payments list (paginated)
-router.get('/pending-payments', DashboardController.getPendingPayments);
+router.get('/pending-payments', requirePermission('invoices.view'), DashboardController.getPendingPayments);
 
 // Monthly sales chart
-router.get('/monthly-sales', DashboardController.getMonthlySales);
+router.get('/monthly-sales', requirePermission('dashboard.view'), DashboardController.getMonthlySales);
 
 // Monthly expenses chart
-router.get('/monthly-expenses', DashboardController.getMonthlyExpenses);
+router.get('/monthly-expenses', requirePermission('dashboard.view'), DashboardController.getMonthlyExpenses);
 
 // Top customers — manager & admin only
-router.get('/top-customers', authorize(['admin', 'manager']), DashboardController.getTopCustomers);
+router.get('/top-customers', requirePermission('customers.view'), DashboardController.getTopCustomers);
 
 // Low stock alerts
-router.get('/low-stock', DashboardController.getLowStockProducts);
+router.get('/low-stock', requirePermission('products.view'), DashboardController.getLowStockProducts);
 
 // Notifications panel (user-scoped)
 router.get('/notifications', DashboardController.getNotifications);
 router.patch('/notifications/:id/read', DashboardController.markNotificationRead);
+
+// Create transactions
+router.post('/transactions', DashboardController.createTransaction);
 
 export default router;

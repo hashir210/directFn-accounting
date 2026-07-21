@@ -38,18 +38,27 @@ describe('Authentication Integration Tests', () => {
   let currentRefreshToken = ''; // raw value pulled from the Set-Cookie header
   let emailVerificationToken = '';
   let passwordResetToken = '';
+  let testOrgId = '';
 
   beforeAll(async () => {
     // Clear any existing test data to ensure a clean state
-    await prisma.user.deleteMany({
-      where: { email: testEmail },
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=0;');
+      await tx.user.deleteMany({ where: { email: testEmail } });
+      await tx.role.deleteMany({ where: { organization: { name: 'Test Org' } } });
+      await tx.organization.deleteMany({ where: { name: 'Test Org' } });
+      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=1;');
     });
   });
 
   afterAll(async () => {
     // Clean up database after tests
-    await prisma.user.deleteMany({
-      where: { email: testEmail },
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=0;');
+      await tx.user.deleteMany({ where: { email: testEmail } });
+      await tx.role.deleteMany({ where: { organization: { name: 'Test Org' } } });
+      await tx.organization.deleteMany({ where: { name: 'Test Org' } });
+      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=1;');
     });
     await prisma.$disconnect();
   });
@@ -62,6 +71,7 @@ describe('Authentication Integration Tests', () => {
           email: testEmail,
           password: testPassword,
           name: testName,
+          organizationName: 'Test Org',
         });
 
       expect(response.status).toBe(201);
@@ -78,23 +88,30 @@ describe('Authentication Integration Tests', () => {
       expect(emailVerificationToken).toBeTruthy();
 
       // Exactly one (hashed) verification token should exist in the DB
-      const user = await prisma.user.findUnique({
+      const user = await prisma.user.findFirst({
         where: { email: testEmail },
         include: { emailVerificationTokens: true },
       });
+      testOrgId = user!.organizationId;
       expect(user?.emailVerificationTokens.length).toBe(1);
       // The stored token must NOT equal the raw token (it is hashed)
       expect(user?.emailVerificationTokens[0].token).not.toBe(emailVerificationToken);
     });
 
-    it('should default new users to the staff role (no privilege escalation)', async () => {
-      const user = await prisma.user.findUnique({ where: { email: testEmail } });
-      expect(user?.role).toBe('staff');
+    it('should default new users to the owner role (no privilege escalation)', async () => {
+      const user = await prisma.user.findFirst({ where: { email: testEmail }, include: { role: true } });
+      expect(user?.role?.name).toBe('Owner');
     });
 
     it('should ignore a client-supplied role and still create a staff user', async () => {
       const escalationEmail = 'escalate@example.com';
-      await prisma.user.deleteMany({ where: { email: escalationEmail } });
+      await prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=0;');
+        await tx.user.deleteMany({ where: { email: escalationEmail } });
+        await tx.role.deleteMany({ where: { organization: { name: 'Test Org 2' } } });
+        await tx.organization.deleteMany({ where: { name: 'Test Org 2' } });
+        await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=1;');
+      });
 
       const response = await request(app)
         .post('/api/v1/auth/register')
@@ -102,13 +119,20 @@ describe('Authentication Integration Tests', () => {
           email: escalationEmail,
           password: testPassword,
           role: 'admin',
+          organizationName: 'Test Org 2',
         });
 
       expect(response.status).toBe(201);
-      const user = await prisma.user.findUnique({ where: { email: escalationEmail } });
-      expect(user?.role).toBe('staff');
+      const user = await prisma.user.findFirst({ where: { email: escalationEmail }, include: { role: true } });
+      expect(user?.role?.name).toBe('Owner');
 
-      await prisma.user.deleteMany({ where: { email: escalationEmail } });
+      await prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=0;');
+        await tx.user.deleteMany({ where: { email: escalationEmail } });
+        await tx.role.deleteMany({ where: { organization: { name: 'Test Org 2' } } });
+        await tx.organization.deleteMany({ where: { name: 'Test Org 2' } });
+        await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=1;');
+      });
     });
 
     it('should return error for duplicate email registration', async () => {
@@ -117,6 +141,7 @@ describe('Authentication Integration Tests', () => {
         .send({
           email: testEmail,
           password: testPassword,
+          organizationName: 'Test Org',
         });
 
       expect(response.status).toBe(409);
@@ -129,6 +154,7 @@ describe('Authentication Integration Tests', () => {
         .send({
           email: 'weak@example.com',
           password: '123',
+          organizationName: 'Test Org',
         });
 
       expect(response.status).toBe(400);
@@ -144,7 +170,7 @@ describe('Authentication Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
 
-      const user = await prisma.user.findUnique({ where: { email: testEmail } });
+      const user = await prisma.user.findFirst({ where: { email: testEmail } });
       expect(user?.emailVerified).toBe(true);
     });
 
@@ -158,13 +184,16 @@ describe('Authentication Integration Tests', () => {
 
   describe('POST /api/v1/auth/login', () => {
     it('should login successfully and return access token (no refresh token in body) when 2FA is disabled', async () => {
+      console.log('testOrgId in login is:', testOrgId);
       const response = await agent
         .post('/api/v1/auth/login')
         .send({
           email: testEmail,
           password: testPassword,
+          organizationId: testOrgId,
         });
 
+      if (response.status !== 200) console.error('Login error:', response.body);
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
       expect(response.body.data).toHaveProperty('accessToken');
@@ -186,6 +215,7 @@ describe('Authentication Integration Tests', () => {
         .send({
           email: testEmail,
           password: 'WrongPassword!',
+          organizationId: testOrgId,
         });
 
       expect(response.status).toBe(401);
@@ -289,7 +319,7 @@ describe('Authentication Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
 
-      const user = await prisma.user.findUnique({ where: { email: testEmail } });
+      const user = await prisma.user.findFirst({ where: { email: testEmail } });
       expect(user?.twoFactorEnabled).toBe(true);
     });
 
@@ -299,6 +329,7 @@ describe('Authentication Integration Tests', () => {
         .send({
           email: testEmail,
           password: testPassword,
+          organizationId: testOrgId,
         });
 
       expect(response.status).toBe(200);
@@ -358,7 +389,7 @@ describe('Authentication Integration Tests', () => {
     it('should initiate forgot password and create token', async () => {
       const response = await request(app)
         .post('/api/v1/auth/forgot-password')
-        .send({ email: testEmail });
+        .send({ email: testEmail, organizationId: testOrgId });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -369,7 +400,7 @@ describe('Authentication Integration Tests', () => {
       passwordResetToken = calls[0][1];
       expect(passwordResetToken).toBeTruthy();
 
-      const user = await prisma.user.findUnique({
+      const user = await prisma.user.findFirst({
         where: { email: testEmail },
         include: { passwordResetTokens: true },
       });
@@ -396,6 +427,7 @@ describe('Authentication Integration Tests', () => {
         .send({
           email: testEmail,
           password: newPassword,
+          organizationId: testOrgId,
         });
 
       expect(loginResponse.status).toBe(200);

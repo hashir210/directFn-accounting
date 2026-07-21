@@ -5,6 +5,7 @@ export const registerSchema = z.object({
     email: z.string().email('Invalid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters long'),
     name: z.string().optional(),
+    organizationName: z.string().min(1, 'Organization name is required'),
     // NOTE: `role` is intentionally NOT accepted here. Public self-registration
     // must never let a user choose their own role (privilege escalation).
     // Role assignment is performed server-side / via an admin-only flow.
@@ -15,6 +16,7 @@ export const loginSchema = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
     password: z.string().min(1, 'Password is required'),
+    organizationId: z.string().min(1, 'Organization ID is required'),
   }),
 });
 
@@ -24,9 +26,17 @@ export const verifyEmailSchema = z.object({
   }),
 });
 
+export const resendVerificationSchema = z.object({
+  body: z.object({
+    email: z.string().email('Invalid email address'),
+    organizationId: z.string().min(1, 'Organization ID is required'),
+  }),
+});
+
 export const forgotPasswordSchema = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
+    organizationId: z.string().min(1, 'Organization ID is required'),
   }),
 });
 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Activity } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Activity, Building2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,8 +13,9 @@ import { ApiError } from '@/lib/api';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, logout, isAuthenticated } = useAuth();
+  const { register, logout } = useAuth();
   const [fullName, setFullName] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -45,7 +46,7 @@ export default function RegisterPage() {
     }
 
     try {
-      await register({ email, password, name: fullName });
+      await register({ email, password, name: fullName, organizationName });
       router.push('/verify-email');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Registration failed. Please try again.');
@@ -59,8 +60,8 @@ export default function RegisterPage() {
 
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center items-center space-y-3 pb-2">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center shadow-sm">
-            <div className="h-full w-full rounded-[10px] bg-[#7c3aed] flex items-center justify-center">
+          <div className="h-11 w-11 rounded-lg bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center shadow-sm">
+            <div className="h-full w-full rounded-md bg-primary flex items-center justify-center">
               <Activity className="h-5 w-5 text-emerald-400" />
             </div>
           </div>
@@ -74,7 +75,7 @@ export default function RegisterPage() {
 
         <CardContent className="space-y-4">
           {error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-lg flex items-center gap-2">
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-ping" />
               {error}
             </div>
@@ -93,7 +94,24 @@ export default function RegisterPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={isLoading}
-                  className="pl-9 h-10"
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="organizationName">Workspace Name</Label>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="organizationName"
+                  type="text"
+                  required
+                  placeholder="Acme Corp"
+                  value={organizationName}
+                  onChange={(e) => setOrganizationName(e.target.value)}
+                  disabled={isLoading}
+                  className="pl-9"
                 />
               </div>
             </div>
@@ -110,7 +128,7 @@ export default function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
-                  className="pl-9 h-10"
+                  className="pl-9"
                 />
               </div>
             </div>
@@ -128,7 +146,7 @@ export default function RegisterPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
-                    className="pl-9 pr-9 h-10"
+                    className="pl-9 pr-9"
                   />
                   <button
                     type="button"
@@ -152,7 +170,7 @@ export default function RegisterPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={isLoading}
-                    className="pl-9 h-10"
+                    className="pl-9"
                   />
                 </div>
               </div>
@@ -170,7 +188,7 @@ export default function RegisterPage() {
               </Label>
             </div>
 
-            <Button type="submit" disabled={isLoading} className="w-full h-10 cursor-pointer" size="lg">
+            <Button type="submit" disabled={isLoading} className="w-full cursor-pointer">
               {isLoading ? (
                 <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
@@ -187,7 +205,7 @@ export default function RegisterPage() {
           <p className="text-xs text-muted-foreground">
             Already have an account?{' '}
             <Link
-              href="/login"
+              href="/workspace"
               className="font-semibold text-primary hover:text-primary/80 transition-colors underline underline-offset-4"
             >
               Sign in instead

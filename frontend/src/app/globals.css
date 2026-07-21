@@ -5,12 +5,25 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-black-forest-50: oklch(97.48% 0.018 123.97);
+  --color-black-forest-100: oklch(94.70% 0.035 124.88);
+  --color-black-forest-200: oklch(89.72% 0.071 125.20);
+  --color-black-forest-300: oklch(84.51% 0.106 125.89);
+  --color-black-forest-400: oklch(79.48% 0.137 126.58);
+  --color-black-forest-500: oklch(74.50% 0.163 128.03);
+  --color-black-forest-600: oklch(63.30% 0.137 127.81);
+  --color-black-forest-700: oklch(51.52% 0.110 127.97);
+  --color-black-forest-800: oklch(39.09% 0.080 127.54);
+  --color-black-forest-900: oklch(25.18% 0.045 127.37);
+  --color-black-forest-950: oklch(20.94% 0.034 126.60);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-display);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display);
+  
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -19,11 +32,13 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
+  
+  --color-chart-1: var(--black-forest-600);
+  --color-chart-2: var(--black-forest-500);
+  --color-chart-3: var(--black-forest-400);
+  --color-chart-4: var(--black-forest-700);
+  --color-chart-5: var(--black-forest-800);
+  
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -36,10 +51,15 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-muted: var(--primary-muted);
+  --color-primary-muted-foreground: var(--primary-muted-foreground);
+  --color-primary-tint: var(--primary-tint);
+  --color-primary-tint-foreground: var(--primary-tint-foreground);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -50,96 +70,116 @@
 }
 
 :root {
+  /* Black Forest OKLCH Palette Definition */
+  --black-forest-50: oklch(97.48% 0.018 123.97);
+  --black-forest-100: oklch(94.70% 0.035 124.88);
+  --black-forest-200: oklch(89.72% 0.071 125.20);
+  --black-forest-300: oklch(84.51% 0.106 125.89);
+  --black-forest-400: oklch(79.48% 0.137 126.58);
+  --black-forest-500: oklch(74.50% 0.163 128.03);
+  --black-forest-600: oklch(63.30% 0.137 127.81);
+  --black-forest-700: oklch(51.52% 0.110 127.97);
+  --black-forest-800: oklch(39.09% 0.080 127.54);
+  --black-forest-900: oklch(25.18% 0.045 127.37);
+  --black-forest-950: oklch(20.94% 0.034 126.60);
+
   /* Fonts */
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-display: var(--font-plus-jakarta-sans), system-ui, sans-serif;
 
-  /* Colors - Modern Violet Theme */
+  /* Theme Mapping - Light Mode (Pure White Base Canvas + Green Accent Distinction) */
   --background: #ffffff;
-  --foreground: #09090b; /* slate-950 */
+  --foreground: var(--black-forest-950);
   --card: #ffffff;
-  --card-foreground: #09090b;
+  --card-foreground: var(--black-forest-950);
   --popover: #ffffff;
-  --popover-foreground: #09090b;
+  --popover-foreground: var(--black-forest-950);
   
-  --primary: #7c3aed; /* violet-600 */
+  --primary: var(--black-forest-600);
   --primary-foreground: #ffffff;
   
-  --secondary: #f5f3ff; /* violet-50 */
-  --secondary-foreground: #6d28d9; /* violet-700 */
+  --primary-muted: var(--black-forest-100);
+  --primary-muted-foreground: var(--black-forest-900);
   
-  --muted: #f4f4f5; /* zinc-100 */
-  --muted-foreground: #71717a; /* zinc-500 */
+  --primary-tint: var(--black-forest-50);
+  --primary-tint-foreground: var(--black-forest-950);
   
-  --accent: #f5f3ff; /* violet-50 */
-  --accent-foreground: #7c3aed; /* violet-600 */
+  --secondary: var(--black-forest-50);
+  --secondary-foreground: var(--black-forest-900);
+  
+  --muted: var(--black-forest-50);
+  --muted-foreground: var(--black-forest-700);
+  
+  --accent: var(--black-forest-50);
+  --accent-foreground: var(--black-forest-900);
   
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   
-  --border: #e4e4e7; /* zinc-200 */
-  --input: #e4e4e7;
-  --ring: #7c3aed;
+  --border: var(--black-forest-200);
+  --input: var(--black-forest-200);
+  --ring: var(--black-forest-600);
   
-  --chart-1: #7c3aed; /* violet-600 */
-  --chart-2: #10b981; /* emerald-500 */
-  --chart-3: #f59e0b; /* amber-500 */
-  --chart-4: #3b82f6; /* blue-500 */
-  --chart-5: #ec4899; /* pink-500 */
+  --chart-1: var(--black-forest-600);
+  --chart-2: var(--black-forest-500);
+  --chart-3: var(--black-forest-400);
+  --chart-4: var(--black-forest-700);
+  --chart-5: var(--black-forest-800);
   
-  --radius: 1rem; /* Premium rounded cards */
+  --radius: 0.5rem;
   
-  --sidebar: #fafafa;
-  --sidebar-foreground: #18181b;
-  --sidebar-primary: #7c3aed;
+  --sidebar: #ffffff;
+  --sidebar-foreground: var(--black-forest-950);
+  --sidebar-primary: var(--black-forest-600);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f4f4f5;
-  --sidebar-accent-foreground: #7c3aed;
-  --sidebar-border: #e4e4e7;
-  --sidebar-ring: #7c3aed;
+  --sidebar-accent: var(--black-forest-50);
+  --sidebar-accent-foreground: var(--black-forest-900);
+  --sidebar-border: var(--black-forest-200);
+  --sidebar-ring: var(--black-forest-600);
 }
 
 .dark {
-  --background: #090514; /* very dark violet */
-  --foreground: #f5f3ff;
-  --card: #120d24;
-  --card-foreground: #f5f3ff;
-  --popover: #120d24;
-  --popover-foreground: #f5f3ff;
+  /* Theme Mapping - Dark Mode (Black Forest Palette) */
+  --background: var(--black-forest-950);
+  --foreground: var(--black-forest-50);
+  --card: var(--black-forest-900);
+  --card-foreground: var(--black-forest-50);
+  --popover: var(--black-forest-900);
+  --popover-foreground: var(--black-forest-50);
   
-  --primary: #a78bfa; /* violet-400 */
-  --primary-foreground: #090514;
+  --primary: var(--black-forest-500);
+  --primary-foreground: var(--black-forest-950);
   
-  --secondary: #1e163b;
-  --secondary-foreground: #c084fc; /* purple-400 */
+  --primary-muted: var(--black-forest-800);
+  --primary-muted-foreground: var(--black-forest-100);
   
-  --muted: #1e163b;
-  --muted-foreground: #94a3b8; /* slate-400 */
+  --primary-tint: var(--black-forest-900);
+  --primary-tint-foreground: var(--black-forest-50);
   
-  --accent: #1e163b;
-  --accent-foreground: #a78bfa;
+  --secondary: var(--black-forest-800);
+  --secondary-foreground: var(--black-forest-100);
+  
+  --muted: var(--black-forest-800);
+  --muted-foreground: var(--black-forest-400);
+  
+  --accent: var(--black-forest-800);
+  --accent-foreground: var(--black-forest-100);
   
   --destructive: #7f1d1d;
-  --destructive-foreground: #f5f3ff;
+  --destructive-foreground: var(--black-forest-50);
   
-  --border: #2e254f;
-  --input: #2e254f;
-  --ring: #a78bfa;
+  --border: var(--black-forest-800);
+  --input: var(--black-forest-800);
+  --ring: var(--black-forest-500);
   
-  --chart-1: #a78bfa;
-  --chart-2: #34d399;
-  --chart-3: #fbbf24;
-  --chart-4: #60a5fa;
-  --chart-5: #f472b6;
-  
-  --sidebar: #120d24;
-  --sidebar-foreground: #f5f3ff;
-  --sidebar-primary: #a78bfa;
-  --sidebar-primary-foreground: #090514;
-  --sidebar-accent: #1e163b;
-  --sidebar-accent-foreground: #a78bfa;
-  --sidebar-border: #2e254f;
-  --sidebar-ring: #a78bfa;
+  --sidebar: var(--black-forest-900);
+  --sidebar-foreground: var(--black-forest-50);
+  --sidebar-primary: var(--black-forest-500);
+  --sidebar-primary-foreground: var(--black-forest-950);
+  --sidebar-accent: var(--black-forest-800);
+  --sidebar-accent-foreground: var(--black-forest-50);
+  --sidebar-border: var(--black-forest-800);
+  --sidebar-ring: var(--black-forest-500);
 }
 
 @layer base {
@@ -147,7 +187,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
   html {
     @apply font-sans;

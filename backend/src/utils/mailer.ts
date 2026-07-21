@@ -38,7 +38,7 @@ export async function sendVerificationEmail(email: string, token: string): Promi
       <div style="text-align: center; margin: 30px 0;">
         <a href="${verificationUrl}" style="background-color: #3182ce; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Verify Email Address</a>
       </div>
-      <p>This verification link will expire in 24 hours.</p>
+      <p>This verification link will expire in 7 days.</p>
       <p style="word-break: break-all; color: #718096; font-size: 12px;">If the button doesn't work, copy and paste this URL into your browser:<br>${verificationUrl}</p>
       <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;">
       <p style="color: #a0aec0; font-size: 12px; text-align: center;">This is an automated email, please do not reply.</p>
@@ -77,7 +77,7 @@ export async function sendPasswordResetEmail(email: string, token: string): Prom
       <div style="text-align: center; margin: 30px 0;">
         <a href="${resetUrl}" style="background-color: #e53e3e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reset Password</a>
       </div>
-      <p>This reset link will expire in 1 hour. If you did not make this request, you can safely ignore this email.</p>
+      <p>This reset link will expire in 24 hours. If you did not make this request, you can safely ignore this email.</p>
       <p style="word-break: break-all; color: #718096; font-size: 12px;">If the button doesn't work, copy and paste this URL into your browser:<br>${resetUrl}</p>
       <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;">
       <p style="color: #a0aec0; font-size: 12px; text-align: center;">This is an automated email, please do not reply.</p>

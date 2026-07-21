@@ -20,9 +20,10 @@ import {
   ChevronsUpDown,
   Mail,
   Zap,
-  ChevronDown,
   Share2,
   SlidersHorizontal,
+  Shield,
+  Lock,
 } from "lucide-react";
 import {
   Sidebar,
@@ -86,7 +87,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, isAuthenticated, logout } = useAuth();
+  const { user, loading, isAuthenticated, hasPermission, isScreenAllowed, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
@@ -148,6 +149,24 @@ export default function DashboardLayout({
     .join("")
     .toUpperCase();
 
+  const getRouteScreenKey = (path: string): string | null => {
+    if (path === "/dashboard") return "dashboard";
+    if (path.startsWith("/dashboard/calendar")) return "calendar";
+    if (path.startsWith("/dashboard/invoices")) return "invoices";
+    if (path.startsWith("/dashboard/expenses")) return "expenses";
+    if (path.startsWith("/dashboard/payments")) return "payments";
+    if (path.startsWith("/dashboard/notifications")) return "notifications";
+    if (path.startsWith("/dashboard/integrations")) return "integrations";
+    if (path.startsWith("/dashboard/inbox")) return "inbox";
+    if (path.startsWith("/dashboard/reports")) return "reports";
+    if (path.startsWith("/dashboard/active")) return "active";
+    if (path.startsWith("/dashboard/past")) return "past";
+    return null;
+  };
+
+  const currentScreenKey = getRouteScreenKey(pathname);
+  const isCurrentScreenBlocked = currentScreenKey ? !isScreenAllowed(currentScreenKey) : false;
+
   if (loading) {
     return (
       <div className="min-h-svh flex items-center justify-center text-muted-foreground">
@@ -161,27 +180,48 @@ export default function DashboardLayout({
   }
 
   const overviewItems = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/dashboard/calendar", label: "Calendar", icon: FileBarChart2 },
-  ];
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perm: 'dashboard.view', key: 'dashboard' },
+    { href: "/dashboard/calendar", label: "Calendar", icon: FileBarChart2, perm: 'dashboard.view', key: 'calendar' },
+  ].filter(i => hasPermission(i.perm) && isScreenAllowed(i.key));
 
   const financeItems = [
-    { href: "/dashboard/invoices", label: "Invoices", icon: Receipt, badge: 3 },
-    { href: "/dashboard/expenses", label: "Expenses", icon: CreditCard },
-    { href: "/dashboard/payments", label: "Payments", icon: TrendingUp, badge: 7 },
-  ];
+    { href: "/dashboard/invoices", label: "Invoices", icon: Receipt, badge: 3, perm: 'invoices.view', key: 'invoices' },
+    { href: "/dashboard/expenses", label: "Expenses", icon: CreditCard, perm: 'expenses.view', key: 'expenses' },
+    { href: "/dashboard/payments", label: "Payments", icon: TrendingUp, badge: 7, perm: 'invoices.view', key: 'payments' },
+  ].filter(i => hasPermission(i.perm) && isScreenAllowed(i.key));
 
   const toolItems = [
-    { href: "/dashboard/notifications", label: "Notification", icon: Bell, badge: 4 },
-    { href: "/dashboard/integrations", label: "Integration", icon: Zap },
-    { href: "/dashboard/inbox", label: "Inbox", icon: Mail, badge: 5 },
-    { href: "/dashboard/reports", label: "Reporting", icon: FileBarChart2 },
-  ];
+    { href: "/dashboard/notifications", label: "Notification", icon: Bell, badge: 4, perm: 'notifications.view', key: 'notifications' },
+    { href: "/dashboard/integrations", label: "Integration", icon: Zap, perm: 'settings.view', key: 'integrations' },
+    { href: "/dashboard/inbox", label: "Inbox", icon: Mail, badge: 5, perm: 'notifications.view', key: 'inbox' },
+    { href: "/dashboard/reports", label: "Reporting", icon: FileBarChart2, perm: 'reports.view', key: 'reports' },
+  ].filter(i => hasPermission(i.perm) && isScreenAllowed(i.key));
 
   const metricItems = [
-    { href: "/dashboard/active", label: "Active", icon: TrendingUp, badge: 1 },
-    { href: "/dashboard/past", label: "Past", icon: FileBarChart2 },
-  ];
+    { href: "/dashboard/active", label: "Active", icon: TrendingUp, badge: 1, perm: 'dashboard.view', key: 'active' },
+    { href: "/dashboard/past", label: "Past", icon: FileBarChart2, perm: 'dashboard.view', key: 'past' },
+  ].filter(i => hasPermission(i.perm) && isScreenAllowed(i.key));
+
+  // Settings and admin items - visible to admins and managers
+  const settingsItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; badge?: number }[] = [];
+  if (hasPermission('settings.view')) {
+    settingsItems.push({ href: "/dashboard/settings", label: "Settings", icon: Settings });
+  }
+  if (hasPermission('users.manage')) {
+    settingsItems.push({ href: "/dashboard/settings/users", label: "Users", icon: Users });
+  }
+  if (hasPermission('roles.manage')) {
+    settingsItems.push({ href: "/dashboard/settings/roles", label: "Roles", icon: Shield });
+  }
+  if (hasPermission('settings.view')) {
+    settingsItems.push({ href: "/dashboard/settings/plan", label: "Subscription", icon: CreditCard });
+  }
+  if (hasPermission('users.manage')) {
+    settingsItems.push({ href: "/dashboard/settings/screens", label: "Screen Access", icon: Lock });
+  }
+  if (user?.isPlatformOrg) {
+    settingsItems.push({ href: "/admin", label: "Platform Admin", icon: Shield });
+  }
 
   return (
     <SidebarProvider>
@@ -191,11 +231,10 @@ export default function DashboardLayout({
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
-                <DropdownMenuTrigger render={
-                  <SidebarMenuButton size="lg" className="cursor-pointer" />
-                }>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton size="lg" className="cursor-pointer">
                     <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center">
-                      <div className="h-full w-full rounded-[6px] bg-[#7c3aed] flex items-center justify-center">
+                      <div className="h-full w-full rounded-md bg-primary flex items-center justify-center">
                         <Activity className="h-4 w-4 text-emerald-400" />
                       </div>
                     </div>
@@ -204,6 +243,7 @@ export default function DashboardLayout({
                       <span className="text-xs text-muted-foreground">DirectFN Finance</span>
                     </div>
                     <ChevronsUpDown className="ml-auto h-4 w-4" />
+                  </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="start">
                   <DropdownMenuLabel>Switch Organization</DropdownMenuLabel>
@@ -311,6 +351,28 @@ export default function DashboardLayout({
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          {/* Settings Section */}
+          {settingsItems.length > 0 && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Administration</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {settingsItems.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton render={<Link href={item.href} />} isActive={isActive} tooltip={item.label}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
         </SidebarContent>
 
         {/* Footer */}
@@ -321,12 +383,6 @@ export default function DashboardLayout({
               <SidebarMenuButton render={<Link href="#" />} tooltip="Help Center">
                 <HelpCircle />
                 <span>Help Center</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton render={<Link href="/dashboard/settings" />} tooltip="Settings">
-                <Settings />
-                <span>Settings</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -346,9 +402,8 @@ export default function DashboardLayout({
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
-                <DropdownMenuTrigger render={
-                  <SidebarMenuButton size="lg" className="cursor-pointer" />
-                }>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton size="lg" className="cursor-pointer">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-gradient-to-tr from-primary to-emerald-400 text-white text-xs font-bold">
                         {initials}
@@ -358,6 +413,7 @@ export default function DashboardLayout({
                       <span className="font-semibold text-sm">{user?.name || "User"}</span>
                       <span className="text-xs text-muted-foreground">{user?.email}</span>
                     </div>
+                  </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" side="top" align="start">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
@@ -487,7 +543,22 @@ export default function DashboardLayout({
         {/* Page Content */}
         <main className="flex-1 p-6">
           <div className="mx-auto max-w-7xl">
-            {children}
+            {isCurrentScreenBlocked ? (
+              <div className="flex flex-col items-center justify-center py-20 px-4 text-center border rounded-2xl bg-card shadow-sm">
+                <div className="h-16 w-16 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center mb-4 border border-destructive/20">
+                  <Shield className="h-8 w-8" />
+                </div>
+                <h2 className="text-xl font-bold tracking-tight text-foreground">Screen Access Restricted</h2>
+                <p className="text-sm text-muted-foreground mt-2 max-w-md">
+                  Access to this feature or screen has been restricted for your organization by your administrator.
+                </p>
+                <Button variant="default" className="mt-6 cursor-pointer" onClick={() => router.push('/dashboard')}>
+                  Return to Overview
+                </Button>
+              </div>
+            ) : (
+              children
+            )}
           </div>
         </main>
       </SidebarInset>

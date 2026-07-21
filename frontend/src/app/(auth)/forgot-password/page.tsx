@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Mail, ArrowLeft, Activity } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,8 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { apiFetch, ApiError } from '@/lib/api';
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordInner() {
+  const searchParams = useSearchParams();
+  const orgIdParam = searchParams.get('orgId');
+
   const [email, setEmail] = useState('');
+  const [organizationId, setOrganizationId] = useState(orgIdParam || '');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -22,7 +27,7 @@ export default function ForgotPasswordPage() {
     try {
       await apiFetch('/api/v1/auth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, organizationId }),
       });
       setSuccess(true);
     } catch (err) {
@@ -38,34 +43,34 @@ export default function ForgotPasswordPage() {
 
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center items-center space-y-3 pb-2">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center shadow-sm">
-            <div className="h-full w-full rounded-[10px] bg-[#7c3aed] flex items-center justify-center">
+            <div className="h-11 w-11 rounded-lg bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center shadow-sm">
+            <div className="h-full w-full rounded-md bg-primary flex items-center justify-center">
               <Activity className="h-5 w-5 text-emerald-400" />
             </div>
           </div>
           <div>
             <CardTitle className="text-xl">Recover password</CardTitle>
             <CardDescription className="mt-1">
-              Enter your corporate email to receive a recovery link
+              Enter your email and organization to receive a recovery link
             </CardDescription>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
           {error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-lg flex items-center gap-2">
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-ping" />
               {error}
             </div>
           )}
           {success ? (
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 rounded-lg space-y-3">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 rounded-md space-y-3">
               <h4 className="text-sm font-semibold">Reset link sent!</h4>
               <p className="text-xs leading-relaxed text-muted-foreground">
                 If the email exists in our database, you will receive reset instructions shortly.
               </p>
               <Link
-                href="/login"
+                href={`/login?orgId=${organizationId}`}
                 className="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:underline"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
@@ -74,6 +79,18 @@ export default function ForgotPasswordPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="orgId">Organization ID</Label>
+                <Input
+                  id="orgId"
+                  type="text"
+                  required
+                  placeholder="Enter your organization ID"
+                  value={organizationId}
+                  onChange={(e) => setOrganizationId(e.target.value)}
+                  disabled={isLoading || !!orgIdParam}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Corporate Email</Label>
                 <div className="relative">
@@ -86,12 +103,12 @@ export default function ForgotPasswordPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
-                    className="pl-9 h-10"
-                  />
-                </div>
+                  className="pl-9"
+                />
               </div>
+            </div>
 
-              <Button type="submit" disabled={isLoading} className="w-full h-10 cursor-pointer" size="lg">
+              <Button type="submit" disabled={isLoading} className="w-full cursor-pointer">
                 {isLoading ? (
                   <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                 ) : (
@@ -101,7 +118,7 @@ export default function ForgotPasswordPage() {
 
               <div className="text-center">
                 <Link
-                  href="/login"
+                  href={`/login?orgId=${organizationId}`}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
@@ -113,5 +130,13 @@ export default function ForgotPasswordPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen w-full flex items-center justify-center text-muted-foreground">Loading...</div>}>
+      <ForgotPasswordInner />
+    </Suspense>
   );
 }

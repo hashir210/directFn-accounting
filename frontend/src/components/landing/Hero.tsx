@@ -37,17 +37,11 @@ export function Hero() {
           
           {/* Left Column: Heading and Form */}
           <div className="lg:col-span-6 flex flex-col items-start text-left">
-            {/* Top Badge */}
-            <div className="inline-flex items-center space-x-2 bg-primary/5 dark:bg-primary/10 px-3.5 py-1.5 rounded-full border border-primary/10 mb-6 text-xs font-semibold text-primary">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-              <span>Next-Gen Accounting Platform</span>
-            </div>
-
             {/* Main Headline */}
             <h1 className="font-display font-extrabold text-4xl sm:text-5xl md:text-6xl tracking-tight leading-[1.08] text-zinc-900 dark:text-zinc-50 mb-6">
               Manage Fund <br />
               Accounting Smarter <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-500">with FinFlow.</span>
+              with FinFlow.
             </h1>
 
             {/* Subtext */}
@@ -81,26 +75,6 @@ export function Hero() {
                   </button>
                 </form>
               )}
-            </div>
-
-            {/* Trust badge / Stars */}
-            <div className="flex items-center space-x-4 border-t border-zinc-100 dark:border-zinc-900 pt-6 w-full max-w-md">
-              <div className="flex -space-x-2">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full bg-zinc-200 border-2 border-white dark:border-zinc-950 flex items-center justify-center text-[10px] font-bold text-zinc-600">
-                    {String.fromCharCode(65 + i)}
-                  </div>
-                ))}
-              </div>
-              <div>
-                <div className="flex items-center space-x-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-3.5 w-3.5 fill-amber-400 stroke-amber-400" />
-                  ))}
-                  <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 ml-1">4.9 / 5</span>
-                </div>
-                <span className="text-[10px] text-zinc-400">Used by 500+ world-changing organizations</span>
-              </div>
             </div>
           </div>
 

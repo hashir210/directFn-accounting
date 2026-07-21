@@ -89,7 +89,6 @@ export async function apiFetch<T = any>(path: string, options: RequestInit = {})
       const newToken = getAccessToken();
       if (newToken) headers.set('Authorization', `Bearer ${newToken}`);
       res = await doRequest();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       body = await res.json().catch(() => ({}));
     }
   }

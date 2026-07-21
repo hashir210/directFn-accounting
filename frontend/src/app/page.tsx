@@ -6,12 +6,9 @@ import { PerformanceStats } from "@/components/landing/PerformanceStats";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { FAQ } from "@/components/landing/FAQ";
 import { CTASection } from "@/components/landing/CTASection";
-import { AutoLogout } from "@/components/auth/AutoLogout";
-
 export default function Home() {
   return (
     <>
-      <AutoLogout />
       <Navbar />
       <Hero />
       <FeatureGrid />

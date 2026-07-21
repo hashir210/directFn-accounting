@@ -4,7 +4,8 @@ import crypto from 'crypto';
 interface UserPayload {
   id: string;
   email: string;
-  role: string;
+  organizationId: string;
+  roleId: string;
   /**
    * Present (and true) only on short-lived pre-authentication tokens issued
    * mid-2FA login. Full access tokens never carry this claim.
@@ -12,14 +13,16 @@ interface UserPayload {
   isPreAuth?: boolean;
 }
 
-const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'fallback_access_secret';
+const JWT_ACCESS_SECRET: string = process.env.JWT_ACCESS_SECRET || (() => {
+  throw new Error('JWT_ACCESS_SECRET environment variable is not set. Server cannot start securely.');
+})();
 
 /**
  * Generates a short-lived access token JWT (15 minutes default)
  */
 export function generateAccessToken(user: UserPayload): string {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: user.id, email: user.email, organizationId: user.organizationId, roleId: user.roleId },
     JWT_ACCESS_SECRET,
     { expiresIn: '15m' }
   );

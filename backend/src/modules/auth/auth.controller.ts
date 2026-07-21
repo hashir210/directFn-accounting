@@ -23,6 +23,7 @@ export class AuthController {
       res.status(200).json({
         success: true,
         message: result.message,
+        data: { message: result.message },
       });
     } catch (error) {
       next(error);
@@ -31,11 +32,12 @@ export class AuthController {
 
   static async resendVerification(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email } = req.body;
-      const result = await AuthService.resendVerification(email);
+      const { email, organizationId } = req.body;
+      const result = await AuthService.resendVerification(email, organizationId);
       res.status(200).json({
         success: true,
         message: result.message,
+        data: { message: result.message },
       });
     } catch (error) {
       next(error);
@@ -190,8 +192,8 @@ export class AuthController {
 
   static async forgotPassword(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email } = req.body;
-      const result = await AuthService.forgotPassword(email);
+      const { email, organizationId } = req.body;
+      const result = await AuthService.forgotPassword(email, organizationId);
       res.status(200).json({
         success: true,
         message: result.message,

@@ -7,7 +7,13 @@ export interface AuthUser {
   id: string;
   email: string;
   name?: string | null;
-  role: string;
+  roleId: string;
+  organizationId: string;
+  permissions: string[];
+  isPlatformOrg: boolean;
+  planFeatures?: string[];
+  blockedScreens?: string[];
+  orgDisabledScreens?: string[];
 }
 
 export interface LoginResult {
@@ -22,9 +28,11 @@ interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<LoginResult>;
+  hasPermission: (key: string) => boolean;
+  isScreenAllowed: (screenKey: string) => boolean;
+  login: (email: string, password: string, organizationId: string) => Promise<LoginResult>;
   complete2fa: (preAuthToken: string, code: string) => Promise<void>;
-  register: (data: { email: string; password: string; name?: string }) => Promise<void>;
+  register: (data: { email: string; password: string; name?: string; organizationName: string }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -41,15 +49,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     apiFetch<{ user: AuthUser }>('/api/v1/auth/me')
-      .then((d) => setUser(d.user))
+      .then((d) => setUser({
+        ...d.user,
+        permissions: d.user.permissions || [],
+        isPlatformOrg: d.user.isPlatformOrg || false,
+        planFeatures: d.user.planFeatures || [],
+        blockedScreens: d.user.blockedScreens || [],
+        orgDisabledScreens: d.user.orgDisabledScreens || [],
+      }))
       .catch(() => setAccessToken(null))
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, organizationId: string) => {
     const data = await apiFetch<LoginResult>('/api/v1/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, organizationId }),
     });
     if (!data.twoFactorRequired && data.accessToken && data.user) {
       setAccessToken(data.accessToken);
@@ -68,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(
-    async (data: { email: string; password: string; name?: string }) => {
+    async (data: { email: string; password: string; name?: string; organizationName: string }) => {
       await apiFetch('/api/v1/auth/register', { method: 'POST', body: JSON.stringify(data) });
     },
     [],
@@ -84,9 +99,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const hasPermission = useCallback((key: string): boolean => {
+    if (!user) return false;
+    // FinFlow platform members have full access (mirrors the backend bypass).
+    if (user.isPlatformOrg) return true;
+    // Fail closed: no permissions means no access.
+    if (!user.permissions || user.permissions.length === 0) {
+      return false;
+    }
+    return user.permissions.includes(key);
+  }, [user]);
+
+  const isScreenAllowed = useCallback((screenKey: string): boolean => {
+    if (!user) return false;
+    if (user.isPlatformOrg) return true; // Platform users see all screens
+    // Manual Organization-level screen blocks (set by FinFlow Platform Admin)
+    if (user.orgDisabledScreens && user.orgDisabledScreens.includes(screenKey)) {
+      return false;
+    }
+    // Per-user screen blocks (set by the tenant org admin)
+    if (user.blockedScreens && user.blockedScreens.includes(screenKey)) {
+      return false;
+    }
+    // Subscription Plan-level feature gates
+    if (user.planFeatures && user.planFeatures.length > 0) {
+      return user.planFeatures.includes(screenKey);
+    }
+    // No plan features configured = no restrictions
+    return true;
+  }, [user]);
+
   return (
     <AuthContext.Provider
-      value={{ user, loading, isAuthenticated: !!user, login, complete2fa, register, logout }}
+      value={{ user, loading, isAuthenticated: !!user, hasPermission, isScreenAllowed, login, complete2fa, register, logout }}
     >
       {children}
     </AuthContext.Provider>

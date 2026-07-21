@@ -4,12 +4,9 @@ import React, { useState, useEffect } from "react";
 import {
   ArrowUpRight,
   ArrowDownRight,
-  Wallet,
   AlertTriangle,
-  TrendingUp,
   Plus,
   Calendar,
-  X,
   Sparkles,
   DollarSign,
   MoreHorizontal,
@@ -37,7 +34,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -53,7 +49,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -117,8 +112,9 @@ export default function DashboardPage() {
   const [txAmount, setTxAmount] = useState("");
   const [txStatus, setTxStatus] = useState<"Paid" | "Pending">("Pending");
   const [txDueDate, setTxDueDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
@@ -208,7 +204,7 @@ export default function DashboardPage() {
           })),
         );
 
-        if (user && (user.role === "admin" || user.role === "manager")) {
+        if (user && hasPermission('customers.view')) {
           try {
             const top = await apiFetch<{ customer: { id: string; name: string; email: string }; totalRevenue: number; invoiceCount: number }[]>(
               `/api/v1/dashboard/top-customers?limit=5`,
@@ -255,52 +251,76 @@ export default function DashboardPage() {
   // the account balances).
   const bankBalance = totalBalance;
 
-  const handleCreateTransaction = (e: React.FormEvent) => {
+  const handleCreateTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName || !txAmount) return;
     const amountNum = parseFloat(txAmount);
     if (isNaN(amountNum) || amountNum <= 0) return;
 
-    const today = new Date().toISOString().split("T")[0];
-    const newTx: Transaction = {
-      id: `tx-${Date.now()}`,
-      invoiceNo: `${txType === "Invoice" ? "INV" : "EXP"}-2026-0${transactions.length + 1}`,
-      customer: customerName,
-      type: txType,
-      date: today,
-      dueDate: txDueDate || today,
-      status: txStatus,
-      amount: amountNum,
-    };
+    try {
+      setIsSubmitting(true);
+      const today = new Date().toISOString().split("T")[0];
+      const payloadDate = txDueDate || today;
+      
+      const response = await apiFetch<{ data: any, type: string }>('/api/v1/dashboard/transactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: txType,
+          customerName,
+          amount: amountNum,
+          dueDate: payloadDate,
+          status: txStatus
+        })
+      });
 
-    setTransactions([newTx, ...transactions]);
+      const returnedId = response.data.id;
+      const returnedInvoiceNo = response.type === 'Invoice' ? response.data.invoiceNo : `EXP-${returnedId.slice(0,6)}`;
 
-    if (txType === "Invoice") {
-      setTotalRevenue(prev => prev + amountNum);
-      setNetProfit(prev => prev + amountNum);
-      const existing = topCustomers.find(c => c.name.toLowerCase() === customerName.toLowerCase());
-      if (existing) {
-        setTopCustomers(topCustomers.map(c => c.id === existing.id ? { ...c, billing: c.billing + amountNum, salesCount: c.salesCount + 1 } : c));
-      } else {
-        const colors = ["bg-purple-500", "bg-emerald-500", "bg-blue-500", "bg-amber-500", "bg-rose-500"];
-        setTopCustomers([...topCustomers, {
-          id: `c-${Date.now()}`,
-          name: customerName,
-          email: `${customerName.toLowerCase().replace(/\s+/g, "")}@example.com`,
-          billing: amountNum,
-          salesCount: 1,
-          avatarColor: colors[Math.floor(Math.random() * colors.length)],
-        }]);
+      const newTx: Transaction = {
+        id: returnedId,
+        invoiceNo: returnedInvoiceNo,
+        customer: customerName,
+        type: txType,
+        date: today,
+        dueDate: payloadDate,
+        status: txStatus,
+        amount: amountNum,
+      };
+
+      setTransactions([newTx, ...transactions]);
+
+      if (txType === "Invoice") {
+        setTotalRevenue(prev => prev + amountNum);
+        setNetProfit(prev => prev + amountNum);
+        const existing = topCustomers.find(c => c.name.toLowerCase() === customerName.toLowerCase());
+        if (existing) {
+          setTopCustomers(topCustomers.map(c => c.id === existing.id ? { ...c, billing: c.billing + amountNum, salesCount: c.salesCount + 1 } : c));
+        } else {
+          const colors = ["bg-purple-500", "bg-emerald-500", "bg-blue-500", "bg-amber-500", "bg-rose-500"];
+          setTopCustomers([...topCustomers, {
+            id: `c-${Date.now()}`,
+            name: customerName,
+            email: `${customerName.toLowerCase().replace(/\s+/g, "")}@example.com`,
+            billing: amountNum,
+            salesCount: 1,
+            avatarColor: colors[Math.floor(Math.random() * colors.length)],
+          }]);
+        }
+      } else if (txType === "Expense") {
+        setTotalExpenses(prev => prev + amountNum);
+        setNetProfit(prev => prev - amountNum);
       }
-    } else if (txType === "Expense") {
-      setTotalExpenses(prev => prev + amountNum);
-      setNetProfit(prev => prev - amountNum);
-    }
 
-    setCustomerName("");
-    setTxAmount("");
-    setTxStatus("Pending");
-    setIsModalOpen(false);
+      setCustomerName("");
+      setTxAmount("");
+      setTxStatus("Pending");
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save transaction to ledger');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const ActionIcons = () => (
@@ -467,20 +487,20 @@ export default function DashboardPage() {
                   <AreaChart data={cashFlowData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="inflowGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                        <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.0} />
                       </linearGradient>
                       <linearGradient id="outflowGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#7c3aed" stopOpacity={0.0} />
+                        <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <ReTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
-                    <Area type="monotone" dataKey="Inflow" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#inflowGrad)" />
-                    <Area type="monotone" dataKey="Outflow" stroke="#7c3aed" strokeWidth={2} fillOpacity={1} fill="url(#outflowGrad)" />
+                    <ReTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px" }} />
+                    <Area type="monotone" dataKey="Inflow" stroke="var(--chart-2)" strokeWidth={2} fillOpacity={1} fill="url(#inflowGrad)" />
+                    <Area type="monotone" dataKey="Outflow" stroke="var(--chart-1)" strokeWidth={2} fillOpacity={1} fill="url(#outflowGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -506,10 +526,10 @@ export default function DashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                    <ReTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
+                    <ReTooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px" }} />
                     <Legend verticalAlign="top" height={36} iconSize={8} iconType="circle" wrapperStyle={{ fontSize: "11px" }} />
-                    <Bar dataKey="Sales" fill="#10b981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Expenses" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Sales" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Expenses" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -852,12 +872,12 @@ export default function DashboardPage() {
             </div>
 
             <DialogFooter>
-              <DialogClose render={
-                <Button variant="outline" type="button" className="cursor-pointer" />
-              }>
-                Cancel
+              <DialogClose asChild>
+                <Button variant="outline" type="button" className="cursor-pointer" disabled={isSubmitting}>Cancel</Button>
               </DialogClose>
-              <Button type="submit" className="cursor-pointer">Post Entry to Ledger</Button>
+              <Button type="submit" className="cursor-pointer" disabled={isSubmitting}>
+                {isSubmitting ? 'Posting...' : 'Post Entry to Ledger'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

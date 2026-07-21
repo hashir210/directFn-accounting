@@ -4,6 +4,10 @@ import cookieParser from 'cookie-parser';
 
 import authRoutes from './modules/auth/auth.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
+import organizationRoutes from './modules/organization/organization.routes';
+import usersRoutes from './modules/users/users.routes';
+import rolesRoutes from './modules/roles/roles.routes';
+import platformRoutes from './modules/platform/platform.routes';
 import logger from './utils/logger';
 
 const app = express();
@@ -29,6 +33,10 @@ app.get('/api/v1/health', (req: Request, res: Response) => {
 // Mounted Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/organizations', organizationRoutes);
+app.use('/api/v1/users', usersRoutes);
+app.use('/api/v1/roles', rolesRoutes);
+app.use('/api/v1/platform', platformRoutes);
 
 // Centralized Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

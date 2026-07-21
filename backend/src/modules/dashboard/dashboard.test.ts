@@ -25,42 +25,94 @@ let staffUserId: string;
 // Seeded entity IDs we'll reference in assertions
 let customerId: string;
 let notificationId: string;
+let orgId: string;
+let adminRoleId: string;
+let staffRoleId: string;
 
 // ─── Setup / Teardown ───────────────────────────────────────────────────────
 
 beforeAll(async () => {
-  // Clean up any leftover test data
-  await prisma.notification.deleteMany({});
-  await prisma.invoice.deleteMany({});
-  await prisma.customer.deleteMany({ where: { email: { in: ['alice@test.com', 'bob@test.com', 'carol@test.com'] } } });
-  await prisma.expense.deleteMany({});
-  await prisma.product.deleteMany({ where: { sku: { startsWith: 'TEST-' } } });
-  await prisma.bankAccount.deleteMany({ where: { accountNumber: { startsWith: 'TEST-' } } });
-  await prisma.user.deleteMany({ where: { email: { in: ['admin-dash@test.com', 'staff-dash@test.com'] } } });
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=0;');
+    await tx.rolePermission.deleteMany({});
+    await tx.permission.deleteMany({});
+    await tx.notification.deleteMany({});
+    await tx.invoice.deleteMany({});
+    await tx.customer.deleteMany({});
+    await tx.expense.deleteMany({});
+    await tx.product.deleteMany({ where: { sku: { startsWith: 'TEST-' } } });
+    await tx.bankAccount.deleteMany({ where: { accountNumber: { startsWith: 'TEST-' } } });
+    await tx.user.deleteMany({ where: { email: { in: ['admin-dash@test.com', 'staff-dash@test.com'] } } });
+    await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=1;');
+  });
 
   // Create test users (no email verify needed — we're issuing tokens directly)
   const bcrypt = require('bcrypt');
   const hashedPw = await bcrypt.hash('Password123!', 10);
 
+  // Create Organization and Roles
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=0;');
+  const org = await prisma.organization.create({
+    data: { name: 'Dashboard Test Org', status: 'active', ownerId: '' }
+  });
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=1;');
+  orgId = org.id;
+
+  const adminRole = await prisma.role.create({
+    data: { name: 'admin', isSystemRole: true, organizationId: orgId }
+  });
+  adminRoleId = adminRole.id;
+
+  const staffRole = await prisma.role.create({
+    data: { name: 'staff', isSystemRole: false, organizationId: orgId }
+  });
+  staffRoleId = staffRole.id;
+
   const adminUser = await prisma.user.create({
-    data: { email: 'admin-dash@test.com', password: hashedPw, name: 'Admin User', role: 'admin', emailVerified: true },
+    data: { email: 'admin-dash@test.com', password: hashedPw, name: 'Admin User', roleId: adminRoleId, organizationId: orgId, emailVerified: true },
   });
   const staffUser = await prisma.user.create({
-    data: { email: 'staff-dash@test.com', password: hashedPw, name: 'Staff User', role: 'staff', emailVerified: true },
+    data: { email: 'staff-dash@test.com', password: hashedPw, name: 'Staff User', roleId: staffRoleId, organizationId: orgId, emailVerified: true },
   });
+
+  // Assign org owner (for completeness)
+  await prisma.organization.update({
+    where: { id: orgId },
+    data: { ownerId: adminUser.id }
+  });
+
+  // Create permissions and assign them to roles
+  const permKeys = [
+    'dashboard.view', 'invoices.view', 'invoices.edit',
+    'customers.view', 'customers.edit',
+    'expenses.view', 'expenses.edit',
+    'products.view', 'products.edit',
+    'notifications.view',
+  ];
+  const perms = await Promise.all(
+    permKeys.map(key => prisma.permission.create({ data: { key } }))
+  );
+  await Promise.all(
+    perms.map(p => prisma.rolePermission.create({ data: { roleId: adminRoleId, permissionId: p.id } }))
+  );
+  // Staff only gets limited view permissions (exclude customers.view for RBAC test)
+  const staffPerms = perms.filter(p => ['dashboard.view', 'invoices.view', 'expenses.view', 'products.view', 'notifications.view'].includes(p.key));
+  await Promise.all(
+    staffPerms.map(p => prisma.rolePermission.create({ data: { roleId: staffRoleId, permissionId: p.id } }))
+  );
 
   adminUserId = adminUser.id;
   staffUserId = staffUser.id;
 
   // Issue JWTs directly (bypass login flow)
-  adminToken = generateAccessToken({ id: adminUser.id, email: adminUser.email, role: adminUser.role });
-  staffToken = generateAccessToken({ id: staffUser.id, email: staffUser.email, role: staffUser.role });
+  adminToken = generateAccessToken({ id: adminUser.id, email: adminUser.email, organizationId: orgId, roleId: adminRoleId });
+  staffToken = generateAccessToken({ id: staffUser.id, email: staffUser.email, organizationId: orgId, roleId: staffRoleId });
 
   // ── Seed Customers ──────────────────────────────────────────────────────
   const [alice, bob, carol] = await Promise.all([
-    prisma.customer.create({ data: { name: 'Alice Corp', email: 'alice@test.com', phone: '111-0000' } }),
-    prisma.customer.create({ data: { name: 'Bob Ltd', email: 'bob@test.com' } }),
-    prisma.customer.create({ data: { name: 'Carol Inc', email: 'carol@test.com' } }),
+    prisma.customer.create({ data: { name: 'Alice Corp', email: 'alice@test.com', phone: '111-0000', organizationId: orgId } }),
+    prisma.customer.create({ data: { name: 'Bob Ltd', email: 'bob@test.com', organizationId: orgId } }),
+    prisma.customer.create({ data: { name: 'Carol Inc', email: 'carol@test.com', organizationId: orgId } }),
   ]);
   customerId = alice.id;
 
@@ -71,65 +123,73 @@ beforeAll(async () => {
   await prisma.invoice.createMany({
     data: [
       // Alice: two paid invoices this year → highest revenue customer
-      { invoiceNo: 'INV-001', customerId: alice.id, amount: 5000, status: 'paid', dueAt: makeFutureDate(-10), paidAt: new Date(thisYear, 0, 15) },
-      { invoiceNo: 'INV-002', customerId: alice.id, amount: 3000, status: 'paid', dueAt: makeFutureDate(-5), paidAt: new Date(thisYear, 1, 20) },
+      { invoiceNo: 'INV-001', customerId: alice.id, amount: 5000, status: 'paid', dueAt: makeFutureDate(-10), paidAt: new Date(thisYear, 0, 15), organizationId: orgId },
+      { invoiceNo: 'INV-002', customerId: alice.id, amount: 3000, status: 'paid', dueAt: makeFutureDate(-5), paidAt: new Date(thisYear, 1, 20), organizationId: orgId },
       // Bob: one paid, one pending
-      { invoiceNo: 'INV-003', customerId: bob.id, amount: 1500, status: 'paid', dueAt: makeFutureDate(-3), paidAt: new Date(thisYear, 2, 10) },
-      { invoiceNo: 'INV-004', customerId: bob.id, amount: 800, status: 'pending', dueAt: makeFutureDate(7) },
+      { invoiceNo: 'INV-003', customerId: bob.id, amount: 1500, status: 'paid', dueAt: makeFutureDate(-3), paidAt: new Date(thisYear, 2, 10), organizationId: orgId },
+      { invoiceNo: 'INV-004', customerId: bob.id, amount: 800, status: 'pending', dueAt: makeFutureDate(7), organizationId: orgId },
       // Carol: one overdue
-      { invoiceNo: 'INV-005', customerId: carol.id, amount: 1200, status: 'overdue', dueAt: makeFutureDate(-15) },
+      { invoiceNo: 'INV-005', customerId: carol.id, amount: 1200, status: 'overdue', dueAt: makeFutureDate(-15), organizationId: orgId },
     ],
   });
 
   // ── Seed Expenses ───────────────────────────────────────────────────────
   await prisma.expense.createMany({
     data: [
-      { category: 'Rent', amount: 2000, date: new Date(thisYear, 0, 1) },
-      { category: 'Salaries', amount: 5000, date: new Date(thisYear, 1, 1) },
-      { category: 'Utilities', amount: 400, date: new Date(thisYear, 2, 1) },
+      { category: 'Rent', amount: 2000, date: new Date(thisYear, 0, 1), organizationId: orgId },
+      { category: 'Salaries', amount: 5000, date: new Date(thisYear, 1, 1), organizationId: orgId },
+      { category: 'Utilities', amount: 400, date: new Date(thisYear, 2, 1), organizationId: orgId },
     ],
   });
 
   // ── Seed Products ───────────────────────────────────────────────────────
   await prisma.product.createMany({
     data: [
-      { name: 'Widget A', sku: 'TEST-WA1', stockQuantity: 3, lowStockThreshold: 10, unitPrice: 49.99 },
-      { name: 'Widget B', sku: 'TEST-WB2', stockQuantity: 50, lowStockThreshold: 10, unitPrice: 19.99 },
-      { name: 'Widget C', sku: 'TEST-WC3', stockQuantity: 0, lowStockThreshold: 5, unitPrice: 9.99 },
+      { name: 'Widget A', sku: 'TEST-WA1', stockQuantity: 3, lowStockThreshold: 10, unitPrice: 49.99, organizationId: orgId },
+      { name: 'Widget B', sku: 'TEST-WB2', stockQuantity: 50, lowStockThreshold: 10, unitPrice: 19.99, organizationId: orgId },
+      { name: 'Widget C', sku: 'TEST-WC3', stockQuantity: 0, lowStockThreshold: 5, unitPrice: 9.99, organizationId: orgId },
     ],
   });
 
   // ── Seed Bank Accounts ──────────────────────────────────────────────────
   await prisma.bankAccount.createMany({
     data: [
-      { name: 'Main Checking', accountNumber: 'TEST-ACC-001', bankName: 'FinBank', balance: 50000, currency: 'USD' },
-      { name: 'Savings', accountNumber: 'TEST-ACC-002', bankName: 'FinBank', balance: 20000, currency: 'USD' },
+      { name: 'Main Checking', accountNumber: 'TEST-ACC-001', bankName: 'FinBank', balance: 50000, currency: 'USD', organizationId: orgId },
+      { name: 'Savings', accountNumber: 'TEST-ACC-002', bankName: 'FinBank', balance: 20000, currency: 'USD', organizationId: orgId },
     ],
   });
 
   // ── Seed Notifications ──────────────────────────────────────────────────
   const notif = await prisma.notification.create({
-    data: { userId: adminUserId, title: 'Low Stock Alert', message: 'Widget A is running low.', type: 'warning' },
+    data: { userId: adminUserId, title: 'Low Stock Alert', message: 'Widget A is running low.', type: 'warning', organizationId: orgId },
   });
   notificationId = notif.id;
 
   await prisma.notification.createMany({
     data: [
-      { userId: adminUserId, title: 'Invoice Paid', message: 'INV-001 has been paid.', type: 'success', read: true },
-      { userId: adminUserId, title: 'System Notice', message: 'Scheduled maintenance tonight.', type: 'info' },
+      { userId: adminUserId, title: 'Invoice Paid', message: 'INV-001 has been paid.', type: 'success', read: true, organizationId: orgId },
+      { userId: adminUserId, title: 'System Notice', message: 'Scheduled maintenance tonight.', type: 'info', organizationId: orgId },
     ],
   });
 });
 
 afterAll(async () => {
   // Clean up seeded data
-  await prisma.notification.deleteMany({ where: { userId: { in: [adminUserId, staffUserId] } } });
-  await prisma.invoice.deleteMany({ where: { invoiceNo: { startsWith: 'INV-00' } } });
-  await prisma.customer.deleteMany({ where: { email: { in: ['alice@test.com', 'bob@test.com', 'carol@test.com'] } } });
-  await prisma.expense.deleteMany({ where: { category: { in: ['Rent', 'Salaries', 'Utilities'] } } });
-  await prisma.product.deleteMany({ where: { sku: { startsWith: 'TEST-' } } });
-  await prisma.bankAccount.deleteMany({ where: { accountNumber: { startsWith: 'TEST-' } } });
-  await prisma.user.deleteMany({ where: { email: { in: ['admin-dash@test.com', 'staff-dash@test.com'] } } });
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=0;');
+    await tx.notification.deleteMany({ where: { userId: { in: [adminUserId, staffUserId] } } });
+    await tx.invoice.deleteMany({ where: { invoiceNo: { startsWith: 'INV-00' } } });
+    await tx.customer.deleteMany({ where: { email: { in: ['alice@test.com', 'bob@test.com', 'carol@test.com'] } } });
+    await tx.expense.deleteMany({ where: { category: { in: ['Rent', 'Salaries', 'Utilities'] } } });
+    await tx.product.deleteMany({ where: { sku: { startsWith: 'TEST-' } } });
+    await tx.bankAccount.deleteMany({ where: { accountNumber: { startsWith: 'TEST-' } } });
+    await tx.user.deleteMany({ where: { email: { in: ['admin-dash@test.com', 'staff-dash@test.com'] } } });
+    if (orgId) {
+      await tx.role.deleteMany({ where: { organizationId: orgId } });
+      await tx.organization.deleteMany({ where: { id: orgId } });
+    }
+    await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=1;');
+  });
   await prisma.$disconnect();
 });
 
@@ -325,7 +385,14 @@ describe('Dashboard Integration Tests', () => {
     });
 
     it('returns top customers (manager)', async () => {
-      const managerToken = generateAccessToken({ id: adminUserId, email: 'admin-dash@test.com', role: 'manager' });
+      const managerRole = await prisma.role.create({
+        data: { name: 'manager', isSystemRole: false, organizationId: orgId }
+      });
+      const customersViewPerm = await prisma.permission.findUnique({ where: { key: 'customers.view' } });
+      if (customersViewPerm) {
+        await prisma.rolePermission.create({ data: { roleId: managerRole.id, permissionId: customersViewPerm.id } });
+      }
+      const managerToken = generateAccessToken({ id: adminUserId, email: 'admin-dash@test.com', roleId: managerRole.id, organizationId: orgId });
       const res = await request(app)
         .get('/api/v1/dashboard/top-customers')
         .set(bearerHeader(managerToken));

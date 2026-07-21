@@ -10,7 +10,6 @@ import {
 } from '../../utils/tokens';
 import { 
   BadRequestError, 
-  ConflictError, 
   NotFoundError, 
   UnauthorizedError 
 } from '../../utils/errors';
@@ -20,51 +19,45 @@ import {
 } from '../../utils/mailer';
 import logger from '../../utils/logger';
 
-const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'fallback_access_secret';
+import { OrganizationService } from '../organization/organization.service';
+
+const JWT_ACCESS_SECRET: string = process.env.JWT_ACCESS_SECRET || (() => {
+  throw new Error('JWT_ACCESS_SECRET environment variable is not set');
+})();
 
 export class AuthService {
   /**
-   * Registers a new user and sends an email verification link
+   * Registers a new user and their new Organization. Sends email verification.
    */
-  static async register(data: { email: string; password?: string; name?: string }) {
-    const { email, password, name } = data;
+  static async register(data: { email: string; password?: string; name?: string; organizationName: string }) {
+    const { email, password, name, organizationName } = data;
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      throw new ConflictError('Email is already registered');
+    if (!organizationName) {
+      throw new BadRequestError('Organization name is required');
     }
 
     if (!password) {
       throw new BadRequestError('Password is required');
     }
 
+    // NOTE: registration always provisions a brand-new organization, and email
+    // uniqueness is scoped per-organization (@@unique([organizationId, email])),
+    // so there is no global-duplicate check here — the same person may own more
+    // than one workspace.
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        // Public registration always creates a low-privilege account.
-        // Elevated roles must be granted through an admin-only flow.
-        role: 'staff',
-        emailVerified: false,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        emailVerified: true,
-        createdAt: true,
-      },
+    const { user, org } = await OrganizationService.createOrganizationWithUser(organizationName, {
+      email,
+      passwordHash: hashedPassword,
+      name,
     });
 
-    // Create an email verification token (expires in 24 hours). The raw token
+    // Create an email verification token (expires in 7 days). The raw token
     // is emailed to the user; only its hash is persisted so a DB leak cannot be
     // used to verify/hijack accounts.
     const verificationToken = generateRefreshToken(); // Secure random bytes
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     await prisma.emailVerificationToken.create({
       data: {
@@ -79,7 +72,14 @@ export class AuthService {
       logger.error(`[auth-service]: Async send verification email failed for ${user.email}`, err);
     });
 
-    return user;
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      organizationId: user.organizationId,
+      roleId: user.roleId,
+      emailVerified: user.emailVerified,
+    };
   }
 
   /**
@@ -94,15 +94,19 @@ export class AuthService {
       throw new BadRequestError('Verification token is invalid or has expired');
     }
 
+    const user = await prisma.user.findUnique({ where: { id: verificationTokenRecord.userId } });
+    if (user?.emailVerified) {
+      await prisma.emailVerificationToken.delete({ where: { id: verificationTokenRecord.id } });
+      throw new BadRequestError('Email is already verified');
+    }
+
     await prisma.user.update({
       where: { id: verificationTokenRecord.userId },
       data: { emailVerified: true },
     });
 
-    // Clean up all verification tokens for the user
-    await prisma.emailVerificationToken.deleteMany({
-      where: { userId: verificationTokenRecord.userId },
-    });
+    // Clean up the used token
+    await prisma.emailVerificationToken.delete({ where: { id: verificationTokenRecord.id } });
 
     return { message: 'Email verified successfully' };
   }
@@ -110,8 +114,14 @@ export class AuthService {
   /**
    * Resends the email verification link
    */
-  static async resendVerification(email: string) {
-    const user = await prisma.user.findUnique({ where: { email } });
+  static async resendVerification(email: string, organizationId: string) {
+    if (!organizationId) {
+      throw new BadRequestError('Organization ID is required');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { organizationId_email: { organizationId, email } },
+    });
     if (!user) {
       // Don't leak user existence
       return { message: 'If the email exists and is unverified, a new link has been sent' };
@@ -122,7 +132,7 @@ export class AuthService {
     }
 
     const verificationToken = generateRefreshToken();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     // Clean up existing tokens for this user
     await prisma.emailVerificationToken.deleteMany({
@@ -147,13 +157,24 @@ export class AuthService {
   /**
    * Handles user login, checking password and whether 2FA is required
    */
-  static async login(data: { email: string; password?: string }) {
-    const { email, password } = data;
+  static async login(data: { email: string; password?: string; organizationId: string }) {
+    const { email, password, organizationId } = data;
     if (!password) {
       throw new BadRequestError('Password is required');
     }
+    if (!organizationId) {
+      throw new BadRequestError('Organization ID is required');
+    }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({
+      where: {
+        organizationId_email: {
+          organizationId,
+          email,
+        }
+      }
+    });
+
     if (!user) {
       throw new UnauthorizedError('Invalid email or password');
     }
@@ -167,7 +188,7 @@ export class AuthService {
     if (user.twoFactorEnabled) {
       // Issue a short-lived pre-auth token (expires in 5 minutes)
       const preAuthToken = jwt.sign(
-        { id: user.id, email: user.email, role: user.role, isPreAuth: true },
+        { id: user.id, email: user.email, roleId: user.roleId, organizationId: user.organizationId, isPreAuth: true },
         JWT_ACCESS_SECRET,
         { expiresIn: '5m' }
       );
@@ -179,7 +200,50 @@ export class AuthService {
     }
 
     // Standard session tokens
-    const tokens = await this.createSession(user.id, user.email, user.role);
+    const tokens = await this.createSession(user.id, user.email, user.roleId || '', user.organizationId);
+
+    const [allPermissions, role, org, screenBlocks] = await Promise.all([
+      prisma.permission.findMany({ select: { key: true } }),
+      user.roleId ? prisma.role.findUnique({
+        where: { id: user.roleId },
+        include: { rolePermissions: { include: { permission: { select: { key: true } } } } },
+      }) : null,
+      prisma.organization.findUnique({
+        where: { id: user.organizationId },
+        select: { 
+          ownerId: true,
+          isPlatform: true,
+          disabledScreens: true,
+          plan: {
+            select: {
+              features: { select: { featureKey: true } }
+            }
+          }
+        },
+      }),
+      prisma.userScreenBlock.findMany({
+        where: { userId: user.id },
+        select: { screenKey: true },
+      }),
+    ]);
+
+    const isOwner = org?.ownerId === user.id;
+    const isAdmin = role?.isSystemRole && (role.name === 'Admin' || role.name === 'Owner');
+
+    let permissionKeys: string[] = [];
+    if (isOwner || isAdmin || org?.isPlatform) {
+      permissionKeys = allPermissions.map(p => p.key);
+    } else if (role) {
+      permissionKeys = role.rolePermissions.map(rp => rp.permission.key);
+    }
+
+    let orgDisabledScreens: string[] = [];
+    if (org?.disabledScreens) {
+      try { orgDisabledScreens = JSON.parse(org.disabledScreens); } catch (e) { orgDisabledScreens = []; }
+    }
+
+    const planFeatures = org?.plan?.features.map(pf => pf.featureKey) || [];
+    const blockedScreens = screenBlocks.map(b => b.screenKey);
 
     return {
       twoFactorRequired: false as const,
@@ -188,7 +252,13 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
+        roleId: user.roleId,
+        organizationId: user.organizationId,
+        permissions: permissionKeys,
+        isPlatformOrg: org?.isPlatform || false,
+        planFeatures,
+        blockedScreens,
+        orgDisabledScreens,
       },
     };
   }
@@ -196,8 +266,8 @@ export class AuthService {
   /**
    * Helper to create access & refresh token pair and save refresh token in DB
    */
-  private static async createSession(userId: string, email: string, role: string) {
-    const accessToken = generateAccessToken({ id: userId, email, role });
+  private static async createSession(userId: string, email: string, roleId: string, organizationId: string) {
+    const accessToken = generateAccessToken({ id: userId, email, roleId, organizationId });
     const rawRefreshToken = generateRefreshToken();
     const hashedRefreshToken = hashToken(rawRefreshToken);
 
@@ -307,7 +377,50 @@ export class AuthService {
     }
 
     // Complete login session
-    const tokens = await this.createSession(user.id, user.email, user.role);
+    const tokens = await this.createSession(user.id, user.email, user.roleId || '', user.organizationId);
+
+    const [allPermissions, role, org, screenBlocks] = await Promise.all([
+      prisma.permission.findMany({ select: { key: true } }),
+      user.roleId ? prisma.role.findUnique({
+        where: { id: user.roleId },
+        include: { rolePermissions: { include: { permission: { select: { key: true } } } } },
+      }) : null,
+      prisma.organization.findUnique({
+        where: { id: user.organizationId },
+        select: { 
+          ownerId: true,
+          isPlatform: true,
+          disabledScreens: true,
+          plan: {
+            select: {
+              features: { select: { featureKey: true } }
+            }
+          }
+        },
+      }),
+      prisma.userScreenBlock.findMany({
+        where: { userId: user.id },
+        select: { screenKey: true },
+      }),
+    ]);
+
+    const isOwner = org?.ownerId === user.id;
+    const isAdmin = role?.isSystemRole && (role.name === 'Admin' || role.name === 'Owner');
+
+    let permissionKeys: string[] = [];
+    if (isOwner || isAdmin || org?.isPlatform) {
+      permissionKeys = allPermissions.map(p => p.key);
+    } else if (role) {
+      permissionKeys = role.rolePermissions.map(rp => rp.permission.key);
+    }
+
+    let orgDisabledScreens: string[] = [];
+    if (org?.disabledScreens) {
+      try { orgDisabledScreens = JSON.parse(org.disabledScreens); } catch (e) { orgDisabledScreens = []; }
+    }
+
+    const planFeatures = org?.plan?.features.map(pf => pf.featureKey) || [];
+    const blockedScreens = screenBlocks.map(b => b.screenKey);
 
     return {
       ...tokens,
@@ -315,7 +428,13 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role,
+        roleId: user.roleId,
+        organizationId: user.organizationId,
+        permissions: permissionKeys,
+        isPlatformOrg: org?.isPlatform || false,
+        planFeatures,
+        blockedScreens,
+        orgDisabledScreens,
       },
     };
   }
@@ -352,7 +471,7 @@ export class AuthService {
     }
 
     // Generate new pair
-    const tokens = await this.createSession(tokenRecord.userId, tokenRecord.user.email, tokenRecord.user.role);
+    const tokens = await this.createSession(tokenRecord.userId, tokenRecord.user.email, tokenRecord.user.roleId || '', tokenRecord.user.organizationId);
 
     // Rotate: revoke the current token (kept for reuse detection instead of deleted)
     await prisma.refreshToken.update({
@@ -380,15 +499,21 @@ export class AuthService {
   /**
    * Initiates forgot password flow by generating and emailing a reset token
    */
-  static async forgotPassword(email: string) {
-    const user = await prisma.user.findUnique({ where: { email } });
+  static async forgotPassword(email: string, organizationId: string) {
+    if (!organizationId) {
+      throw new BadRequestError('Organization ID is required');
+    }
+
+    const user = await prisma.user.findUnique({ 
+      where: { organizationId_email: { organizationId, email } } 
+    });
     if (!user) {
       // For security, don't reveal that the user does not exist
       return { message: 'If the email exists, a password reset link has been sent' };
     }
 
     const resetToken = generateRefreshToken();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hour expiry
 
     await prisma.passwordResetToken.create({
       data: {

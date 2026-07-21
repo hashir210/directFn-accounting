@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, CheckCircle2, XCircle, ArrowLeft, Activity } from 'lucide-react';
@@ -22,11 +22,14 @@ function VerifyInner() {
   
   // Resend state
   const [email, setEmail] = useState('');
+  const [resendOrgId, setResendOrgId] = useState('');
   const [isResending, setIsResending] = useState(false);
   const [resendStatus, setResendStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  const effectRan = useRef(false);
+
   useEffect(() => {
-    if (!token) return;
+    if (!token || effectRan.current) return;
 
     let mounted = true;
     const verifyToken = async () => {
@@ -49,7 +52,10 @@ function VerifyInner() {
     };
 
     verifyToken();
-    return () => { mounted = false; };
+    return () => { 
+      mounted = false; 
+      effectRan.current = true;
+    };
   }, [token, router]);
 
   const handleResend = async (e: React.FormEvent) => {
@@ -57,12 +63,12 @@ function VerifyInner() {
     setIsResending(true);
     setResendStatus('idle');
     try {
-      await apiFetch('/api/v1/auth/resend-verification', {
+      const data = await apiFetch('/api/v1/auth/resend-verification', {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, organizationId: resendOrgId }),
       });
       setResendStatus('success');
-      setMessage('A new verification link has been sent to your email.');
+      setMessage(data.message || 'A new verification link has been sent to your email.');
     } catch (err) {
       setResendStatus('error');
       setMessage(err instanceof ApiError ? err.message : 'Failed to resend verification email.');
@@ -150,6 +156,16 @@ function VerifyInner() {
                     <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       Need a new link?
                     </Label>
+                    <Input
+                      id="resendOrgId"
+                      type="text"
+                      required
+                      placeholder="Organization ID"
+                      value={resendOrgId}
+                      onChange={(e) => setResendOrgId(e.target.value)}
+                      disabled={isResending}
+                      className="h-10 mb-2"
+                    />
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
