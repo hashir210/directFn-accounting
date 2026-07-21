@@ -70,8 +70,24 @@ export function requirePermission(permissionKey: string, options: PermissionOpti
         throw new ForbiddenError('Your organization is suspended. Please contact support.');
       }
 
-      // FinFlow platform org: full access to everything, bypassing Layer 2 & 3.
-      if (org.isPlatform) {
+      // 0. Per-user Screen Restrictions (applies to non-owner users across all orgs)
+      if (!options.skipScreenCheck && org.ownerId !== req.user.id) {
+        const userBlock = await prisma.userScreenBlock.findUnique({
+          where: {
+            userId_screenKey: {
+              userId: req.user.id,
+              screenKey,
+            },
+          },
+        });
+        if (userBlock) {
+          throw new ForbiddenError(`Access to this screen (${screenKey}) has been restricted for your user account`);
+        }
+      }
+
+      // FinFlow platform org Owner/Admin: full access to everything, bypassing Layer 2 & 3.
+      const isOwnerOrAdmin = org.ownerId === req.user.id;
+      if (org.isPlatform && isOwnerOrAdmin) {
         return next();
       }
 

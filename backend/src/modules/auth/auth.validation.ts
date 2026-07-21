@@ -16,7 +16,7 @@ export const loginSchema = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
     password: z.string().min(1, 'Password is required'),
-    organizationId: z.string().min(1, 'Organization ID is required'),
+    organizationId: z.string().optional(),
   }),
 });
 
@@ -29,14 +29,14 @@ export const verifyEmailSchema = z.object({
 export const resendVerificationSchema = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
-    organizationId: z.string().min(1, 'Organization ID is required'),
+    organizationId: z.string().optional(),
   }),
 });
 
 export const forgotPasswordSchema = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
-    organizationId: z.string().min(1, 'Organization ID is required'),
+    organizationId: z.string().optional(),
   }),
 });
 
@@ -57,5 +57,11 @@ export const authenticate2faSchema = z.object({
   body: z.object({
     preAuthToken: z.string().min(1, 'Pre-authentication token is required'),
     token: z.string().length(6, 'TOTP code must be exactly 6 digits'),
+  }),
+});
+
+export const sessionIdParamSchema = z.object({
+  params: z.object({
+    sessionId: z.string().min(1, 'Session id is required'),
   }),
 });

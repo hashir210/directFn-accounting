@@ -15,6 +15,11 @@ import {
   Settings,
   HelpCircle,
   Users,
+  Building2,
+  ContactRound,
+  Truck,
+  Package,
+  Warehouse,
   LogOut,
   Plus,
   ChevronsUpDown,
@@ -24,7 +29,9 @@ import {
   SlidersHorizontal,
   Shield,
   Lock,
+  Monitor,
 } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
   Sidebar,
   SidebarContent,
@@ -150,17 +157,28 @@ export default function DashboardLayout({
     .toUpperCase();
 
   const getRouteScreenKey = (path: string): string | null => {
-    if (path === "/dashboard") return "dashboard";
-    if (path.startsWith("/dashboard/calendar")) return "calendar";
-    if (path.startsWith("/dashboard/invoices")) return "invoices";
-    if (path.startsWith("/dashboard/expenses")) return "expenses";
-    if (path.startsWith("/dashboard/payments")) return "payments";
-    if (path.startsWith("/dashboard/notifications")) return "notifications";
-    if (path.startsWith("/dashboard/integrations")) return "integrations";
-    if (path.startsWith("/dashboard/inbox")) return "inbox";
-    if (path.startsWith("/dashboard/reports")) return "reports";
-    if (path.startsWith("/dashboard/active")) return "active";
-    if (path.startsWith("/dashboard/past")) return "past";
+    if (path.startsWith('/admin')) return 'platform';
+    const normalized = path.replace(/^\/dashboard/, '');
+    if (normalized === '' || normalized === '/') return 'dashboard';
+    if (normalized.startsWith('/invoices')) return 'invoices';
+    if (normalized.startsWith('/expenses')) return 'expenses';
+    if (normalized.startsWith('/payments')) return 'payments';
+    if (normalized.startsWith('/company')) return 'company';
+    if (normalized.startsWith('/customers')) return 'customers';
+    if (normalized.startsWith('/suppliers')) return 'suppliers';
+    if (normalized.startsWith('/products')) return 'products';
+    if (normalized.startsWith('/inventory')) return 'inventory';
+    if (normalized.startsWith('/notifications')) return 'notifications';
+    if (normalized.startsWith('/integrations')) return 'integrations';
+    if (normalized.startsWith('/inbox')) return 'inbox';
+    if (normalized.startsWith('/reports')) return 'reports';
+    if (normalized.startsWith('/active')) return 'active';
+    if (normalized.startsWith('/past')) return 'past';
+    if (normalized.startsWith('/settings/users')) return 'users';
+    if (normalized.startsWith('/settings/roles')) return 'roles';
+    if (normalized.startsWith('/settings/screens')) return 'screens';
+    if (normalized.startsWith('/settings/sessions')) return 'settings';
+    if (normalized.startsWith('/settings/plan')) return 'plan';
     return null;
   };
 
@@ -179,47 +197,58 @@ export default function DashboardLayout({
     return null;
   }
 
+  const isStaff = user?.roleName === 'Staff';
+
   const overviewItems = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perm: 'dashboard.view', key: 'dashboard' },
-    { href: "/dashboard/calendar", label: "Calendar", icon: FileBarChart2, perm: 'dashboard.view', key: 'calendar' },
-  ].filter(i => hasPermission(i.perm) && isScreenAllowed(i.key));
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, key: 'dashboard' },
+  ].filter(i => isScreenAllowed(i.key));
 
   const financeItems = [
-    { href: "/dashboard/invoices", label: "Invoices", icon: Receipt, badge: 3, perm: 'invoices.view', key: 'invoices' },
-    { href: "/dashboard/expenses", label: "Expenses", icon: CreditCard, perm: 'expenses.view', key: 'expenses' },
-    { href: "/dashboard/payments", label: "Payments", icon: TrendingUp, badge: 7, perm: 'invoices.view', key: 'payments' },
-  ].filter(i => hasPermission(i.perm) && isScreenAllowed(i.key));
+    { href: "/dashboard/invoices", label: "Invoices", icon: Receipt, badge: 3, key: 'invoices' },
+    { href: "/dashboard/expenses", label: "Expenses", icon: CreditCard, key: 'expenses' },
+    { href: "/dashboard/payments", label: "Payments", icon: TrendingUp, badge: 7, key: 'payments' },
+  ].filter(i => isScreenAllowed(i.key));
+
+  const managementItems = [
+    { href: "/dashboard/company", label: "Company", icon: Building2, key: 'company', permission: 'settings.view' },
+    { href: "/dashboard/settings/users", label: "Users", icon: Users, key: 'users', permission: 'users.manage', adminOnly: true },
+    { href: "/dashboard/settings/roles", label: "Roles", icon: Shield, key: 'roles', permission: 'roles.manage', adminOnly: true },
+    { href: "/dashboard/customers", label: "Customers", icon: ContactRound, key: 'customers', permission: 'customers.view' },
+    { href: "/dashboard/suppliers", label: "Suppliers", icon: Truck, key: 'suppliers' },
+    { href: "/dashboard/products", label: "Products", icon: Package, key: 'products', permission: 'products.view' },
+    { href: "/dashboard/inventory", label: "Inventory", icon: Warehouse, key: 'inventory', permission: 'products.view' },
+  ].filter(i => {
+    if (i.adminOnly && isStaff) return false;
+    if (!isScreenAllowed(i.key)) return false;
+    return !i.permission || hasPermission(i.permission);
+  });
 
   const toolItems = [
-    { href: "/dashboard/notifications", label: "Notification", icon: Bell, badge: 4, perm: 'notifications.view', key: 'notifications' },
-    { href: "/dashboard/integrations", label: "Integration", icon: Zap, perm: 'settings.view', key: 'integrations' },
-    { href: "/dashboard/inbox", label: "Inbox", icon: Mail, badge: 5, perm: 'notifications.view', key: 'inbox' },
-    { href: "/dashboard/reports", label: "Reporting", icon: FileBarChart2, perm: 'reports.view', key: 'reports' },
-  ].filter(i => hasPermission(i.perm) && isScreenAllowed(i.key));
+    { href: "/dashboard/notifications", label: "Notification", icon: Bell, badge: 4, key: 'notifications' },
+    { href: "/dashboard/integrations", label: "Integration", icon: Zap, key: 'integrations' },
+    { href: "/dashboard/inbox", label: "Inbox", icon: Mail, badge: 5, key: 'inbox' },
+    { href: "/dashboard/reports", label: "Reporting", icon: FileBarChart2, key: 'reports' },
+  ].filter(i => isScreenAllowed(i.key));
 
   const metricItems = [
-    { href: "/dashboard/active", label: "Active", icon: TrendingUp, badge: 1, perm: 'dashboard.view', key: 'active' },
-    { href: "/dashboard/past", label: "Past", icon: FileBarChart2, perm: 'dashboard.view', key: 'past' },
-  ].filter(i => hasPermission(i.perm) && isScreenAllowed(i.key));
+    { href: "/dashboard/active", label: "Active", icon: TrendingUp, badge: 1, key: 'active' },
+    { href: "/dashboard/past", label: "Past", icon: FileBarChart2, key: 'past' },
+  ].filter(i => isScreenAllowed(i.key));
 
-  // Settings and admin items - visible to admins and managers
+  // Settings and Workspace section
   const settingsItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; badge?: number }[] = [];
-  if (hasPermission('settings.view')) {
+
+  if (hasPermission('settings.view') && isScreenAllowed('settings')) {
     settingsItems.push({ href: "/dashboard/settings", label: "Settings", icon: Settings });
+    settingsItems.push({ href: "/dashboard/settings/sessions", label: "Sessions", icon: Monitor });
   }
-  if (hasPermission('users.manage')) {
-    settingsItems.push({ href: "/dashboard/settings/users", label: "Users", icon: Users });
-  }
-  if (hasPermission('roles.manage')) {
-    settingsItems.push({ href: "/dashboard/settings/roles", label: "Roles", icon: Shield });
-  }
-  if (hasPermission('settings.view')) {
+  if (!isStaff && isScreenAllowed('plan')) {
     settingsItems.push({ href: "/dashboard/settings/plan", label: "Subscription", icon: CreditCard });
   }
-  if (hasPermission('users.manage')) {
+  if (!isStaff && isScreenAllowed('screens')) {
     settingsItems.push({ href: "/dashboard/settings/screens", label: "Screen Access", icon: Lock });
   }
-  if (user?.isPlatformOrg) {
+  if (user?.isPlatformOrg && !isStaff && isScreenAllowed('platform')) {
     settingsItems.push({ href: "/admin", label: "Platform Admin", icon: Shield });
   }
 
@@ -282,6 +311,28 @@ export default function DashboardLayout({
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          {/* Management Section */}
+          {managementItems.length > 0 && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Management</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {managementItems.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton render={<Link href={item.href} />} isActive={isActive} tooltip={item.label}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
 
           {/* Finance Section */}
           <SidebarGroup>
@@ -355,7 +406,7 @@ export default function DashboardLayout({
           {/* Settings Section */}
           {settingsItems.length > 0 && (
             <SidebarGroup>
-              <SidebarGroupLabel>Administration</SidebarGroupLabel>
+              <SidebarGroupLabel>Settings & Workspace</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {settingsItems.map((item) => {
@@ -544,17 +595,19 @@ export default function DashboardLayout({
         <main className="flex-1 p-6">
           <div className="mx-auto max-w-7xl">
             {isCurrentScreenBlocked ? (
-              <div className="flex flex-col items-center justify-center py-20 px-4 text-center border rounded-2xl bg-card shadow-sm">
-                <div className="h-16 w-16 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center mb-4 border border-destructive/20">
-                  <Shield className="h-8 w-8" />
+              <div className="py-12 px-4 max-w-2xl mx-auto space-y-6">
+                <Alert variant="destructive" className="border-destructive/30 shadow-sm">
+                  <Shield className="h-5 w-5" />
+                  <AlertTitle className="text-base font-bold">Access Restricted</AlertTitle>
+                  <AlertDescription className="text-xs leading-relaxed mt-1">
+                    Access to this feature or screen ({currentScreenKey}) has been restricted for your account or organization by your administrator.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex justify-center">
+                  <Button variant="default" className="cursor-pointer" onClick={() => router.push('/dashboard')}>
+                    Return to Overview
+                  </Button>
                 </div>
-                <h2 className="text-xl font-bold tracking-tight text-foreground">Screen Access Restricted</h2>
-                <p className="text-sm text-muted-foreground mt-2 max-w-md">
-                  Access to this feature or screen has been restricted for your organization by your administrator.
-                </p>
-                <Button variant="default" className="mt-6 cursor-pointer" onClick={() => router.push('/dashboard')}>
-                  Return to Overview
-                </Button>
               </div>
             ) : (
               children

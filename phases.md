@@ -17,7 +17,7 @@ This document tracks all implemented phases, module scopes, and feature checklis
 - [x] JWT Access Token issuing + verification middleware
 - [x] Refresh Token flow (rotation + revoke-on-logout)
 - [x] Two-Factor Authentication (2FA setup, TOTP verification, pre-auth verification flow)
-- [ ] Session Management (v1.1 active session list/revoke)
+- [x] Session Management (v1.1 active session list/revoke)
 
 ---
 
@@ -36,57 +36,6 @@ This document tracks all implemented phases, module scopes, and feature checklis
 - [x] Low Stock alert widget (Inventory stock alerts & threshold indicators)
 - [x] Notifications panel (Topbar dropdown + dedicated Notification Center at `/dashboard/notifications`)
 
----
-
-## Phase 2 — Invoicing & Payments
-
-**Scope:**
-- [x] Invoice creation & management (`/dashboard/invoices`)
-- [x] Payment tracking & transaction records (`/dashboard/payments`)
-- [x] Customer billing history
-
----
-
-## Phase 3 — Expense Tracking
-
-**Scope:**
-- [x] Expense recording & categorization (`/dashboard/expenses`)
-- [x] Organization outflow tracking
-
----
-
-## Phase 4 — Reporting & Analytics
-
-**Scope:**
-- [x] Financial reporting overview (`/dashboard/reports`)
-- [x] Real-time active account metrics (`/dashboard/active`)
-- [x] Historical performance archives (`/dashboard/past`)
-
----
-
-## Phase 5 — Tools & External Integrations
-
-**Scope:**
-- [x] Event & schedule calendar (`/dashboard/calendar`)
-- [x] External service & API integrations (`/dashboard/integrations`)
-- [x] Organization inbox (`/dashboard/inbox`)
-- [x] Notification center (`/dashboard/notifications`)
-
----
-
-## Phase 6 — Multi-Tenant 3-Layer Access Control & Administration
-
-**Scope:**
-- [x] **Layer 1 (User ↔ Role Assignment):** Assign single role per user in tenant organization (`/dashboard/settings/users`)
-- [x] **Layer 2 (Role ↔ Permission Access):** Configure granular module permission keys for tenant roles (`/dashboard/settings/roles`)
-- [x] **Layer 3 (Plan Features & Manual Tenant Screen Restrictions):**
-  - Platform Admins define allowed screens per Subscription Tier (`/admin/plans`)
-  - Platform Admins manually restrict specific screens per B2B tenant organization (`/dashboard/settings/screens`)
-  - Tenant Admins restrict specific screens per team user (`/dashboard/settings/screens`)
-- [x] **Platform Administration (`/admin`):**
-  - Provision B2B client tenant organizations with owner account, password, tier, and limits
-  - Edit subscription tier to instantly grant/revoke screen access for client organizations
-  - Freeze/suspend tenant organizations
 
 3. Company Management
 

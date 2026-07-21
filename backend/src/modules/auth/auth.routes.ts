@@ -13,13 +13,14 @@ import {
   resetPasswordSchema,
   verify2faSchema,
   authenticate2faSchema,
+  sessionIdParamSchema,
 } from './auth.validation';
 
 const router = Router();
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 1000 : 20,
+  max: process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' ? 1000 : 100,
   message: { success: false, message: 'Too many requests. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -42,6 +43,11 @@ router.post('/reset-password', validate(resetPasswordSchema), AuthController.res
 router.post('/2fa/setup', authenticate, AuthController.setup2fa);
 router.post('/2fa/verify', authenticate, validate(verify2faSchema), AuthController.verify2fa);
 router.post('/2fa/authenticate', validate(authenticate2faSchema), AuthController.authenticate2fa);
+
+// Session management
+router.get('/sessions', authenticate, AuthController.listSessions);
+router.delete('/sessions/others', authenticate, AuthController.revokeOtherSessions);
+router.delete('/sessions/:sessionId', authenticate, validate(sessionIdParamSchema), AuthController.revokeSession);
 
 // Protected user profile route to verify JWT access
 router.get('/me', authenticate, async (req, res, next) => {
@@ -75,7 +81,7 @@ router.get('/me', authenticate, async (req, res, next) => {
     const isAdmin = role?.isSystemRole && (role.name === 'Admin' || role.name === 'Owner');
 
     let permissionKeys: string[] = [];
-    if (isOwner || isAdmin || org?.isPlatform) {
+    if (isOwner || isAdmin) {
       permissionKeys = allPermissions.map(p => p.key);
     } else if (role) {
       permissionKeys = role.rolePermissions.map(rp => rp.permission.key);
@@ -94,6 +100,7 @@ router.get('/me', authenticate, async (req, res, next) => {
       data: {
         user: {
           ...req.user,
+          roleName: role?.name || '',
           permissions: permissionKeys,
           isPlatformOrg: org?.isPlatform || false,
           planFeatures,

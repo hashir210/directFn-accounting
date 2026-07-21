@@ -84,6 +84,10 @@ interface Transaction {
   amount: number;
 }
 
+type DashboardTransactionResponse =
+  | { type: "Invoice"; data: { id: string; invoiceNo: string } }
+  | { type: "Expense"; data: { id: string } };
+
 interface StockItem {
   id: string;
   name: string;
@@ -262,7 +266,7 @@ export default function DashboardPage() {
       const today = new Date().toISOString().split("T")[0];
       const payloadDate = txDueDate || today;
       
-      const response = await apiFetch<{ data: any, type: string }>('/api/v1/dashboard/transactions', {
+      const response = await apiFetch<DashboardTransactionResponse>('/api/v1/dashboard/transactions', {
         method: 'POST',
         body: JSON.stringify({
           type: txType,

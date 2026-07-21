@@ -10,21 +10,21 @@ export function FeatureGrid() {
       description: "Build robust donor profiles, log communication pipelines, and run online donation pages that feed directly into your ledgers.",
       icon: Heart,
       color: "text-rose-500 bg-rose-50 dark:bg-rose-950/20",
-      href: "/register"
+      href: "/login"
     },
     {
       title: "Double-Entry Ledger",
       description: "Manage unrestricted assets and restricted grants in real-time, keeping cost centers organized and balanced for immediate audits.",
       icon: Landmark,
       color: "text-violet-500 bg-violet-50 dark:bg-violet-950/20",
-      href: "/register"
+      href: "/login"
     },
     {
       title: "Compliance Auditing",
       description: "Automate GAAP statements, track FASB ASC 958 requirements, and lock accounts to prevent retrospect changes.",
       icon: ShieldCheck,
       color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20",
-      href: "/register"
+      href: "/login"
     }
   ];
 

@@ -46,9 +46,6 @@ export class RolesService {
     if (!role || role.organizationId !== organizationId) {
       throw new NotFoundError('Role not found in your organization');
     }
-    if (role.isSystemRole) {
-      throw new BadRequestError('Cannot modify system role permissions');
-    }
 
     const ids = Array.from(new Set(permissionIds ?? []));
 
@@ -74,9 +71,6 @@ export class RolesService {
     if (!role || role.organizationId !== organizationId) {
       throw new NotFoundError('Role not found in your organization');
     }
-    if (role.isSystemRole) {
-      throw new BadRequestError('Cannot modify system role permissions');
-    }
 
     const permission = await prisma.permission.findUnique({ where: { id: permissionId } });
     if (!permission) {
@@ -100,9 +94,6 @@ export class RolesService {
     const role = await prisma.role.findUnique({ where: { id: roleId } });
     if (!role || role.organizationId !== organizationId) {
       throw new NotFoundError('Role not found in your organization');
-    }
-    if (role.isSystemRole) {
-      throw new BadRequestError('Cannot modify system role permissions');
     }
 
     const rp = await prisma.rolePermission.findUnique({

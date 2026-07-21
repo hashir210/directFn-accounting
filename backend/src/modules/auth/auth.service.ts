@@ -11,7 +11,8 @@ import {
 import { 
   BadRequestError, 
   NotFoundError, 
-  UnauthorizedError 
+  UnauthorizedError,
+  ForbiddenError,
 } from '../../utils/errors';
 import { 
   sendVerificationEmail, 
@@ -114,14 +115,10 @@ export class AuthService {
   /**
    * Resends the email verification link
    */
-  static async resendVerification(email: string, organizationId: string) {
-    if (!organizationId) {
-      throw new BadRequestError('Organization ID is required');
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { organizationId_email: { organizationId, email } },
-    });
+  static async resendVerification(email: string, organizationId?: string) {
+    const user = organizationId
+      ? await prisma.user.findUnique({ where: { organizationId_email: { organizationId, email } } })
+      : await prisma.user.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } });
     if (!user) {
       // Don't leak user existence
       return { message: 'If the email exists and is unverified, a new link has been sent' };
@@ -157,23 +154,23 @@ export class AuthService {
   /**
    * Handles user login, checking password and whether 2FA is required
    */
-  static async login(data: { email: string; password?: string; organizationId: string }) {
+  static async login(data: { email: string; password?: string; organizationId?: string }) {
     const { email, password, organizationId } = data;
     if (!password) {
       throw new BadRequestError('Password is required');
     }
-    if (!organizationId) {
-      throw new BadRequestError('Organization ID is required');
-    }
 
-    const user = await prisma.user.findUnique({
-      where: {
-        organizationId_email: {
-          organizationId,
-          email,
-        }
-      }
-    });
+    let user;
+    if (organizationId) {
+      user = await prisma.user.findUnique({
+        where: { organizationId_email: { organizationId, email } },
+      });
+    } else {
+      user = await prisma.user.findFirst({
+        where: { email },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
 
     if (!user) {
       throw new UnauthorizedError('Invalid email or password');
@@ -231,7 +228,7 @@ export class AuthService {
     const isAdmin = role?.isSystemRole && (role.name === 'Admin' || role.name === 'Owner');
 
     let permissionKeys: string[] = [];
-    if (isOwner || isAdmin || org?.isPlatform) {
+    if (isOwner || isAdmin) {
       permissionKeys = allPermissions.map(p => p.key);
     } else if (role) {
       permissionKeys = role.rolePermissions.map(rp => rp.permission.key);
@@ -253,6 +250,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         roleId: user.roleId,
+        roleName: role?.name || '',
         organizationId: user.organizationId,
         permissions: permissionKeys,
         isPlatformOrg: org?.isPlatform || false,
@@ -408,7 +406,7 @@ export class AuthService {
     const isAdmin = role?.isSystemRole && (role.name === 'Admin' || role.name === 'Owner');
 
     let permissionKeys: string[] = [];
-    if (isOwner || isAdmin || org?.isPlatform) {
+    if (isOwner || isAdmin) {
       permissionKeys = allPermissions.map(p => p.key);
     } else if (role) {
       permissionKeys = role.rolePermissions.map(rp => rp.permission.key);
@@ -429,6 +427,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         roleId: user.roleId,
+        roleName: role?.name || '',
         organizationId: user.organizationId,
         permissions: permissionKeys,
         isPlatformOrg: org?.isPlatform || false,
@@ -496,17 +495,82 @@ export class AuthService {
     return { message: 'Logged out successfully' };
   }
 
+  static async listSessions(userId: string, currentRefreshToken?: string) {
+    const currentTokenHash = currentRefreshToken ? hashToken(currentRefreshToken) : null;
+    const sessions = await prisma.refreshToken.findMany({
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        token: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+    });
+
+    return sessions.map((session) => ({
+      id: session.id,
+      createdAt: session.createdAt,
+      expiresAt: session.expiresAt,
+      isCurrent: currentTokenHash ? session.token === currentTokenHash : false,
+    }));
+  }
+
+  static async revokeSession(userId: string, sessionId: string) {
+    const session = await prisma.refreshToken.findUnique({
+      where: { id: sessionId },
+      select: { userId: true, revokedAt: true, expiresAt: true },
+    });
+
+    if (!session || session.revokedAt || session.expiresAt < new Date()) {
+      throw new NotFoundError('Session not found');
+    }
+
+    if (session.userId !== userId) {
+      throw new ForbiddenError('You cannot revoke another user session');
+    }
+
+    await prisma.refreshToken.update({
+      where: { id: sessionId },
+      data: { revokedAt: new Date() },
+    });
+
+    return { message: 'Session revoked successfully' };
+  }
+
+  static async revokeOtherSessions(userId: string, currentRefreshToken?: string) {
+    if (!currentRefreshToken) {
+      throw new BadRequestError('Current refresh token is required');
+    }
+
+    const currentTokenHash = hashToken(currentRefreshToken);
+    const result = await prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        token: { not: currentTokenHash },
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: { revokedAt: new Date() },
+    });
+
+    return {
+      message: 'Other sessions revoked successfully',
+      revokedCount: result.count,
+    };
+  }
+
   /**
    * Initiates forgot password flow by generating and emailing a reset token
    */
-  static async forgotPassword(email: string, organizationId: string) {
-    if (!organizationId) {
-      throw new BadRequestError('Organization ID is required');
-    }
-
-    const user = await prisma.user.findUnique({ 
-      where: { organizationId_email: { organizationId, email } } 
-    });
+  static async forgotPassword(email: string, organizationId?: string) {
+    const user = organizationId
+      ? await prisma.user.findUnique({ where: { organizationId_email: { organizationId, email } } })
+      : await prisma.user.findFirst({ where: { email }, orderBy: { createdAt: 'desc' } });
     if (!user) {
       // For security, don't reveal that the user does not exist
       return { message: 'If the email exists, a password reset link has been sent' };

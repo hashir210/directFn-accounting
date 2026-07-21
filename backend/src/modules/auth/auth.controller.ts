@@ -190,6 +190,57 @@ export class AuthController {
     }
   }
 
+  static async listSessions(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user?.id) {
+        throw new BadRequestError('User not authenticated');
+      }
+
+      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+      const sessions = await AuthService.listSessions(req.user.id, refreshToken);
+      res.status(200).json({
+        success: true,
+        data: { sessions },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async revokeSession(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user?.id) {
+        throw new BadRequestError('User not authenticated');
+      }
+
+      const result = await AuthService.revokeSession(req.user.id, req.params.sessionId);
+      res.status(200).json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async revokeOtherSessions(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user?.id) {
+        throw new BadRequestError('User not authenticated');
+      }
+
+      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+      const result = await AuthService.revokeOtherSessions(req.user.id, refreshToken);
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: { revokedCount: result.revokedCount },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async forgotPassword(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, organizationId } = req.body;

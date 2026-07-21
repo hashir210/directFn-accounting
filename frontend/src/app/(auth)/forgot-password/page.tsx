@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { Mail, ArrowLeft, Activity } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,12 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { apiFetch, ApiError } from '@/lib/api';
 
-function ForgotPasswordInner() {
-  const searchParams = useSearchParams();
-  const orgIdParam = searchParams.get('orgId');
-
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
-  const [organizationId, setOrganizationId] = useState(orgIdParam || '');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -27,7 +22,7 @@ function ForgotPasswordInner() {
     try {
       await apiFetch('/api/v1/auth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email, organizationId }),
+        body: JSON.stringify({ email }),
       });
       setSuccess(true);
     } catch (err) {
@@ -51,7 +46,7 @@ function ForgotPasswordInner() {
           <div>
             <CardTitle className="text-xl">Recover password</CardTitle>
             <CardDescription className="mt-1">
-              Enter your email and organization to receive a recovery link
+              Enter your email to receive a recovery link
             </CardDescription>
           </div>
         </CardHeader>
@@ -70,7 +65,7 @@ function ForgotPasswordInner() {
                 If the email exists in our database, you will receive reset instructions shortly.
               </p>
               <Link
-                href={`/login?orgId=${organizationId}`}
+                href="/login"
                 className="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:underline"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
@@ -80,19 +75,7 @@ function ForgotPasswordInner() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="orgId">Organization ID</Label>
-                <Input
-                  id="orgId"
-                  type="text"
-                  required
-                  placeholder="Enter your organization ID"
-                  value={organizationId}
-                  onChange={(e) => setOrganizationId(e.target.value)}
-                  disabled={isLoading || !!orgIdParam}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Corporate Email</Label>
+                <Label htmlFor="email">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -118,7 +101,7 @@ function ForgotPasswordInner() {
 
               <div className="text-center">
                 <Link
-                  href={`/login?orgId=${organizationId}`}
+                  href="/login"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
@@ -130,13 +113,5 @@ function ForgotPasswordInner() {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-export default function ForgotPasswordPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen w-full flex items-center justify-center text-muted-foreground">Loading...</div>}>
-      <ForgotPasswordInner />
-    </Suspense>
   );
 }

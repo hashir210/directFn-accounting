@@ -8,7 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
-import { Shield, Loader2, CheckCircle2, Users, ArrowLeft, Building2 } from 'lucide-react';
+import { Shield, Loader2, CheckCircle2, Users, ArrowLeft, Building2, AlertCircle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
 
 interface OrgUser {
@@ -29,23 +30,32 @@ interface OrganizationItem {
 
 const AVAILABLE_SCREENS = [
   { key: 'dashboard', label: 'Dashboard', category: 'Overview', description: 'Main financial performance dashboard and KPIs' },
-  { key: 'calendar', label: 'Calendar', category: 'Overview', description: 'Financial events, due dates, and schedule' },
   { key: 'invoices', label: 'Invoices', category: 'Finance', description: 'Customer invoices, creation, and tracking' },
   { key: 'expenses', label: 'Expenses', category: 'Finance', description: 'Organization outflow and expense records' },
   { key: 'payments', label: 'Payments', category: 'Finance', description: 'Payment processing and transactions' },
+  { key: 'company', label: 'Company Profile', category: 'Management', description: 'Company details, GST/VAT, logo, address, fiscal year, currency, and timezone' },
+  { key: 'customers', label: 'Customers', category: 'Management', description: 'Customer profiles, credit limits, balances, transactions, and statements' },
+  { key: 'suppliers', label: 'Suppliers', category: 'Management', description: 'Supplier details, purchase history, and due payments' },
+  { key: 'products', label: 'Products', category: 'Management', description: 'Categories, units, barcode, SKU, pricing, tax, and images' },
+  { key: 'inventory', label: 'Inventory', category: 'Management', description: 'Stock movement, transfers, damaged stock, adjustments, alerts, and warehouses' },
   { key: 'notifications', label: 'Notifications', category: 'Tools', description: 'User alert and notification center' },
   { key: 'integrations', label: 'Integrations', category: 'Tools', description: 'External service & API connections' },
   { key: 'inbox', label: 'Inbox', category: 'Tools', description: 'Organization message and query inbox' },
   { key: 'reports', label: 'Reporting', category: 'Tools', description: 'Advanced financial reports and analytics' },
   { key: 'active', label: 'Active Metrics', category: 'Metrics', description: 'Real-time active account metrics' },
   { key: 'past', label: 'Past Metrics', category: 'Metrics', description: 'Historical performance archives' },
+  { key: 'users', label: 'Team Users', category: 'Administration', description: 'Manage workspace team members and invitations' },
+  { key: 'roles', label: 'Roles & Permissions', category: 'Administration', description: 'Configure role permissions and access levels' },
+  { key: 'screens', label: 'Screen Access Control', category: 'Administration', description: 'Manage screen access restrictions for team members' },
+  { key: 'plan', label: 'Subscription Plan', category: 'Administration', description: 'View and manage organization subscription plan' },
+  { key: 'platform', label: 'Platform Admin', category: 'Administration', description: 'Platform administration console (Platform Org only)' },
 ];
 
 function ScreenAccessContent() {
   const searchParams = useSearchParams();
   const initialUserId = searchParams.get('userId');
 
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const isPlatform = !!user?.isPlatformOrg;
 
   const [activeTab, setActiveTab] = useState<'users' | 'tenants'>(isPlatform && !initialUserId ? 'tenants' : 'users');
@@ -181,6 +191,7 @@ function ScreenAccessContent() {
         });
         setSaveMsg('Organization screen restrictions saved successfully!');
       }
+      await refreshUser();
       setTimeout(() => setSaveMsg(''), 3500);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to save screen restrictions');
@@ -192,6 +203,7 @@ function ScreenAccessContent() {
   const selectedUser = users.find(u => u.id === selectedUserId);
   const selectedOrg = orgs.find(o => o.id === selectedOrgId);
   const categories = Array.from(new Set(AVAILABLE_SCREENS.map(s => s.category)));
+  const targetUsers = users.filter(u => u.id !== user?.id);
 
   return (
     <div className="space-y-6">
@@ -211,14 +223,19 @@ function ScreenAccessContent() {
       </div>
 
       {error && (
-        <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md">{error}</div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle className="font-bold">Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {saveMsg && (
-        <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-xs rounded-lg font-medium">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <span>{saveMsg}</span>
-        </div>
+        <Alert variant="success">
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertTitle className="font-bold">Settings Saved</AlertTitle>
+          <AlertDescription>{saveMsg}</AlertDescription>
+        </Alert>
       )}
 
       {/* Main Card with Tab Switcher for Platform Admins */}
@@ -241,7 +258,7 @@ function ScreenAccessContent() {
                   activeTab === 'users' ? 'bg-background text-foreground shadow-2xs font-semibold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <Users className="h-3.5 w-3.5" /> Team Members ({users.length})
+                <Users className="h-3.5 w-3.5" /> Team Members ({targetUsers.length})
               </button>
             </div>
           </div>
@@ -259,7 +276,7 @@ function ScreenAccessContent() {
               ) : (
                 <span className="flex items-center gap-2">
                   <Users className="h-3.5 w-3.5" />
-                  Team Members ({users.length})
+                  Team Members ({targetUsers.length})
                 </span>
               )}
             </div>
@@ -307,14 +324,12 @@ function ScreenAccessContent() {
                   <div className="flex items-center justify-center p-12">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : users.length === 0 ? (
+                ) : targetUsers.length === 0 ? (
                   <div className="p-8 text-center text-xs text-muted-foreground">
                     No team members found
                   </div>
                 ) : (
-                  users
-                    .filter(u => u.id !== user?.id) // can't block yourself
-                    .map(u => (
+                  targetUsers.map(u => (
                       <div
                         key={u.id}
                         onClick={() => handleSelectUser(u.id)}

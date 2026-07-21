@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Shield, Lock, Building2, CreditCard } from "lucide-react";
+import { Users, Shield, Lock, Building2, CreditCard, Monitor } from "lucide-react";
 import { useAuth } from "@/features/auth/useAuth";
 
 export default function SettingsPage() {
@@ -69,6 +69,25 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <Link href="/dashboard/settings/plan" className="inline-flex items-center justify-center rounded-lg border border-border bg-background hover:bg-muted h-8 px-2.5 w-full text-sm font-medium whitespace-nowrap transition-colors">View Subscription</Link>
+            </CardContent>
+          </Card>
+        )}
+
+        {hasPermission('settings.view') && (
+          <Card className="hover:border-primary/50 transition-colors">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Monitor className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Active Sessions</CardTitle>
+                  <CardDescription>Review and revoke signed-in devices</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Link href="/dashboard/settings/sessions" className="inline-flex items-center justify-center rounded-lg border border-border bg-background hover:bg-muted h-8 px-2.5 w-full text-sm font-medium whitespace-nowrap transition-colors">Manage Sessions</Link>
             </CardContent>
           </Card>
         )}

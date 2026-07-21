@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import {
   UserPlus,
   Trash2,
@@ -33,6 +34,8 @@ import {
   Users as UsersIcon,
   Search,
   ExternalLink,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -156,7 +159,7 @@ export default function UsersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Team Members</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your organization's team members, roles, and page access restrictions.
+            Manage your organization&apos;s team members, roles, and page access restrictions.
           </p>
         </div>
 
@@ -175,13 +178,22 @@ export default function UsersPage() {
                   <DialogTitle>User Invited Successfully</DialogTitle>
                   <DialogDescription>Share the temporary credentials below with your team member.</DialogDescription>
                 </DialogHeader>
-                <div className="p-4 bg-muted rounded-lg space-y-2 text-xs">
-                  <div><span className="font-semibold">Email:</span> {inviteResult.email}</div>
-                  <div>
-                    <span className="font-semibold">Temp Password:</span>
-                    <code className="ml-2 px-2 py-0.5 bg-background rounded font-mono font-bold text-primary">
-                      {inviteResult.tempPassword}
-                    </code>
+                <div className="space-y-4 py-2">
+                  <Alert variant="success">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <AlertTitle>Invitation Created</AlertTitle>
+                    <AlertDescription>
+                      User invitation has been recorded. Provide the credentials below to the team member.
+                    </AlertDescription>
+                  </Alert>
+                  <div className="p-4 bg-muted rounded-lg space-y-2 text-xs">
+                    <div><span className="font-semibold">Email:</span> {inviteResult.email}</div>
+                    <div>
+                      <span className="font-semibold">Temp Password:</span>
+                      <code className="ml-2 px-2 py-0.5 bg-background rounded font-mono font-bold text-primary">
+                        {inviteResult.tempPassword}
+                      </code>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -198,9 +210,11 @@ export default function UsersPage() {
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   {userError && (
-                    <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md">
-                      {userError}
-                    </div>
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Action Failed</AlertTitle>
+                      <AlertDescription>{userError}</AlertDescription>
+                    </Alert>
                   )}
                   <div className="space-y-2">
                     <Label htmlFor="invite-email">Email Address</Label>
@@ -212,14 +226,20 @@ export default function UsersPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="invite-role">Role</Label>
-                    <Select value={inviteRoleId} onValueChange={setInviteRoleId}>
-                      <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
-                      <SelectContent>
-                        {roles.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <select
+                      id="invite-role"
+                      required
+                      value={inviteRoleId}
+                      onChange={(e) => setInviteRoleId(e.target.value)}
+                      className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+                    >
+                      <option value="" disabled>Select a role...</option>
+                      {roles.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <DialogFooter>

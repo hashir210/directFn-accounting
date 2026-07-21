@@ -158,13 +158,11 @@ export default function RolesSettingsPage() {
                     <h3 className="text-lg font-bold flex items-center gap-2">
                       {role.name} Permissions
                       {role.isSystemRole && (
-                        <Badge variant="destructive" className="text-[10px]">Read Only</Badge>
+                        <Badge variant="secondary" className="text-[10px]">System Role</Badge>
                       )}
                     </h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {role.isSystemRole 
-                        ? 'System roles cannot be modified.' 
-                        : 'Toggle module access for this role.'}
+                      Toggle module permissions for this role.
                     </p>
                   </div>
                   
@@ -180,7 +178,6 @@ export default function RolesSettingsPage() {
                               <Switch
                                 id={`${role.id}-${p.id}`}
                                 checked={assigned.has(p.id)}
-                                disabled={role.isSystemRole}
                                 onCheckedChange={() => handleTogglePermission(role.id, p.id, assigned.has(p.id))}
                               />
                               <div className="space-y-1">

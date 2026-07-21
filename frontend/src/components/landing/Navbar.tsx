@@ -53,7 +53,7 @@ export function Navbar() {
             Sign In
           </Link>
           <Link
-            href="/register"
+            href="/login"
             className={buttonVariants({
               size: "lg",
               className: "rounded-full px-6 font-medium shadow-xs"
@@ -98,7 +98,7 @@ export function Navbar() {
                 Sign In
               </Link>
               <Link
-                href="/register"
+                href="/login"
                 onClick={() => setMobileMenuOpen(false)}
                 className={buttonVariants({
                   className: "w-full rounded-full py-3 shadow-xs"
