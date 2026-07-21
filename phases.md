@@ -87,3 +87,110 @@ This document tracks all implemented phases, module scopes, and feature checklis
   - Provision B2B client tenant organizations with owner account, password, tier, and limits
   - Edit subscription tier to instantly grant/revoke screen access for client organizations
   - Freeze/suspend tenant organizations
+
+3. Company Management
+
+Company Profile
+
+GST/VAT Number
+
+Logo
+
+Address
+
+Fiscal Year
+
+Currency
+
+Time Zone
+
+4. User & Role Management
+
+Admin
+
+Accountant
+
+Cashier
+
+Sales Person
+
+Store Manager
+
+
+
+Permissions:
+
+
+
+Create
+
+Read
+
+Update
+
+Delete
+
+Export
+
+Approve
+
+5. Customer Management
+
+Customer Profile
+
+Credit Limit
+
+Outstanding Balance
+
+Transaction History
+
+Statements
+
+6. Supplier Management
+
+Supplier Details
+
+Purchase History
+
+Due Payments
+
+7. Product Management
+
+Categories
+
+Units
+
+Barcode
+
+SKU
+
+Purchase Price
+
+Selling Price
+
+Tax
+
+Images
+
+8. Inventory
+
+Stock In
+
+Stock Out
+
+Transfers
+
+Damaged Stock
+
+Stock Adjustment
+
+Low Stock Alerts
+
+Warehouse Support
+
+
+
+
+
+
+
