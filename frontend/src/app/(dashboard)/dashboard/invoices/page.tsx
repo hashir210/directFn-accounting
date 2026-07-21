@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,14 +21,15 @@ import {
   Plus,
   Search,
   Download,
-  Send,
   MoreVertical,
   CheckCircle2,
   Clock,
   AlertTriangle,
   DollarSign,
   FileText,
+  Loader2,
 } from 'lucide-react';
+import apiFetch from '@/lib/api';
 
 interface InvoiceItem {
   id: string;
@@ -41,67 +42,77 @@ interface InvoiceItem {
   dueAt: string;
 }
 
-const INITIAL_INVOICES: InvoiceItem[] = [
-  { id: '1', invoiceNo: 'INV-2026-001', customerName: 'Acme Global Corp', customerEmail: 'billing@acme.com', amount: 14500.00, status: 'paid', issuedAt: '2026-07-01', dueAt: '2026-07-15' },
-  { id: '2', invoiceNo: 'INV-2026-002', customerName: 'Apex Technologies', customerEmail: 'ap@apextech.io', amount: 8200.50, status: 'pending', issuedAt: '2026-07-10', dueAt: '2026-07-24' },
-  { id: '3', invoiceNo: 'INV-2026-003', customerName: 'Starlight Retail LLC', customerEmail: 'finance@starlight.com', amount: 3950.00, status: 'overdue', issuedAt: '2026-06-15', dueAt: '2026-06-30' },
-  { id: '4', invoiceNo: 'INV-2026-004', customerName: 'Nexus Digital Solutions', customerEmail: 'invoices@nexus.net', amount: 22400.00, status: 'paid', issuedAt: '2026-07-05', dueAt: '2026-07-19' },
-  { id: '5', invoiceNo: 'INV-2026-005', customerName: 'Vanguard Capital', customerEmail: 'accounts@vanguard.org', amount: 12100.00, status: 'pending', issuedAt: '2026-07-12', dueAt: '2026-07-26' },
-  { id: '6', invoiceNo: 'INV-2026-006', customerName: 'Horizon Media Group', customerEmail: 'payables@horizon.com', amount: 4350.00, status: 'overdue', issuedAt: '2026-06-20', dueAt: '2026-07-05' },
-];
-
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState<InvoiceItem[]>(INITIAL_INVOICES);
+  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Form state for new invoice
   const [newCustomer, setNewCustomer] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const [newDueDate, setNewDueDate] = useState('');
+  const [creating, setCreating] = useState(false);
 
-  const filteredInvoices = invoices.filter((inv) => {
-    const matchesSearch =
-      inv.invoiceNo.toLowerCase().includes(search.toLowerCase()) ||
-      inv.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      inv.customerEmail.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || inv.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const fetchInvoices = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (search) params.set('search', search);
+      const result = await apiFetch<{ data: InvoiceItem[] }>(`/api/v1/invoices?${params.toString()}`);
+      setInvoices(result.data);
+    } catch {
+      setInvoices([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, statusFilter]);
+
+  useEffect(() => {
+    fetchInvoices();
+  }, [fetchInvoices]);
 
   const totalInvoiced = invoices.reduce((acc, inv) => acc + inv.amount, 0);
   const totalPaid = invoices.filter((i) => i.status === 'paid').reduce((acc, inv) => acc + inv.amount, 0);
   const totalPending = invoices.filter((i) => i.status === 'pending').reduce((acc, inv) => acc + inv.amount, 0);
   const totalOverdue = invoices.filter((i) => i.status === 'overdue').reduce((acc, inv) => acc + inv.amount, 0);
 
-  const handleCreateInvoice = (e: React.FormEvent) => {
+  const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCustomer || !newAmount) return;
+    setCreating(true);
+    try {
+      await apiFetch('/api/v1/invoices', {
+        method: 'POST',
+        body: JSON.stringify({
+          customerName: newCustomer,
+          customerEmail: newEmail || undefined,
+          amount: parseFloat(newAmount),
+          dueAt: newDueDate || undefined,
+        }),
+      });
+      setNewCustomer('');
+      setNewEmail('');
+      setNewAmount('');
+      setNewDueDate('');
+      setDialogOpen(false);
+      fetchInvoices();
+    } finally {
+      setCreating(false);
+    }
+  };
 
-    const newInv: InvoiceItem = {
-      id: String(Date.now()),
-      invoiceNo: `INV-2026-00${invoices.length + 1}`,
-      customerName: newCustomer,
-      customerEmail: newEmail || 'billing@customer.com',
-      amount: parseFloat(newAmount),
-      status: 'pending',
-      issuedAt: new Date().toISOString().split('T')[0],
-      dueAt: newDueDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
-    };
-
-    setInvoices([newInv, ...invoices]);
-    setNewCustomer('');
-    setNewEmail('');
-    setNewAmount('');
-    setNewDueDate('');
-    setDialogOpen(false);
+  const handleMarkPaid = async (id: string) => {
+    try {
+      await apiFetch(`/api/v1/invoices/${id}/pay`, { method: 'POST' });
+      fetchInvoices();
+    } catch {}
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
@@ -172,8 +183,8 @@ export default function InvoicesPage() {
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" className="cursor-pointer">
-                  Generate Invoice
+                <Button type="submit" className="cursor-pointer" disabled={creating}>
+                  {creating ? 'Creating...' : 'Generate Invoice'}
                 </Button>
               </DialogFooter>
             </form>
@@ -181,7 +192,6 @@ export default function InvoicesPage() {
         </Dialog>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="shadow-2xs">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -228,7 +238,6 @@ export default function InvoicesPage() {
         </Card>
       </div>
 
-      {/* Toolbar & Filters */}
       <Card className="shadow-2xs">
         <CardHeader className="p-4 border-b">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -279,14 +288,20 @@ export default function InvoicesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInvoices.length === 0 ? (
+              {loading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                    No invoices found matching criteria
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                  </TableCell>
+                </TableRow>
+              ) : invoices.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                    No invoices found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredInvoices.map((inv) => (
+                invoices.map((inv) => (
                   <TableRow key={inv.id} className="hover:bg-primary-tint transition-colors">
                     <TableCell className="font-semibold text-xs flex items-center gap-2">
                       <FileText className="h-4 w-4 text-primary shrink-0" />
@@ -317,11 +332,19 @@ export default function InvoicesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {inv.status !== 'paid' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                            onClick={() => handleMarkPaid(inv.id)}
+                            title="Mark as paid"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer">
                           <Download className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer">
-                          <Send className="h-3.5 w-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer">
                           <MoreVertical className="h-3.5 w-3.5" />
