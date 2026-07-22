@@ -10,5 +10,8 @@ router.use(authenticate);
 
 router.get('/', InventoryController.list);
 router.post('/', validate(recordMovementSchema), InventoryController.recordMovement);
+router.get('/warehouses', InventoryController.listWarehouses);
+router.post('/warehouses', InventoryController.createWarehouse);
 
 export default router;
+

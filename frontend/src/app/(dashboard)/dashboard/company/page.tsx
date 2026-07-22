@@ -1,17 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2,
   Save,
   Globe,
-  DollarSign,
-  Clock,
-  FileText,
-  MapPin,
   Upload,
   CheckCircle,
   ShieldCheck,
+  MapPin,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,24 +23,92 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { apiFetch, ApiError } from '@/lib/api';
 
 export default function CompanyManagementPage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [error, setError] = useState('');
+
   const [formData, setFormData] = useState({
-    companyName: 'DirectFN Accounting Systems',
-    taxNumber: 'GST-98420-DFN',
-    vatNumber: 'VAT-US-991204',
-    address: '742 Market Street, Suite 410, New York, NY 10001',
+    companyName: '',
+    contactEmail: '',
+    taxNumber: '',
+    address: '',
     fiscalYear: 'jan-dec',
     currency: 'USD',
     timeZone: 'UTC-5',
+    logoUrl: '',
   });
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    async function loadCompany() {
+      try {
+        const data = await apiFetch<{
+          name?: string;
+          contactEmail?: string;
+          gstVatNumber?: string;
+          address?: string;
+          fiscalYear?: string;
+          currency?: string;
+          timeZone?: string;
+          logoUrl?: string;
+        }>('/api/v1/organization/current');
+        setFormData({
+          companyName: data.name || '',
+          contactEmail: data.contactEmail || '',
+          taxNumber: data.gstVatNumber || '',
+          address: data.address || '',
+          fiscalYear: data.fiscalYear || 'jan-dec',
+          currency: data.currency || 'USD',
+          timeZone: data.timeZone || 'UTC-5',
+          logoUrl: data.logoUrl || '',
+        });
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : 'Failed to load organization settings');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadCompany();
+  }, []);
+
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    setIsSaving(true);
+    setError('');
+    try {
+      await apiFetch('/api/v1/organization/current', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: formData.companyName,
+          contactEmail: formData.contactEmail,
+          gstVatNumber: formData.taxNumber,
+          address: formData.address,
+          fiscalYear: formData.fiscalYear,
+          currency: formData.currency,
+          timeZone: formData.timeZone,
+          logoUrl: formData.logoUrl,
+        }),
+      });
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to update company settings');
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12">
@@ -64,12 +130,18 @@ export default function CompanyManagementPage() {
               <CheckCircle className="h-3.5 w-3.5 mr-1" /> Saved Successfully
             </Badge>
           )}
-          <Button onClick={handleSave} className="cursor-pointer">
-            <Save className="h-4 w-4 mr-2" />
+          <Button onClick={handleSave} disabled={isSaving} className="cursor-pointer">
+            {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Save Changes
           </Button>
         </div>
       </div>
+
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-md">
+          {error}
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-3">
         {/* Left 2 Cols: Form Settings */}
@@ -79,7 +151,7 @@ export default function CompanyManagementPage() {
               <CardTitle className="text-base flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-primary" /> Company Profile & Branding
               </CardTitle>
-              <CardDescription>Legal registered business identity and logo.</CardDescription>
+              <CardDescription>Legal registered business identity and contact details.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -91,41 +163,42 @@ export default function CompanyManagementPage() {
                     onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="taxNumber">GST / Tax Identification Number</Label>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="contactEmail">Official Contact Email</Label>
+                  <Input
+                    id="contactEmail"
+                    type="email"
+                    placeholder="billing@company.com"
+                    value={formData.contactEmail}
+                    onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="taxNumber">GST / VAT Identification Number</Label>
                   <Input
                     id="taxNumber"
+                    placeholder="e.g. GST-98420-DFN"
                     value={formData.taxNumber}
                     onChange={(e) => setFormData({ ...formData, taxNumber: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="vatNumber">VAT Number</Label>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="logoUrl">Company Logo URL</Label>
                   <Input
-                    id="vatNumber"
-                    value={formData.vatNumber}
-                    onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value })}
+                    id="logoUrl"
+                    placeholder="https://example.com/logo.png"
+                    value={formData.logoUrl}
+                    onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="address">Registered Address</Label>
                   <Input
                     id="address"
+                    placeholder="Address, City, Country"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   />
-                </div>
-              </div>
-
-              <div className="pt-2 border-t space-y-3">
-                <Label>Company Logo</Label>
-                <div className="flex items-center gap-4">
-                  <div className="h-16 w-16 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center bg-muted/20">
-                    <Building2 className="h-8 w-8 text-muted-foreground/50" />
-                  </div>
-                  <Button variant="outline" size="sm" className="cursor-pointer">
-                    <Upload className="h-4 w-4 mr-2" /> Upload Logo
-                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -209,36 +282,16 @@ export default function CompanyManagementPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">GST Status:</span>
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Verified</Badge>
+                <span className="text-muted-foreground">GST/VAT Status:</span>
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Active</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Fiscal Period:</span>
-                <span className="font-medium">Active (Q3 2026)</span>
+                <span className="text-muted-foreground">Fiscal Cycle:</span>
+                <span className="font-medium uppercase">{formData.fiscalYear}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Tax Audit Lock:</span>
-                <span className="font-medium">Dec 31, 2025</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Branch Locations</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="p-3 border rounded-lg bg-muted/20 space-y-1">
-                <div className="font-semibold flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-primary" /> Head Office (HQ)
-                </div>
-                <div className="text-xs text-muted-foreground">New York, NY 10001</div>
-              </div>
-              <div className="p-3 border rounded-lg bg-muted/20 space-y-1">
-                <div className="font-semibold flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" /> Operations Hub
-                </div>
-                <div className="text-xs text-muted-foreground">Chicago, IL 60601</div>
+                <span className="text-muted-foreground">Currency:</span>
+                <span className="font-medium">{formData.currency}</span>
               </div>
             </CardContent>
           </Card>
@@ -247,3 +300,4 @@ export default function CompanyManagementPage() {
     </div>
   );
 }
+

@@ -1,9 +1,50 @@
 import prisma from '../../config/db';
 
 export class InventoryService {
+  static async listWarehouses(organizationId: string) {
+    let warehouses = await prisma.warehouse.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (warehouses.length === 0) {
+      // Auto-create default HQ warehouse
+      const defaultWh = await prisma.warehouse.create({
+        data: {
+          organizationId,
+          name: 'Main HQ Warehouse',
+          code: 'HQ-01',
+          isDefault: true,
+        },
+      });
+      warehouses = [defaultWh];
+    }
+
+    return warehouses;
+  }
+
+  static async createWarehouse(organizationId: string, data: { name: string; code?: string; address?: string; isDefault?: boolean }) {
+    if (data.isDefault) {
+      await prisma.warehouse.updateMany({
+        where: { organizationId },
+        data: { isDefault: false },
+      });
+    }
+
+    return prisma.warehouse.create({
+      data: {
+        organizationId,
+        name: data.name,
+        code: data.code || null,
+        address: data.address || null,
+        isDefault: data.isDefault || false,
+      },
+    });
+  }
+
   static async list(organizationId: string, options: { page?: number; limit?: number; search?: string; type?: string }) {
     const page = options.page || 1;
-    const limit = options.limit || 20;
+    const limit = options.limit || 50;
     const skip = (page - 1) * limit;
 
     const where: any = { organizationId };
@@ -45,6 +86,7 @@ export class InventoryService {
     itemName: string;
     quantity: number;
     warehouse?: string;
+    warehouseId?: string;
   }) {
     const product = await prisma.product.findFirst({
       where: { organizationId, sku: data.sku },
@@ -58,7 +100,8 @@ export class InventoryService {
         sku: data.sku,
         itemName: data.itemName,
         quantity: data.quantity,
-        warehouse: data.warehouse || 'Main Warehouse',
+        warehouse: data.warehouse || 'Main HQ Warehouse',
+        warehouseId: data.warehouseId || null,
         status: 'Completed',
       },
     });
@@ -72,13 +115,30 @@ export class InventoryService {
       }
 
       if (stockChange !== 0) {
-        await prisma.product.update({
+        const updatedProduct = await prisma.product.update({
           where: { id: product.id },
           data: { stockQuantity: { increment: stockChange } },
         });
+
+        // Trigger notification if low stock threshold is reached
+        if (updatedProduct.stockQuantity <= updatedProduct.lowStockThreshold) {
+          const owner = await prisma.user.findFirst({ where: { organizationId } });
+          if (owner) {
+            await prisma.notification.create({
+              data: {
+                organizationId,
+                userId: owner.id,
+                title: 'Low Stock Alert',
+                message: `Product ${updatedProduct.name} (${updatedProduct.sku}) stock dropped to ${updatedProduct.stockQuantity} units!`,
+                type: 'warning',
+              },
+            });
+          }
+        }
       }
     }
 
     return movement;
   }
 }
+

@@ -11,16 +11,30 @@ export class OrganizationController {
     }
   }
 
+  static async getCurrentOrg(req: Request, res: Response, next: NextFunction) {
+    try {
+      const orgId = req.user!.organizationId;
+      const org = await OrganizationService.getCurrentOrg(orgId);
+      res.status(200).json({ success: true, data: org });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async updateSettings(req: Request, res: Response, next: NextFunction) {
     try {
       const orgId = req.user!.organizationId;
-      // Only tenant‑editable fields are accepted; platform‑controlled fields
-      // (maxUsers, disabledScreens, planId, status) are ignored by the service.
-      const { name, contactEmail } = req.body;
+      const { name, contactEmail, gstVatNumber, address, fiscalYear, currency, timeZone, logoUrl } = req.body;
 
       const updatedOrg = await OrganizationService.updateOrganization(orgId, {
         name,
         contactEmail,
+        gstVatNumber,
+        address,
+        fiscalYear,
+        currency,
+        timeZone,
+        logoUrl,
       });
 
       res.status(200).json({ success: true, data: updatedOrg });
@@ -38,3 +52,4 @@ export class OrganizationController {
     }
   }
 }
+

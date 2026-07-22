@@ -97,25 +97,80 @@ export class OrganizationService {
   }
 
   /**
+   * Get full organization profile for the current logged in tenant.
+   */
+  static async getCurrentOrg(orgId: string) {
+    const org = await prisma.organization.findUnique({
+      where: { id: orgId },
+      select: {
+        id: true,
+        name: true,
+        contactEmail: true,
+        gstVatNumber: true,
+        address: true,
+        fiscalYear: true,
+        currency: true,
+        timeZone: true,
+        logoUrl: true,
+        status: true,
+        maxUsers: true,
+        disabledScreens: true,
+        createdAt: true,
+      },
+    });
+
+    if (!org) {
+      throw new NotFoundError('Organization not found');
+    }
+
+    return org;
+  }
+
+  /**
    * Updates organization settings that a tenant is allowed to change itself.
    *
    * NOTE: platform‑controlled fields (`maxUsers`, `disabledScreens`, `planId`,
    * `status`, `isPlatform`) are intentionally NOT editable here — those are only
    * mutable through the platform (FinFlow) endpoints.
    */
-  static async updateOrganization(orgId: string, data: { name?: string; contactEmail?: string }) {
-    const updateData: { name?: string; contactEmail?: string } = {};
+  static async updateOrganization(orgId: string, data: {
+    name?: string;
+    contactEmail?: string;
+    gstVatNumber?: string;
+    address?: string;
+    fiscalYear?: string;
+    currency?: string;
+    timeZone?: string;
+    logoUrl?: string;
+  }) {
+    const updateData: any = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.contactEmail !== undefined) updateData.contactEmail = data.contactEmail;
+    if (data.gstVatNumber !== undefined) updateData.gstVatNumber = data.gstVatNumber;
+    if (data.address !== undefined) updateData.address = data.address;
+    if (data.fiscalYear !== undefined) updateData.fiscalYear = data.fiscalYear;
+    if (data.currency !== undefined) updateData.currency = data.currency;
+    if (data.timeZone !== undefined) updateData.timeZone = data.timeZone;
+    if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl;
 
     if (Object.keys(updateData).length === 0) {
-      return prisma.organization.findUnique({ where: { id: orgId } });
+      return this.getCurrentOrg(orgId);
     }
 
     return prisma.organization.update({
       where: { id: orgId },
       data: updateData,
-      select: { id: true, name: true, contactEmail: true },
+      select: {
+        id: true,
+        name: true,
+        contactEmail: true,
+        gstVatNumber: true,
+        address: true,
+        fiscalYear: true,
+        currency: true,
+        timeZone: true,
+        logoUrl: true,
+      },
     });
   }
 
@@ -162,3 +217,4 @@ export class OrganizationService {
     };
   }
 }
+

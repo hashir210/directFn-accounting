@@ -1,10 +1,11 @@
+import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../../config/db';
 import { NotFoundError, ConflictError } from '../../utils/errors';
 
 export class CustomersService {
   static async list(organizationId: string, options: { page?: number; limit?: number; search?: string }) {
     const page = options.page || 1;
-    const limit = options.limit || 20;
+    const limit = options.limit || 50;
     const skip = (page - 1) * limit;
 
     const where: any = { organizationId };
@@ -12,6 +13,7 @@ export class CustomersService {
       where.OR = [
         { name: { contains: options.search } },
         { email: { contains: options.search } },
+        { phone: { contains: options.search } },
       ];
     }
 
@@ -20,13 +22,28 @@ export class CustomersService {
         where,
         skip,
         take: limit,
+        include: {
+          invoices: {
+            where: { status: { in: ['pending', 'unpaid', 'overdue'] } },
+            select: { amount: true },
+          },
+        },
         orderBy: { createdAt: 'desc' },
       }),
       prisma.customer.count({ where }),
     ]);
 
+    const formattedItems = items.map((customer) => {
+      const outstandingSum = customer.invoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+      const { invoices, ...rest } = customer;
+      return {
+        ...rest,
+        outstanding: outstandingSum.toFixed(2),
+      };
+    });
+
     return {
-      items,
+      items: formattedItems,
       pagination: {
         page,
         limit,
@@ -43,10 +60,25 @@ export class CustomersService {
     });
 
     if (!customer) throw new NotFoundError('Customer not found');
-    return customer;
+
+    const outstandingSum = customer.invoices
+      .filter((inv) => ['pending', 'unpaid', 'overdue'].includes(inv.status.toLowerCase()))
+      .reduce((sum, inv) => sum + Number(inv.amount), 0);
+
+    return {
+      ...customer,
+      outstanding: outstandingSum.toFixed(2),
+    };
   }
 
-  static async create(organizationId: string, data: { name: string; email?: string; phone?: string; address?: string }) {
+  static async create(organizationId: string, data: {
+    name: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    creditLimit?: number;
+    status?: string;
+  }) {
     if (data.email) {
       const existing = await prisma.customer.findFirst({
         where: { organizationId, email: data.email },
@@ -61,17 +93,47 @@ export class CustomersService {
         email: data.email || null,
         phone: data.phone || null,
         address: data.address || null,
+        creditLimit: data.creditLimit !== undefined ? new Decimal(data.creditLimit) : 0,
+        status: data.status || 'Active',
       },
     });
   }
 
-  static async update(organizationId: string, id: string, data: { name?: string; email?: string; phone?: string; address?: string }) {
+  static async update(organizationId: string, id: string, data: Partial<{
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    creditLimit: number;
+    status: string;
+  }>) {
     await this.getById(organizationId, id);
-    return prisma.customer.update({ where: { id }, data });
+
+    const updateData: any = { ...data };
+    if (data.creditLimit !== undefined) updateData.creditLimit = new Decimal(data.creditLimit);
+
+    return prisma.customer.update({ where: { id }, data: updateData });
   }
 
   static async delete(organizationId: string, id: string) {
     await this.getById(organizationId, id);
     return prisma.customer.delete({ where: { id } });
   }
+
+  static async getStatement(organizationId: string, id: string) {
+    const customer = await this.getById(organizationId, id);
+    const invoices = await prisma.invoice.findMany({
+      where: { organizationId, customerId: id },
+      orderBy: { issuedAt: 'desc' },
+    });
+
+    return {
+      customer,
+      statementDate: new Date().toISOString(),
+      invoices,
+      totalInvoiced: invoices.reduce((sum, inv) => sum + Number(inv.amount), 0),
+      totalOutstanding: customer.outstanding,
+    };
+  }
 }
+

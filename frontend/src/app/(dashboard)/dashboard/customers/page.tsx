@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ContactRound,
   Plus,
@@ -8,11 +8,8 @@ import {
   ArrowUpRight,
   Download,
   AlertTriangle,
-  CreditCard,
   FileText,
-  DollarSign,
-  MoreVertical,
-  CheckCircle,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,89 +33,98 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { apiFetch, ApiError } from '@/lib/api';
 
 interface Customer {
   id: string;
   name: string;
-  email: string;
-  phone: string;
-  creditLimit: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  creditLimit: string | number;
   outstanding: string;
-  status: 'Active' | 'Credit Hold' | 'Overdue';
-  lastStatement: string;
+  status: string;
+  createdAt: string;
 }
 
-const mockCustomers: Customer[] = [
-  {
-    id: 'cust-1',
-    name: 'Apex Global Systems',
-    email: 'billing@apexglobal.com',
-    phone: '+1 (555) 234-5678',
-    creditLimit: '$50,000',
-    outstanding: '$24,500',
-    status: 'Active',
-    lastStatement: 'Jul 01, 2026',
-  },
-  {
-    id: 'cust-2',
-    name: 'Horizon Tech Ventures',
-    email: 'finance@horizon.vc',
-    phone: '+1 (555) 876-5432',
-    creditLimit: '$30,000',
-    outstanding: '$32,100',
-    status: 'Overdue',
-    lastStatement: 'Jun 15, 2026',
-  },
-  {
-    id: 'cust-3',
-    name: 'Acme Logistics Corp',
-    email: 'accounts@acme.com',
-    phone: '+1 (555) 345-6789',
-    creditLimit: '$20,000',
-    outstanding: '$0',
-    status: 'Active',
-    lastStatement: 'Jul 10, 2026',
-  },
-  {
-    id: 'cust-4',
-    name: 'Starlight Retailers',
-    email: 'payables@starlight.io',
-    phone: '+1 (555) 901-2345',
-    creditLimit: '$15,000',
-    outstanding: '$18,400',
-    status: 'Credit Hold',
-    lastStatement: 'Jun 30, 2026',
-  },
-];
+interface CustomerStatement {
+  customer: Customer;
+  statementDate: string;
+  invoices: Array<{
+    id: string;
+    invoiceNo: string;
+    amount: string | number;
+    status: string;
+    issuedAt: string;
+  }>;
+  totalInvoiced: number;
+  totalOutstanding: string;
+}
 
 export default function CustomerManagementPage() {
-  const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [openAdd, setOpenAdd] = useState(false);
-  const [newCust, setNewCust] = useState({ name: '', email: '', phone: '', creditLimit: '$10,000' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleCreateCustomer = (e: React.FormEvent) => {
+  const [newCust, setNewCust] = useState({ name: '', email: '', phone: '', address: '', creditLimit: '10000' });
+  const [selectedStatement, setSelectedStatement] = useState<CustomerStatement | null>(null);
+  const [openStatement, setOpenStatement] = useState(false);
+
+  const fetchCustomers = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await apiFetch<{ items: Customer[] }>(`/api/v1/customers?search=${encodeURIComponent(search)}`);
+      setCustomers(res.items);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to fetch customers');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [search]);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
+
+  const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    const created: Customer = {
-      id: `cust-${Date.now()}`,
-      name: newCust.name || 'New Customer',
-      email: newCust.email || 'customer@example.com',
-      phone: newCust.phone || '+1 (555) 000-0000',
-      creditLimit: newCust.creditLimit,
-      outstanding: '$0',
-      status: 'Active',
-      lastStatement: 'Today',
-    };
-    setCustomers([created, ...customers]);
-    setOpenAdd(false);
-    setNewCust({ name: '', email: '', phone: '', creditLimit: '$10,000' });
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await apiFetch('/api/v1/customers', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: newCust.name,
+          email: newCust.email || undefined,
+          phone: newCust.phone || undefined,
+          address: newCust.address || undefined,
+          creditLimit: parseFloat(newCust.creditLimit) || 0,
+        }),
+      });
+      setOpenAdd(false);
+      setNewCust({ name: '', email: '', phone: '', address: '', creditLimit: '10000' });
+      fetchCustomers();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to create customer');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const filtered = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleViewStatement = async (id: string) => {
+    try {
+      const data = await apiFetch<CustomerStatement>(`/api/v1/customers/${id}/statement`);
+      setSelectedStatement(data);
+      setOpenStatement(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to load customer statement');
+    }
+  };
+
+  const totalOutstandingSum = customers.reduce((sum, c) => sum + parseFloat(c.outstanding || '0'), 0);
 
   return (
     <div className="space-y-6 pb-12">
@@ -135,10 +141,6 @@ export default function CustomerManagementPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="cursor-pointer">
-            <Download className="h-4 w-4 mr-2" /> Export
-          </Button>
-
           <Dialog open={openAdd} onOpenChange={setOpenAdd}>
             <DialogTrigger asChild>
               <Button size="sm" className="cursor-pointer">
@@ -168,7 +170,6 @@ export default function CustomerManagementPage() {
                       <Label>Billing Email</Label>
                       <Input
                         type="email"
-                        required
                         placeholder="billing@apex.com"
                         value={newCust.email}
                         onChange={(e) => setNewCust({ ...newCust, email: e.target.value })}
@@ -186,7 +187,8 @@ export default function CustomerManagementPage() {
                   <div className="space-y-2">
                     <Label>Approved Credit Limit ($)</Label>
                     <Input
-                      placeholder="$10,000"
+                      type="number"
+                      placeholder="10000"
                       value={newCust.creditLimit}
                       onChange={(e) => setNewCust({ ...newCust, creditLimit: e.target.value })}
                     />
@@ -196,13 +198,22 @@ export default function CustomerManagementPage() {
                   <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">Save Customer</Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                    Save Customer
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
         </div>
       </div>
+
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-md">
+          {error}
+        </div>
+      )}
 
       {/* Metric Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -213,7 +224,7 @@ export default function CustomerManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xs text-emerald-600 flex items-center gap-1 font-medium">
-              <ArrowUpRight className="h-3.5 w-3.5" /> 18 High-Volume Accounts
+              <ArrowUpRight className="h-3.5 w-3.5" /> Registered Accounts
             </div>
           </CardContent>
         </Card>
@@ -221,35 +232,11 @@ export default function CustomerManagementPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Outstanding Receivables</CardDescription>
-            <CardTitle className="text-2xl font-bold">$75,000</CardTitle>
+            <CardTitle className="text-2xl font-bold">${totalOutstandingSum.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-xs text-amber-600 flex items-center gap-1 font-medium">
-              Across 4 Active Clients
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Credit Hold Accounts</CardDescription>
-            <CardTitle className="text-2xl font-bold text-rose-600">1 Account</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-rose-600 flex items-center gap-1 font-medium">
-              <AlertTriangle className="h-3.5 w-3.5" /> Limit Exceeded
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Monthly Statements Ready</CardDescription>
-            <CardTitle className="text-2xl font-bold">{customers.length}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground flex items-center gap-1">
-              <FileText className="h-3.5 w-3.5" /> Generated Jul 2026
+              Active Unpaid Balances
             </div>
           </CardContent>
         </Card>
@@ -275,49 +262,111 @@ export default function CustomerManagementPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Customer / Contact</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Approved Credit Limit</TableHead>
-                <TableHead>Outstanding Balance</TableHead>
-                <TableHead>Last Statement</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell>
-                    <div className="font-semibold">{c.name}</div>
-                    <div className="text-xs text-muted-foreground">{c.email} • {c.phone}</div>
-                  </TableCell>
-                  <TableCell>
-                    {c.status === 'Active' && (
-                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Active</Badge>
-                    )}
-                    {c.status === 'Overdue' && (
-                      <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">Overdue</Badge>
-                    )}
-                    {c.status === 'Credit Hold' && (
-                      <Badge variant="outline" className="bg-rose-500/10 text-rose-600 border-rose-500/20">Credit Hold</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">{c.creditLimit}</TableCell>
-                  <TableCell className="font-mono font-semibold text-sm">{c.outstanding}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{c.lastStatement}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="cursor-pointer">
-                      <FileText className="h-4 w-4 mr-1" /> Statement
-                    </Button>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer / Contact</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Approved Credit Limit</TableHead>
+                  <TableHead>Outstanding Balance</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {customers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                      No customers found. Click &quot;Add Customer&quot; to create your first client.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  customers.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell>
+                        <div className="font-semibold">{c.name}</div>
+                        <div className="text-xs text-muted-foreground">{c.email || 'No Email'} • {c.phone || 'No Phone'}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                          {c.status || 'Active'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">${Number(c.creditLimit || 0).toLocaleString()}</TableCell>
+                      <TableCell className="font-mono font-semibold text-sm">${Number(c.outstanding || 0).toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <Button onClick={() => handleViewStatement(c.id)} variant="ghost" size="sm" className="cursor-pointer">
+                          <FileText className="h-4 w-4 mr-1" /> Statement
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
+
+      {/* Statement Modal Dialog */}
+      <Dialog open={openStatement} onOpenChange={setOpenStatement}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Customer Account Statement</DialogTitle>
+            <DialogDescription>
+              Ledger summary for {selectedStatement?.customer?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4 text-sm bg-muted/20 p-3 rounded-lg">
+              <div>
+                <span className="text-muted-foreground">Total Invoiced:</span>{' '}
+                <span className="font-bold">${selectedStatement?.totalInvoiced?.toFixed(2)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Total Outstanding:</span>{' '}
+                <span className="font-bold text-rose-600">${selectedStatement?.totalOutstanding}</span>
+              </div>
+            </div>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Invoices Breakdown</h4>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice #</TableHead>
+                  <TableHead>Issued Date</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selectedStatement?.invoices?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-xs text-muted-foreground py-4">No invoices recorded yet.</TableCell>
+                  </TableRow>
+                ) : (
+                  selectedStatement?.invoices?.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-semibold">{inv.invoiceNo}</TableCell>
+                      <TableCell className="text-xs">{new Date(inv.issuedAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-mono">${Number(inv.amount).toFixed(2)}</TableCell>
+                      <TableCell><Badge variant="secondary">{inv.status}</Badge></TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenStatement(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+

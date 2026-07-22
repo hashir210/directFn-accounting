@@ -51,4 +51,23 @@ export class SuppliersController {
       next(error);
     }
   }
+
+  static async createPurchaseBill(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await SuppliersService.createPurchaseBill(req.user!.organizationId, req.body);
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async recordPayment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await SuppliersService.recordPayment(req.user!.organizationId, req.body);
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
+

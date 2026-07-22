@@ -51,4 +51,14 @@ export class CustomersController {
       next(error);
     }
   }
+
+  static async getStatement(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await CustomersService.getStatement(req.user!.organizationId, req.params.id);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
+

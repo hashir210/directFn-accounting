@@ -16,13 +16,34 @@ import {
   CheckCircle2,
   Loader2,
 } from 'lucide-react';
-import apiFetch from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+
+interface IncomeReport {
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  grossMargin: number;
+}
+
+interface BalanceReport {
+  assets?: { totalAssets: number };
+  liabilities?: { totalLiabilities: number };
+  equity?: { totalEquity: number };
+}
+
+interface CashFlowReport {
+  summary?: {
+    totalOperatingInflow: number;
+    totalOperatingOutflow: number;
+    netCashFlow: number;
+  };
+}
 
 export default function ReportsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState(new Date().getFullYear().toString());
-  const [income, setIncome] = useState<any>(null);
-  const [balance, setBalance] = useState<any>(null);
-  const [cashFlow, setCashFlow] = useState<any>(null);
+  const [income, setIncome] = useState<IncomeReport | null>(null);
+  const [balance, setBalance] = useState<BalanceReport | null>(null);
+  const [cashFlow, setCashFlow] = useState<CashFlowReport | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,9 +51,9 @@ export default function ReportsPage() {
       setLoading(true);
       try {
         const [incomeData, balanceData, cashData] = await Promise.all([
-          apiFetch(`/api/v1/reports/income-statement?year=${selectedPeriod}`),
-          apiFetch('/api/v1/reports/balance-sheet'),
-          apiFetch(`/api/v1/reports/cash-flow?year=${selectedPeriod}`),
+          apiFetch<IncomeReport>(`/api/v1/reports/income-statement?year=${selectedPeriod}`),
+          apiFetch<BalanceReport>('/api/v1/reports/balance-sheet'),
+          apiFetch<CashFlowReport>(`/api/v1/reports/cash-flow?year=${selectedPeriod}`),
         ]);
         setIncome(incomeData);
         setBalance(balanceData);
@@ -46,6 +67,10 @@ export default function ReportsPage() {
       }
     })();
   }, [selectedPeriod]);
+
+  const handleExportReport = () => {
+    window.print();
+  };
 
   if (loading) {
     return (
@@ -79,6 +104,11 @@ export default function ReportsPage() {
               </button>
             ))}
           </div>
+
+          <Button onClick={handleExportReport} variant="outline" size="sm" className="cursor-pointer">
+            <Download className="h-4 w-4 mr-2" />
+            Print / Export Report
+          </Button>
         </div>
       </div>
 
@@ -104,8 +134,8 @@ export default function ReportsPage() {
             </div>
             <div className="flex justify-between items-center text-sm font-bold pt-1">
               <span>Net Profit</span>
-              <span className={income?.netProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}>
-                {income?.netProfit >= 0 ? '+' : '-'}${Math.abs(income?.netProfit || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              <span className={(income?.netProfit ?? 0) >= 0 ? 'text-emerald-600' : 'text-destructive'}>
+                {(income?.netProfit ?? 0) >= 0 ? '+' : '-'}${Math.abs(income?.netProfit || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             </div>
             <div className="text-xs text-muted-foreground mt-1">

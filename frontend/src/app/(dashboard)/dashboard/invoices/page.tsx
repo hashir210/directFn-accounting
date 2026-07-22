@@ -111,6 +111,28 @@ export default function InvoicesPage() {
     } catch {}
   };
 
+  const handleExportCSV = () => {
+    if (invoices.length === 0) return;
+    const headers = ['Invoice No', 'Customer Name', 'Email', 'Amount', 'Status', 'Issued Date', 'Due Date'];
+    const rows = invoices.map((inv) => [
+      inv.invoiceNo,
+      `"${inv.customerName.replace(/"/g, '""')}"`,
+      `"${(inv.customerEmail || '').replace(/"/g, '""')}"`,
+      inv.amount,
+      inv.status,
+      inv.issuedAt,
+      inv.dueAt,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `invoices_export_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -266,7 +288,7 @@ export default function InvoicesPage() {
                 ))}
               </div>
 
-              <Button variant="outline" size="sm" className="cursor-pointer text-xs h-9">
+              <Button onClick={handleExportCSV} variant="outline" size="sm" className="cursor-pointer text-xs h-9">
                 <Download className="h-3.5 w-3.5 mr-1.5" />
                 Export
               </Button>

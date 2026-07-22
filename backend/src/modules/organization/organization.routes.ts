@@ -8,6 +8,9 @@ const router = Router();
 // Public route to list organizations for the pre-login workspace selector
 router.get('/public', OrganizationController.getPublicOrganizations);
 
+// Read current org profile
+router.get('/current', authenticate, OrganizationController.getCurrentOrg);
+
 // Read-only view of the current org's plan, limits, and enabled screens
 router.get('/current/plan', authenticate, OrganizationController.getCurrentPlan);
 
@@ -20,3 +23,4 @@ router.patch(
 );
 
 export default router;
+

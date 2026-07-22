@@ -1,17 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Package,
   Plus,
   Search,
-  Download,
   Barcode,
-  Tag,
-  DollarSign,
-  Image as ImageIcon,
   AlertTriangle,
-  CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,110 +31,114 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { apiFetch, ApiError } from '@/lib/api';
 
 interface Product {
   id: string;
   name: string;
   sku: string;
-  barcode: string;
-  category: string;
+  barcode: string | null;
+  category: string | null;
   unit: string;
   purchasePrice: string;
   sellingPrice: string;
   taxRate: string;
+  imageUrl: string | null;
+  stockQuantity: number;
+  lowStockThreshold: number;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
 }
 
-const mockProducts: Product[] = [
-  {
-    id: 'prod-1',
-    name: 'FinFlow POS Smart Terminal V2',
-    sku: 'FF-POS-V2',
-    barcode: '890123456789',
-    category: 'Hardware & POS',
-    unit: 'Unit',
-    purchasePrice: '$220.00',
-    sellingPrice: '$349.00',
-    taxRate: '8%',
-    status: 'In Stock',
-  },
-  {
-    id: 'prod-2',
-    name: 'Thermal Receipt Paper Roll 80mm',
-    sku: 'FF-TRP-80',
-    barcode: '890987654321',
-    category: 'Consumables',
-    unit: 'Box (50 Rolls)',
-    purchasePrice: '$18.50',
-    sellingPrice: '$35.00',
-    taxRate: '5%',
-    status: 'Low Stock',
-  },
-  {
-    id: 'prod-3',
-    name: 'FinFlow Wireless NFC Reader',
-    sku: 'FF-NFC-R1',
-    barcode: 'N/A',
-    category: 'Hardware & POS',
-    unit: 'Unit',
-    purchasePrice: '$45.00',
-    sellingPrice: '$89.00',
-    taxRate: '8%',
-    status: 'Out of Stock',
-  },
-  {
-    id: 'prod-4',
-    name: 'Enterprise Cloud Backup Module',
-    sku: 'FF-SW-BCK',
-    barcode: 'DIGITAL-SKU',
-    category: 'Software Addon',
-    unit: 'License/Year',
-    purchasePrice: '$100.00',
-    sellingPrice: '$299.00',
-    taxRate: '0%',
-    status: 'In Stock',
-  },
-];
-
 export default function ProductManagementPage() {
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [openAdd, setOpenAdd] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
   const [newProd, setNewProd] = useState({
     name: '',
     sku: '',
     barcode: '',
     category: 'Hardware',
     unit: 'Unit',
-    purchasePrice: '$0',
-    sellingPrice: '$0',
+    purchasePrice: '0',
+    sellingPrice: '0',
+    imageUrl: '',
+    stockQuantity: '10',
   });
 
-  const handleCreateProduct = (e: React.FormEvent) => {
+  const fetchProducts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await apiFetch<{ items: Product[] }>(`/api/v1/products?search=${encodeURIComponent(search)}`);
+      setProducts(res.items);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to fetch products');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [search]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    const created: Product = {
-      id: `prod-${Date.now()}`,
-      name: newProd.name || 'New Item',
-      sku: newProd.sku || `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
-      barcode: newProd.barcode || 'N/A',
-      category: newProd.category,
-      unit: newProd.unit,
-      purchasePrice: newProd.purchasePrice,
-      sellingPrice: newProd.sellingPrice,
-      taxRate: '5%',
-      status: 'In Stock',
-    };
-    setProducts([created, ...products]);
-    setOpenAdd(false);
-    setNewProd({ name: '', sku: '', barcode: '', category: 'Hardware', unit: 'Unit', purchasePrice: '$0', sellingPrice: '$0' });
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await apiFetch('/api/v1/products', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: newProd.name,
+          sku: newProd.sku || `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
+          barcode: newProd.barcode || undefined,
+          category: newProd.category || undefined,
+          unit: newProd.unit,
+          purchasePrice: parseFloat(newProd.purchasePrice) || 0,
+          sellingPrice: parseFloat(newProd.sellingPrice) || 0,
+          imageUrl: newProd.imageUrl || undefined,
+          stockQuantity: parseInt(newProd.stockQuantity) || 0,
+        }),
+      });
+      setOpenAdd(false);
+      setNewProd({ name: '', sku: '', barcode: '', category: 'Hardware', unit: 'Unit', purchasePrice: '0', sellingPrice: '0', imageUrl: '', stockQuantity: '10' });
+      fetchProducts();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to create product');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const filtered = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase()) ||
-      p.category.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleExportCSV = () => {
+    if (products.length === 0) return;
+    const headers = ['Product Name', 'SKU', 'Unit', 'Category', 'Barcode', 'Status', 'Stock Quantity', 'Purchase Price', 'Selling Price'];
+    const rows = products.map((p) => [
+      `"${p.name.replace(/"/g, '""')}"`,
+      `"${p.sku.replace(/"/g, '""')}"`,
+      `"${p.unit.replace(/"/g, '""')}"`,
+      `"${(p.category || 'Hardware').replace(/"/g, '""')}"`,
+      `"${(p.barcode || 'N/A').replace(/"/g, '""')}"`,
+      p.status,
+      p.stockQuantity,
+      p.purchasePrice,
+      p.sellingPrice,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `catalog_export_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const lowStockCount = products.filter(p => p.status === 'Low Stock' || p.status === 'Out of Stock').length;
 
   return (
     <div className="space-y-6 pb-12">
@@ -155,10 +155,9 @@ export default function ProductManagementPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="cursor-pointer">
-            <Download className="h-4 w-4 mr-2" /> Export Catalog
+          <Button onClick={handleExportCSV} variant="outline" size="sm" className="cursor-pointer">
+            Export Catalog
           </Button>
-
           <Dialog open={openAdd} onOpenChange={setOpenAdd}>
             <DialogTrigger asChild>
               <Button size="sm" className="cursor-pointer">
@@ -169,7 +168,7 @@ export default function ProductManagementPage() {
               <form onSubmit={handleCreateProduct}>
                 <DialogHeader>
                   <DialogTitle>Add Product to Catalog</DialogTitle>
-                  <DialogDescription>Configure pricing, SKU, barcode, and tax profiles.</DialogDescription>
+                  <DialogDescription>Configure pricing, SKU, barcode, image URL, and stock levels.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
@@ -203,7 +202,8 @@ export default function ProductManagementPage() {
                     <div className="space-y-2">
                       <Label>Purchase Cost ($)</Label>
                       <Input
-                        placeholder="$220.00"
+                        type="number"
+                        placeholder="220.00"
                         value={newProd.purchasePrice}
                         onChange={(e) => setNewProd({ ...newProd, purchasePrice: e.target.value })}
                       />
@@ -211,18 +211,40 @@ export default function ProductManagementPage() {
                     <div className="space-y-2">
                       <Label>Selling Price ($)</Label>
                       <Input
-                        placeholder="$349.00"
+                        type="number"
+                        required
+                        placeholder="349.00"
                         value={newProd.sellingPrice}
                         onChange={(e) => setNewProd({ ...newProd, sellingPrice: e.target.value })}
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Product Image URL</Label>
+                    <Input
+                      placeholder="https://images.unsplash.com/photo-1556742049-0a6792357321"
+                      value={newProd.imageUrl}
+                      onChange={(e) => setNewProd({ ...newProd, imageUrl: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Initial Stock Quantity</Label>
+                    <Input
+                      type="number"
+                      placeholder="10"
+                      value={newProd.stockQuantity}
+                      onChange={(e) => setNewProd({ ...newProd, stockQuantity: e.target.value })}
+                    />
                   </div>
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">Save Product</Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                    Save Product
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -230,47 +252,33 @@ export default function ProductManagementPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-md">
+          {error}
+        </div>
+      )}
+
       {/* Metrics */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Products</CardDescription>
             <CardTitle className="text-2xl font-bold">{products.length}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xs text-emerald-600 font-medium">7 Active Categories</div>
+            <div className="text-xs text-emerald-600 font-medium">Catalog Items</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Average Margin</CardDescription>
-            <CardTitle className="text-2xl font-bold">36.5%</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground">Across Sellable SKUs</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Low Stock Alerts</CardDescription>
-            <CardTitle className="text-2xl font-bold text-amber-600">1 SKU</CardTitle>
+            <CardDescription>Low / Out of Stock</CardDescription>
+            <CardTitle className="text-2xl font-bold text-amber-600">{lowStockCount} SKUs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-xs text-amber-600 font-medium flex items-center gap-1">
-              <AlertTriangle className="h-3.5 w-3.5" /> Thermal Paper (Reorder Needed)
+              <AlertTriangle className="h-3.5 w-3.5" /> Reorder Threshold Indicators
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Barcode Missing</CardDescription>
-            <CardTitle className="text-2xl font-bold text-rose-600">1 Item</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-rose-600 font-medium">Needs Scan Code</div>
           </CardContent>
         </Card>
       </div>
@@ -295,51 +303,88 @@ export default function ProductManagementPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product / SKU</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Barcode</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Cost Price</TableHead>
-                <TableHead className="text-right">Selling Price</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <div className="font-semibold">{p.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{p.sku} • {p.unit}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{p.category}</Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Barcode className="h-3.5 w-3.5" /> {p.barcode}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {p.status === 'In Stock' && (
-                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">In Stock</Badge>
-                    )}
-                    {p.status === 'Low Stock' && (
-                      <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">Low Stock</Badge>
-                    )}
-                    {p.status === 'Out of Stock' && (
-                      <Badge variant="outline" className="bg-rose-500/10 text-rose-600 border-rose-500/20">Out of Stock</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">{p.purchasePrice}</TableCell>
-                  <TableCell className="text-right font-mono font-semibold text-sm">{p.sellingPrice}</TableCell>
+          {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product / SKU</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Barcode</TableHead>
+                  <TableHead>Stock Level</TableHead>
+                  <TableHead>Cost Price</TableHead>
+                  <TableHead className="text-right">Selling Price</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {products.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                      No products found. Click &quot;Add Product&quot; to create your first catalog item.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  products.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {p.imageUrl ? (
+                            <img
+                              src={p.imageUrl}
+                              alt={p.name}
+                              className="h-9 w-9 rounded-md object-cover border bg-muted shrink-0"
+                            />
+                          ) : (
+                            <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center text-muted-foreground shrink-0 border">
+                              <Package className="h-4 w-4" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-semibold">{p.name}</div>
+                            <div className="text-xs text-muted-foreground font-mono">{p.sku} • {p.unit}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{p.category || 'Hardware'}</Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Barcode className="h-3.5 w-3.5" /> {p.barcode || 'N/A'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {p.status === 'In Stock' && (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                            In Stock ({p.stockQuantity})
+                          </Badge>
+                        )}
+                        {p.status === 'Low Stock' && (
+                          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                            Low Stock ({p.stockQuantity})
+                          </Badge>
+                        )}
+                        {p.status === 'Out of Stock' && (
+                          <Badge variant="outline" className="bg-rose-500/10 text-rose-600 border-rose-500/20">
+                            Out of Stock (0)
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm text-muted-foreground">${Number(p.purchasePrice).toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono font-semibold text-sm">${Number(p.sellingPrice).toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
+

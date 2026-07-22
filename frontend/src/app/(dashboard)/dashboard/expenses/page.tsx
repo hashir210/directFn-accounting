@@ -109,6 +109,27 @@ export default function ExpensesPage() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (expenses.length === 0) return;
+    const headers = ['Vendor', 'Category', 'Description', 'Amount', 'Date', 'Status'];
+    const rows = expenses.map((exp) => [
+      `"${exp.vendor.replace(/"/g, '""')}"`,
+      `"${exp.category.replace(/"/g, '""')}"`,
+      `"${(exp.description || '').replace(/"/g, '""')}"`,
+      exp.amount,
+      exp.date,
+      exp.status,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `expenses_export_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -280,7 +301,7 @@ export default function ExpensesPage() {
                 ))}
               </div>
 
-              <Button variant="outline" size="sm" className="cursor-pointer text-xs h-9">
+              <Button onClick={handleExportCSV} variant="outline" size="sm" className="cursor-pointer text-xs h-9">
                 <Download className="h-3.5 w-3.5 mr-1.5" />
                 Export
               </Button>

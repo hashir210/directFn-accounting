@@ -10,8 +10,11 @@ router.use(authenticate);
 
 router.get('/', SuppliersController.list);
 router.post('/', validate(createSupplierSchema), SuppliersController.create);
+router.post('/bills', SuppliersController.createPurchaseBill);
+router.post('/payments', SuppliersController.recordPayment);
 router.get('/:id', SuppliersController.getById);
 router.patch('/:id', validate(updateSupplierSchema), SuppliersController.update);
 router.delete('/:id', SuppliersController.delete);
 
 export default router;
+

@@ -25,4 +25,23 @@ export class InventoryController {
       next(error);
     }
   }
+
+  static async listWarehouses(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await InventoryService.listWarehouses(req.user!.organizationId);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async createWarehouse(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await InventoryService.createWarehouse(req.user!.organizationId, req.body);
+      res.status(201).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
+

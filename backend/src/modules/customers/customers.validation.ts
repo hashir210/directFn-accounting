@@ -6,9 +6,12 @@ export const createCustomerSchema = z.object({
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     phone: z.string().optional(),
     address: z.string().optional(),
+    creditLimit: z.number().optional(),
+    status: z.string().optional(),
   }),
 });
 
 export const updateCustomerSchema = z.object({
   body: createCustomerSchema.shape.body.partial(),
 });
+

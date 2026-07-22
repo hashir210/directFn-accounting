@@ -87,7 +87,7 @@
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-display: var(--font-plus-jakarta-sans), system-ui, sans-serif;
 
-  /* Theme Mapping - Light Mode (Pure White Base Canvas + Green Accent Distinction) */
+  /* Theme Mapping - Light Mode (Pure White Base Canvas + Soft Ambient Shadows & Soft Borders) */
   --background: #ffffff;
   --foreground: var(--black-forest-950);
   --card: #ffffff;
@@ -116,8 +116,8 @@
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   
-  --border: var(--black-forest-200);
-  --input: var(--black-forest-200);
+  --border: rgba(0, 0, 0, 0.07);
+  --input: rgba(0, 0, 0, 0.09);
   --ring: var(--black-forest-600);
   
   --chart-1: var(--black-forest-600);
@@ -126,7 +126,7 @@
   --chart-4: var(--black-forest-700);
   --chart-5: var(--black-forest-800);
   
-  --radius: 0.5rem;
+  --radius: 0.75rem;
   
   --sidebar: #ffffff;
   --sidebar-foreground: var(--black-forest-950);
@@ -134,7 +134,7 @@
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: var(--black-forest-50);
   --sidebar-accent-foreground: var(--black-forest-900);
-  --sidebar-border: var(--black-forest-200);
+  --sidebar-border: rgba(0, 0, 0, 0.06);
   --sidebar-ring: var(--black-forest-600);
 }
 
@@ -168,8 +168,8 @@
   --destructive: #7f1d1d;
   --destructive-foreground: var(--black-forest-50);
   
-  --border: var(--black-forest-800);
-  --input: var(--black-forest-800);
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
   --ring: var(--black-forest-500);
   
   --sidebar: var(--black-forest-900);
@@ -178,7 +178,7 @@
   --sidebar-primary-foreground: var(--black-forest-950);
   --sidebar-accent: var(--black-forest-800);
   --sidebar-accent-foreground: var(--black-forest-50);
-  --sidebar-border: var(--black-forest-800);
+  --sidebar-border: rgba(255, 255, 255, 0.07);
   --sidebar-ring: var(--black-forest-500);
 }
 
@@ -193,3 +193,11 @@
     @apply font-sans;
   }
 }
+
+.shadow-soft {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+.shadow-soft-lg {
+  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.06), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+}
