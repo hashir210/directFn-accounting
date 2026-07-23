@@ -27,23 +27,21 @@ export class DashboardService {
    */
   static async getSummary(organizationId: string, year?: number) {
     const targetYear = year ?? new Date().getFullYear();
-    const yearStart = new Date(targetYear, 0, 1);
-    const yearEnd = new Date(targetYear + 1, 0, 1);
+    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
+    const orgWhere: any = org?.isPlatform ? {} : { organizationId };
 
-    // Fetch paid invoices and expenses for the whole year in 2 queries total
+    // Fetch all paid invoices and expenses for the organization (or connected system for platform admin)
     const [paidInvoices, expenses] = await Promise.all([
       prisma.invoice.findMany({
         where: {
-          organizationId,
+          ...orgWhere,
           status: 'paid',
-          paidAt: { gte: yearStart, lt: yearEnd },
         },
-        select: { amount: true, paidAt: true },
+        select: { amount: true, paidAt: true, issuedAt: true },
       }),
       prisma.expense.findMany({
         where: {
-          organizationId,
-          date: { gte: yearStart, lt: yearEnd },
+          ...orgWhere,
         },
         select: { amount: true, date: true },
       }),
@@ -58,15 +56,16 @@ export class DashboardService {
     const monthlyExp = new Array(12).fill(0);
 
     for (const inv of paidInvoices) {
-      if (inv.paidAt) {
-        const m = inv.paidAt.getMonth(); // 0-indexed
+      const d = inv.paidAt || inv.issuedAt;
+      if (d && d.getFullYear() === targetYear) {
+        const m = d.getMonth();
         monthlyRev[m] += toNumber(inv.amount);
       }
     }
 
     for (const exp of expenses) {
-      if (exp.date) {
-        const m = exp.date.getMonth(); // 0-indexed
+      if (exp.date && exp.date.getFullYear() === targetYear) {
+        const m = exp.date.getMonth();
         monthlyExp[m] += toNumber(exp.amount);
       }
     }
@@ -156,24 +155,22 @@ export class DashboardService {
    */
   static async getMonthlySales(organizationId: string, year?: number) {
     const targetYear = year ?? new Date().getFullYear();
-    const yearStart = new Date(targetYear, 0, 1);
-    const yearEnd = new Date(targetYear + 1, 0, 1);
 
     const invoices = await prisma.invoice.findMany({
       where: {
         organizationId,
         status: 'paid',
-        paidAt: { gte: yearStart, lt: yearEnd },
       },
-      select: { amount: true, paidAt: true },
+      select: { amount: true, paidAt: true, issuedAt: true },
     });
 
     const monthlyRevenue = new Array(12).fill(0);
     const monthlyCount = new Array(12).fill(0);
 
     for (const inv of invoices) {
-      if (inv.paidAt) {
-        const m = inv.paidAt.getMonth();
+      const d = inv.paidAt || inv.issuedAt;
+      if (d && d.getFullYear() === targetYear) {
+        const m = d.getMonth();
         monthlyRevenue[m] += toNumber(inv.amount);
         monthlyCount[m] += 1;
       }
@@ -193,13 +190,10 @@ export class DashboardService {
    */
   static async getMonthlyExpenses(organizationId: string, year?: number) {
     const targetYear = year ?? new Date().getFullYear();
-    const yearStart = new Date(targetYear, 0, 1);
-    const yearEnd = new Date(targetYear + 1, 0, 1);
 
     const expenses = await prisma.expense.findMany({
       where: {
         organizationId,
-        date: { gte: yearStart, lt: yearEnd },
       },
       select: { amount: true, date: true },
     });
@@ -208,7 +202,7 @@ export class DashboardService {
     const monthlyCount = new Array(12).fill(0);
 
     for (const exp of expenses) {
-      if (exp.date) {
+      if (exp.date && exp.date.getFullYear() === targetYear) {
         const m = exp.date.getMonth();
         monthlyExpenses[m] += toNumber(exp.amount);
         monthlyCount[m] += 1;
@@ -256,45 +250,27 @@ export class DashboardService {
    * Low Stock: products where stockQuantity <= lowStockThreshold.
    */
   static async getLowStockProducts(organizationId: string, threshold?: number) {
-    if (threshold !== undefined) {
-      // Filter by an explicit numeric threshold across all products
-      const products = await prisma.product.findMany({
-        where: { organizationId, stockQuantity: { lte: threshold } },
-        orderBy: { stockQuantity: 'asc' },
-      });
-      return {
-        count: products.length,
-        products: products.map((p) => ({
-          ...p,
-          sellingPrice: toNumber(p.sellingPrice),
-          purchasePrice: toNumber(p.purchasePrice),
-        })),
-      };
-    }
+    const products = await prisma.product.findMany({
+      where: { organizationId },
+      orderBy: { stockQuantity: 'asc' },
+    });
 
-    // Default: compare each product's quantity against its own lowStockThreshold
-    const products = await prisma.$queryRaw<
-      {
-        id: string;
-        name: string;
-        sku: string;
-        category: string | null;
-        stockQuantity: number;
-        lowStockThreshold: number;
-        unitPrice: string;
-      }[]
-    >`
-      SELECT id, name, sku, category, stockQuantity, lowStockThreshold, unitPrice
-      FROM Product
-      WHERE stockQuantity <= lowStockThreshold AND organizationId = ${organizationId}
-      ORDER BY stockQuantity ASC
-    `;
+    const lowStockProducts = products.filter((p) =>
+      threshold !== undefined
+        ? p.stockQuantity <= threshold
+        : p.stockQuantity <= p.lowStockThreshold
+    );
 
     return {
-      count: products.length,
-      products: products.map((p) => ({
-        ...p,
-        unitPrice: Number(p.unitPrice),
+      count: lowStockProducts.length,
+      products: lowStockProducts.map((p) => ({
+        id: p.id,
+        name: p.name,
+        sku: p.sku,
+        category: p.category,
+        stockQuantity: p.stockQuantity,
+        lowStockThreshold: p.lowStockThreshold,
+        unitPrice: toNumber(p.sellingPrice),
       })),
     };
   }

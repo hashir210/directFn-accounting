@@ -7,13 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -36,8 +29,9 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertCircle,
+  Pencil,
+  Save,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 interface Role {
@@ -65,8 +59,14 @@ export default function UsersPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [userSearch, setUserSearch] = useState('');
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [userError, setUserError] = useState('');
+  const [updateMsg, setUpdateMsg] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  // Edit User Name State
+  const [editName, setEditName] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
 
   // Invite User Dialog State
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -76,7 +76,7 @@ export default function UsersPage() {
   const [isInviting, setIsInviting] = useState(false);
   const [inviteResult, setInviteResult] = useState<{ email: string; tempPassword: string } | null>(null);
 
-  // Fetch Users & Roles
+  // Fetch Users & Roles for current organization
   const fetchUsersData = useCallback(async () => {
     try {
       setIsLoadingUsers(true);
@@ -88,6 +88,7 @@ export default function UsersPage() {
       setRoles(rolesData);
       if (usersData.length > 0 && !selectedUserId) {
         setSelectedUserId(usersData[0].id);
+        setEditName(usersData[0].name || '');
       }
     } catch (err) {
       setUserError(err instanceof ApiError ? err.message : 'Failed to load user data');
@@ -99,6 +100,35 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsersData();
   }, [fetchUsersData]);
+
+  const handleSelectUser = (u: OrgUser) => {
+    setSelectedUserId(u.id);
+    setEditName(u.name || '');
+    setIsEditingName(false);
+    setUpdateMsg('');
+    setUserError('');
+  };
+
+  // Save User Name Handler
+  const handleSaveUserName = async (userId: string) => {
+    setIsUpdatingUser(true);
+    setUserError('');
+    setUpdateMsg('');
+    try {
+      await apiFetch(`/api/v1/users/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: editName }),
+      });
+      setUpdateMsg('User name updated and saved in database!');
+      setIsEditingName(false);
+      setTimeout(() => setUpdateMsg(''), 3000);
+      fetchUsersData();
+    } catch (err) {
+      setUserError(err instanceof ApiError ? err.message : 'Failed to update user name');
+    } finally {
+      setIsUpdatingUser(false);
+    }
+  };
 
   // Invite User Handler
   const handleInviteUser = async (e: React.FormEvent) => {
@@ -123,14 +153,21 @@ export default function UsersPage() {
   };
 
   const handleRoleChange = async (userId: string, roleId: string) => {
+    setIsUpdatingUser(true);
+    setUserError('');
+    setUpdateMsg('');
     try {
       await apiFetch(`/api/v1/users/${userId}/role`, {
         method: 'PATCH',
         body: JSON.stringify({ roleId }),
       });
+      setUpdateMsg('User role updated & saved successfully!');
+      setTimeout(() => setUpdateMsg(''), 3000);
       fetchUsersData();
     } catch (err) {
       setUserError(err instanceof ApiError ? err.message : 'Failed to update role');
+    } finally {
+      setIsUpdatingUser(false);
     }
   };
 
@@ -159,7 +196,7 @@ export default function UsersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Team Members</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage your organization&apos;s team members, roles, and page access restrictions.
+            Manage team members, roles, edit names, and assign page access restrictions.
           </p>
         </div>
 
@@ -183,7 +220,7 @@ export default function UsersPage() {
                     <CheckCircle2 className="h-4 w-4" />
                     <AlertTitle>Invitation Created</AlertTitle>
                     <AlertDescription>
-                      User invitation has been recorded. Provide the credentials below to the team member.
+                      User invitation recorded in database. Provide the credentials below to the team member.
                     </AlertDescription>
                   </Alert>
                   <div className="p-4 bg-muted rounded-lg space-y-2 text-xs">
@@ -254,6 +291,22 @@ export default function UsersPage() {
         </Dialog>
       </div>
 
+      {userError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{userError}</AlertDescription>
+        </Alert>
+      )}
+
+      {updateMsg && (
+        <Alert variant="success">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          <AlertTitle className="font-bold text-emerald-700">Updated</AlertTitle>
+          <AlertDescription className="text-emerald-600">{updateMsg}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Main Card */}
       <Card className="shadow-2xs">
         <CardHeader className="p-4 border-b">
@@ -297,7 +350,7 @@ export default function UsersPage() {
                     filteredUsers.map((u) => (
                       <div
                         key={u.id}
-                        onClick={() => setSelectedUserId(u.id)}
+                        onClick={() => handleSelectUser(u)}
                         className={`p-3.5 rounded-lg cursor-pointer transition-colors border ${
                           selectedUserId === u.id
                             ? 'bg-primary/5 border-primary/30 shadow-sm'
@@ -321,7 +374,7 @@ export default function UsersPage() {
                 </div>
               </div>
 
-              {/* Right Panel: Role & Screen Restrictions for Selected User */}
+              {/* Right Panel: Role & Details & Screen Restrictions for Selected User */}
               <div className="md:w-1/2 bg-muted/5 flex flex-col">
                 {!selectedUserId ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-3">
@@ -329,7 +382,7 @@ export default function UsersPage() {
                     <div className="space-y-1">
                       <h3 className="text-base font-semibold">Select a User</h3>
                       <p className="text-sm text-muted-foreground">
-                        Choose a team member from the list to assign their role and manage page access.
+                        Choose a team member from the list to assign their role and edit details.
                       </p>
                     </div>
                   </div>
@@ -341,23 +394,62 @@ export default function UsersPage() {
                     return (
                       <div className="p-6 space-y-6 flex-1 flex flex-col justify-between">
                         <div className="space-y-6">
-                          {/* User Banner */}
-                          <div className="flex items-center justify-between pb-4 border-b">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-bold">{selectedUser.name || selectedUser.email}</h3>
-                                <Badge variant="outline" className="text-xs">
-                                  {selectedUser.role?.name || 'No Role'}
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">{selectedUser.email}</p>
+                          {/* User Banner & Edit Name */}
+                          <div className="flex items-start justify-between pb-4 border-b">
+                            <div className="space-y-1 flex-1 mr-4">
+                              {isEditingName ? (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Input
+                                    size={1}
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    placeholder="Full Name"
+                                    className="h-8 text-sm font-bold"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleSaveUserName(selectedUser.id)}
+                                    disabled={isUpdatingUser}
+                                    className="h-8 cursor-pointer"
+                                  >
+                                    {isUpdatingUser ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                                    Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setIsEditingName(false)}
+                                    className="h-8 cursor-pointer"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-lg font-bold">{selectedUser.name || selectedUser.email.split('@')[0]}</h3>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground cursor-pointer hover:text-foreground"
+                                    onClick={() => { setEditName(selectedUser.name || ''); setIsEditingName(true); }}
+                                    title="Edit User Name"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Badge variant="outline" className="text-xs ml-auto">
+                                    {selectedUser.role?.name || 'No Role'}
+                                  </Badge>
+                                </div>
+                              )}
+                              <p className="text-xs text-muted-foreground">{selectedUser.email}</p>
                             </div>
                             {selectedUser.id !== user?.id && (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-destructive cursor-pointer hover:bg-destructive/10"
+                                className="h-8 w-8 text-destructive cursor-pointer hover:bg-destructive/10 shrink-0"
                                 onClick={() => handleRemoveUser(selectedUser.id)}
+                                title="Remove Team Member"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -383,6 +475,7 @@ export default function UsersPage() {
                                     value={role.id}
                                     checked={selectedUser.roleId === role.id}
                                     onChange={() => handleRoleChange(selectedUser.id, role.id)}
+                                    disabled={isUpdatingUser}
                                     className="h-4 w-4 text-primary focus:ring-primary cursor-pointer border-input"
                                   />
                                   <div className="space-y-0.5 flex-1">
@@ -422,3 +515,4 @@ export default function UsersPage() {
     </div>
   );
 }
+

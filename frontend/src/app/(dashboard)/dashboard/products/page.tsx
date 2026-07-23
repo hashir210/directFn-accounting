@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useAuth } from '@/features/auth/useAuth';
 
 interface Product {
   id: string;
@@ -50,6 +51,8 @@ interface Product {
 }
 
 export default function ProductManagementPage() {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('products.edit');
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -158,6 +161,7 @@ export default function ProductManagementPage() {
           <Button onClick={handleExportCSV} variant="outline" size="sm" className="cursor-pointer">
             Export Catalog
           </Button>
+          {canEdit && (
           <Dialog open={openAdd} onOpenChange={setOpenAdd}>
             <DialogTrigger asChild>
               <Button size="sm" className="cursor-pointer">
@@ -249,6 +253,7 @@ export default function ProductManagementPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 

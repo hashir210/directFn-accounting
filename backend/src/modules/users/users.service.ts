@@ -4,9 +4,10 @@ import prisma from '../../config/db';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../utils/errors';
 
 export class UsersService {
-  static async listUsers(organizationId: string) {
+  static async listUsers(organizationId: string, targetOrgId?: string, isPlatformAdmin: boolean = false) {
+    const effectiveOrgId = (isPlatformAdmin && targetOrgId) ? targetOrgId : organizationId;
     return prisma.user.findMany({
-      where: { organizationId },
+      where: { organizationId: effectiveOrgId },
       select: {
         id: true,
         email: true,
@@ -21,14 +22,15 @@ export class UsersService {
     });
   }
 
-  static async inviteUser(data: { email: string; name?: string; roleId: string }, organizationId: string, currentUserId: string) {
+  static async inviteUser(data: { email: string; name?: string; roleId: string; targetOrgId?: string }, organizationId: string, currentUserId: string, isPlatformAdmin: boolean = false) {
+    const effectiveOrgId = (isPlatformAdmin && data.targetOrgId) ? data.targetOrgId : organizationId;
     const role = await prisma.role.findUnique({ where: { id: data.roleId } });
-    if (!role || role.organizationId !== organizationId) {
-      throw new BadRequestError('Role not found in your organization');
+    if (!role || role.organizationId !== effectiveOrgId) {
+      throw new BadRequestError('Role not found in organization');
     }
 
     const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
+      where: { id: effectiveOrgId },
       include: {
         _count: {
           select: { users: true }
@@ -40,8 +42,8 @@ export class UsersService {
       throw new NotFoundError('Organization not found');
     }
 
-    if (organization._count.users >= organization.maxUsers) {
-      throw new BadRequestError(`User limit reached. Your organization is limited to ${organization.maxUsers} users.`);
+    if (!organization.isPlatform && organization._count.users >= organization.maxUsers) {
+      throw new BadRequestError(`User limit reached. Organization is limited to ${organization.maxUsers} users.`);
     }
 
     const existing = await prisma.user.findUnique({
@@ -56,7 +58,7 @@ export class UsersService {
 
     const user = await prisma.user.create({
       data: {
-        organizationId,
+        organizationId: effectiveOrgId,
         roleId: data.roleId,
         email: data.email,
         password: hashedPassword,
@@ -68,26 +70,41 @@ export class UsersService {
     return { user: { id: user.id, email: user.email, name: user.name, roleId: user.roleId }, tempPassword };
   }
 
-  static async updateUserRole(userId: string, roleId: string, organizationId: string, currentUserId: string) {
-    if (userId === currentUserId) {
-      throw new BadRequestError('You cannot change your own role');
-    }
-
+  static async updateUser(userId: string, data: { name?: string; roleId?: string }, organizationId: string, currentUserId: string) {
     const user = await prisma.user.findFirst({ where: { id: userId, organizationId } });
     if (!user) {
       throw new NotFoundError('User not found in your organization');
     }
 
-    const role = await prisma.role.findUnique({ where: { id: roleId } });
-    if (!role || role.organizationId !== organizationId) {
-      throw new BadRequestError('Role not found in your organization');
+    if (data.roleId && userId === currentUserId && data.roleId !== user.roleId) {
+      throw new BadRequestError('You cannot change your own role');
+    }
+
+    if (data.roleId) {
+      const role = await prisma.role.findUnique({ where: { id: data.roleId } });
+      if (!role || role.organizationId !== organizationId) {
+        throw new BadRequestError('Role not found in your organization');
+      }
     }
 
     return prisma.user.update({
       where: { id: userId },
-      data: { roleId },
-      select: { id: true, email: true, name: true, roleId: true },
+      data: {
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.roleId ? { roleId: data.roleId } : {}),
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        roleId: true,
+        role: { select: { id: true, name: true } },
+      },
     });
+  }
+
+  static async updateUserRole(userId: string, roleId: string, organizationId: string, currentUserId: string) {
+    return this.updateUser(userId, { roleId }, organizationId, currentUserId);
   }
 
   static async removeUser(userId: string, organizationId: string, currentUserId: string) {

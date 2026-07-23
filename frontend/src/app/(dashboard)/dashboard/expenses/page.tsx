@@ -29,6 +29,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import apiFetch from '@/lib/api';
+import { useAuth } from '@/features/auth/useAuth';
 
 interface ExpenseItem {
   id: string;
@@ -43,6 +44,8 @@ interface ExpenseItem {
 const CATEGORIES = ['all', 'salaries', 'rent', 'software', 'utilities', 'supplies'] as const;
 
 export default function ExpensesPage() {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('expenses.edit');
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -140,6 +143,7 @@ export default function ExpensesPage() {
           </p>
         </div>
 
+        {canEdit && (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="cursor-pointer">
@@ -223,6 +227,7 @@ export default function ExpensesPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">

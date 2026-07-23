@@ -40,6 +40,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useAuth } from '@/features/auth/useAuth';
+
 
 interface StockMovement {
   id: string;
@@ -59,6 +61,8 @@ interface Warehouse {
 }
 
 export default function InventoryManagementPage() {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('products.edit');
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -163,6 +167,7 @@ export default function InventoryManagementPage() {
           <Button onClick={handleExportCSV} variant="outline" size="sm" className="cursor-pointer">
             Stock Audit Log
           </Button>
+          {canEdit && (
           <Dialog open={openAdd} onOpenChange={setOpenAdd}>
             <DialogTrigger asChild>
               <Button size="sm" className="cursor-pointer">
@@ -261,6 +266,7 @@ export default function InventoryManagementPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 

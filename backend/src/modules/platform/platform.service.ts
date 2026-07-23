@@ -5,6 +5,7 @@ import { OrganizationService } from '../organization/organization.service';
 export class PlatformService {
   static async listOrganizations() {
     return prisma.organization.findMany({
+      where: { isPlatform: false },
       select: {
         id: true,
         name: true,

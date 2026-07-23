@@ -8,7 +8,8 @@ export class CustomersService {
     const limit = options.limit || 50;
     const skip = (page - 1) * limit;
 
-    const where: any = { organizationId };
+    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
+    const where: any = org?.isPlatform ? {} : { organizationId };
     if (options.search) {
       where.OR = [
         { name: { contains: options.search } },

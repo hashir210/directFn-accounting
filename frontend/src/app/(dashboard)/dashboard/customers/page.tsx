@@ -34,6 +34,8 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useAuth } from '@/features/auth/useAuth';
+
 
 interface Customer {
   id: string;
@@ -62,6 +64,8 @@ interface CustomerStatement {
 }
 
 export default function CustomerManagementPage() {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('customers.edit');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -141,6 +145,7 @@ export default function CustomerManagementPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {canEdit && (
           <Dialog open={openAdd} onOpenChange={setOpenAdd}>
             <DialogTrigger asChild>
               <Button size="sm" className="cursor-pointer">
@@ -206,6 +211,7 @@ export default function CustomerManagementPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 

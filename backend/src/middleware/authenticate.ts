@@ -30,7 +30,13 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       throw new UnauthorizedError('Two-factor authentication is not complete');
     }
 
-    req.user = { id: decoded.id, email: decoded.email, organizationId: decoded.organizationId, roleId: decoded.roleId };
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      organizationId: decoded.organizationId,
+      roleId: decoded.roleId,
+      isPlatformOrg: (decoded as any).isPlatformOrg || false,
+    };
     next();
   } catch (error) {
     next(error);

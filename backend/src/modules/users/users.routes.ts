@@ -14,6 +14,7 @@ const canManageUsers = requirePermission('users.manage', { skipScreenCheck: true
 
 router.get('/', canManageUsers, UsersController.listUsers);
 router.post('/invite', canManageUsers, validate(inviteUserSchema), UsersController.inviteUser);
+router.patch('/:id', canManageUsers, UsersController.updateUser);
 router.patch('/:id/role', canManageUsers, validate(updateUserRoleSchema), UsersController.updateUserRole);
 router.delete('/:id', canManageUsers, UsersController.removeUser);
 router.get('/:id/screens', canManageUsers, UsersController.getUserScreenBlocks);

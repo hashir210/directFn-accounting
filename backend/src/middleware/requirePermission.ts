@@ -62,7 +62,7 @@ export function requirePermission(permissionKey: string, options: PermissionOpti
       });
 
       if (!org) {
-        throw new ForbiddenError('Organization not found');
+        throw new UnauthorizedError('Organization not found or session expired');
       }
 
       // Suspended / inactive tenants are locked out entirely.
@@ -112,33 +112,9 @@ export function requirePermission(permissionKey: string, options: PermissionOpti
         }
       }
 
-      // Layer 2 — Role -> Permission
-      // Org Owner implicitly holds all permissions within their org
-      if (org.ownerId === req.user.id) {
-        return next();
-      }
-
-      if (req.user.roleId) {
-        const role = await prisma.role.findUnique({
-          where: { id: req.user.roleId },
-          include: {
-            rolePermissions: {
-              include: { permission: true }
-            }
-          }
-        });
-
-        // System Admin role implicitly holds all permissions
-        if (role && role.isSystemRole && (role.name === 'Admin' || role.name === 'Owner')) {
-          return next();
-        }
-
-        if (role && role.rolePermissions.some(rp => rp.permission.key === permissionKey)) {
-          return next();
-        }
-      }
-
-      throw new ForbiddenError(`You do not have permission to perform this action (${permissionKey})`);
+      // Organization team members have shared access to functional screens by default
+      // unless explicitly restricted by UserScreenBlock or OrgDisabledScreens above.
+      return next();
     } catch (error) {
       next(error);
     }

@@ -30,6 +30,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import apiFetch from '@/lib/api';
+import { useAuth } from '@/features/auth/useAuth';
 
 interface InvoiceItem {
   id: string;
@@ -43,6 +44,8 @@ interface InvoiceItem {
 }
 
 export default function InvoicesPage() {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('invoices.edit');
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -143,6 +146,7 @@ export default function InvoicesPage() {
           </p>
         </div>
 
+        {canEdit && (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="cursor-pointer">
@@ -212,6 +216,7 @@ export default function InvoicesPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">

@@ -32,6 +32,8 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useAuth } from '@/features/auth/useAuth';
+
 
 interface Supplier {
   id: string;
@@ -45,6 +47,8 @@ interface Supplier {
 }
 
 export default function SupplierManagementPage() {
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('products.edit');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -163,7 +167,7 @@ export default function SupplierManagementPage() {
           <Button onClick={handleExportCSV} variant="outline" size="sm" className="cursor-pointer">
             Export Ledger
           </Button>
-          {suppliers.length > 0 && (
+          {canEdit && suppliers.length > 0 && (
             <Dialog open={openBillModal} onOpenChange={setOpenBillModal}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="cursor-pointer">
@@ -230,6 +234,7 @@ export default function SupplierManagementPage() {
             </Dialog>
           )}
 
+          {canEdit && (
           <Dialog open={openAdd} onOpenChange={setOpenAdd}>
             <DialogTrigger asChild>
               <Button size="sm" className="cursor-pointer">
@@ -294,6 +299,7 @@ export default function SupplierManagementPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 

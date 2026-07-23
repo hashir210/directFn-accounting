@@ -8,15 +8,14 @@ async function main() {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   // Check if admin user exists
-  let admin = await prisma.user.findFirst({ where: { email: 'admin@finflow.com' } });
+  const admin = await prisma.user.findFirst({ where: { email: 'admin@finflow.com' } });
 
   if (admin) {
     await prisma.user.update({
       where: { id: admin.id },
-      data: { password: hashedPassword, emailVerified: true, isVerified: true },
+      data: { password: hashedPassword, emailVerified: true },
     });
   } else {
-    // Run full seed if missing
     console.log('Admin user missing, please run npm run seed');
   }
 

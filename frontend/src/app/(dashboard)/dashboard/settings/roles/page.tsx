@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { apiFetch, ApiError } from '@/lib/api';
-import { Shield, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/features/auth/useAuth';
+import { Shield, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface Permission {
   id: string;
@@ -28,9 +31,12 @@ interface Role {
 }
 
 export default function RolesSettingsPage() {
+  const { refreshUser } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
   const [error, setError] = useState('');
   const [expandedRole, setExpandedRole] = useState<string | null>(null);
 
@@ -42,16 +48,22 @@ export default function RolesSettingsPage() {
       ]);
       setRoles(rolesData);
       setAllPermissions(permsData);
+      if (rolesData.length > 0 && !expandedRole) {
+        setExpandedRole(rolesData[0].id);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load data');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [expandedRole]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleTogglePermission = async (roleId: string, permissionId: string, currentlyAssigned: boolean) => {
+    setIsSaving(true);
+    setError('');
+    setSaveMsg('');
     try {
       if (currentlyAssigned) {
         await apiFetch(`/api/v1/roles/${roleId}/permissions/${permissionId}`, { method: 'DELETE' });
@@ -61,9 +73,29 @@ export default function RolesSettingsPage() {
           body: JSON.stringify({ permissionId }),
         });
       }
-      fetchData();
+      await fetchData();
+      await refreshUser();
+      setSaveMsg('Role permissions updated & saved to database successfully!');
+      setTimeout(() => setSaveMsg(''), 3000);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to update permission');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveRole = async () => {
+    setIsSaving(true);
+    setSaveMsg('');
+    setError('');
+    try {
+      await refreshUser();
+      setSaveMsg('Role permissions configuration is saved and active in database!');
+      setTimeout(() => setSaveMsg(''), 3500);
+    } catch (err) {
+      setError('Failed to refresh authorization context');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -93,13 +125,23 @@ export default function RolesSettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Roles & Permissions</h1>
-        <p className="text-muted-foreground">Configure roles and what they can access</p>
+        <p className="text-muted-foreground">Configure roles and what they can access across all modules</p>
       </div>
 
       {error && (
-        <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle className="font-bold">Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {saveMsg && (
+        <Alert variant="success">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          <AlertTitle className="font-bold text-emerald-700">Database Updated</AlertTitle>
+          <AlertDescription className="text-emerald-600">{saveMsg}</AlertDescription>
+        </Alert>
       )}
 
       <div className="flex flex-col md:flex-row min-h-[500px] border rounded-lg bg-card overflow-hidden">
@@ -154,16 +196,22 @@ export default function RolesSettingsPage() {
 
               return (
                 <div className="flex flex-col h-full">
-                  <div className="p-6 border-b">
-                    <h3 className="text-lg font-bold flex items-center gap-2">
-                      {role.name} Permissions
-                      {role.isSystemRole && (
-                        <Badge variant="secondary" className="text-[10px]">System Role</Badge>
-                      )}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Toggle module permissions for this role.
-                    </p>
+                  <div className="p-6 border-b flex items-center justify-between bg-muted/5">
+                    <div>
+                      <h3 className="text-lg font-bold flex items-center gap-2">
+                        {role.name} Permissions
+                        {role.isSystemRole && (
+                          <Badge variant="secondary" className="text-[10px]">System Role</Badge>
+                        )}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Toggle module permissions. Changes are persisted immediately to the database.
+                      </p>
+                    </div>
+                    <Button onClick={handleSaveRole} disabled={isSaving} className="cursor-pointer">
+                      {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Save Role Permissions
+                    </Button>
                   </div>
                   
                   <div className="flex-1 overflow-y-auto p-6 space-y-8 max-h-[600px]">
@@ -179,6 +227,7 @@ export default function RolesSettingsPage() {
                                 id={`${role.id}-${p.id}`}
                                 checked={assigned.has(p.id)}
                                 onCheckedChange={() => handleTogglePermission(role.id, p.id, assigned.has(p.id))}
+                                disabled={isSaving}
                               />
                               <div className="space-y-1">
                                 <Label htmlFor={`${role.id}-${p.id}`} className="text-sm font-semibold cursor-pointer">
@@ -203,3 +252,4 @@ export default function RolesSettingsPage() {
     </div>
   );
 }
+

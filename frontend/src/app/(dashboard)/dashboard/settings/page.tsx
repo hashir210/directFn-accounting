@@ -6,7 +6,7 @@ import { Users, Shield, Lock, Building2, CreditCard, Monitor } from "lucide-reac
 import { useAuth } from "@/features/auth/useAuth";
 
 export default function SettingsPage() {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, isScreenAllowed } = useAuth();
   const isPlatform = !!user?.isPlatformOrg;
 
   return (
@@ -16,7 +16,7 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Manage team members, roles, and your subscription.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {hasPermission('users.manage') && (
+        {hasPermission('users.manage') && isScreenAllowed('users') && (
           <Card className="hover:border-primary/50 transition-colors">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -35,7 +35,7 @@ export default function SettingsPage() {
           </Card>
         )}
 
-        {hasPermission('roles.manage') && (
+        {hasPermission('roles.manage') && isScreenAllowed('roles') && (
           <Card className="hover:border-primary/50 transition-colors">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -54,7 +54,7 @@ export default function SettingsPage() {
           </Card>
         )}
 
-        {hasPermission('settings.view') && (
+        {hasPermission('settings.view') && isScreenAllowed('plan') && (
           <Card className="hover:border-primary/50 transition-colors">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -111,7 +111,7 @@ export default function SettingsPage() {
           </Card>
         )}
 
-        {hasPermission('users.manage') && (
+        {hasPermission('users.manage') && isScreenAllowed('screens') && (
           <Card className="hover:border-primary/50 transition-colors">
             <CardHeader>
               <div className="flex items-center gap-3">

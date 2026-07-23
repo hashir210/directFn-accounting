@@ -48,7 +48,7 @@ export default function OrganizationsPage() {
         apiFetch<OrgSummary[]>('/api/v1/platform/organizations'),
         apiFetch<{ id: string; name: string; description: string }[]>('/api/v1/platform/plans'),
       ]);
-      setOrgs(orgsData);
+      setOrgs(orgsData.filter(o => !o.isPlatform));
       setAvailablePlans(plansData);
       if (!planId && plansData.length > 0) {
         setPlanId(plansData[0].id);

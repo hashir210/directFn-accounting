@@ -227,17 +227,24 @@ export class AuthService {
     const isOwner = org?.ownerId === user.id;
     const isAdmin = role?.isSystemRole && (role.name === 'Admin' || role.name === 'Owner');
 
-    let permissionKeys: string[] = [];
-    if (isOwner || isAdmin) {
-      permissionKeys = allPermissions.map(p => p.key);
-    } else if (role) {
-      permissionKeys = role.rolePermissions.map(rp => rp.permission.key);
-    }
-
     let orgDisabledScreens: string[] = [];
     if (org?.disabledScreens) {
       try { orgDisabledScreens = JSON.parse(org.disabledScreens); } catch (e) { orgDisabledScreens = []; }
     }
+
+    const userBlockedScreens = new Set(screenBlocks.map(b => b.screenKey));
+    const orgBlockedScreens = new Set(orgDisabledScreens);
+
+    // All organization team members have shared access to functional modules by default,
+    // filtered out ONLY if the admin explicitly blocked that screen key for the user or organization.
+    let permissionKeys: string[] = allPermissions
+      .map(p => p.key)
+      .filter(key => {
+        const mod = key.split('.')[0];
+        if (userBlockedScreens.has(mod)) return false;
+        if (orgBlockedScreens.has(mod)) return false;
+        return true;
+      });
 
     const planFeatures = org?.plan?.features.map(pf => pf.featureKey) || [];
     const blockedScreens = screenBlocks.map(b => b.screenKey);

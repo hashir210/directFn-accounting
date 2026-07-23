@@ -4,7 +4,9 @@ import { UsersService } from './users.service';
 export class UsersController {
   static async listUsers(req: Request, res: Response, next: NextFunction) {
     try {
-      const users = await UsersService.listUsers(req.user!.organizationId);
+      const targetOrgId = req.query.orgId as string | undefined;
+      const isPlatformAdmin = !!req.user!.isPlatformOrg;
+      const users = await UsersService.listUsers(req.user!.organizationId, targetOrgId, isPlatformAdmin);
       res.status(200).json({ success: true, data: users });
     } catch (error) {
       next(error);
@@ -13,12 +15,22 @@ export class UsersController {
 
   static async inviteUser(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await UsersService.inviteUser(req.body, req.user!.organizationId, req.user!.id);
+      const isPlatformAdmin = !!req.user!.isPlatformOrg;
+      const result = await UsersService.inviteUser(req.body, req.user!.organizationId, req.user!.id, isPlatformAdmin);
       res.status(201).json({
         success: true,
         message: 'User invited successfully',
         data: result,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await UsersService.updateUser(req.params.id, req.body, req.user!.organizationId, req.user!.id);
+      res.status(200).json({ success: true, message: 'User updated successfully', data: result });
     } catch (error) {
       next(error);
     }

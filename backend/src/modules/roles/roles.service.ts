@@ -2,9 +2,10 @@ import prisma from '../../config/db';
 import { NotFoundError, BadRequestError } from '../../utils/errors';
 
 export class RolesService {
-  static async listRoles(organizationId: string) {
+  static async listRoles(organizationId: string, targetOrgId?: string, isPlatformAdmin: boolean = false) {
+    const effectiveOrgId = (isPlatformAdmin && targetOrgId) ? targetOrgId : organizationId;
     return prisma.role.findMany({
-      where: { organizationId },
+      where: { organizationId: effectiveOrgId },
       include: {
         rolePermissions: {
           include: { permission: { select: { id: true, key: true, description: true } } },

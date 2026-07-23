@@ -4,7 +4,9 @@ import { RolesService } from './roles.service';
 export class RolesController {
   static async listRoles(req: Request, res: Response, next: NextFunction) {
     try {
-      const roles = await RolesService.listRoles(req.user!.organizationId);
+      const targetOrgId = req.query.orgId as string | undefined;
+      const isPlatformAdmin = !!req.user!.isPlatformOrg;
+      const roles = await RolesService.listRoles(req.user!.organizationId, targetOrgId, isPlatformAdmin);
       res.status(200).json({ success: true, data: roles });
     } catch (error) {
       next(error);

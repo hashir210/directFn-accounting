@@ -53,23 +53,29 @@ export class OrganizationService {
         },
       });
 
-      // 3. Create Default Roles
-      const ownerRole = await tx.role.create({
-        data: { organizationId: orgId, name: 'Owner', isSystemRole: true }
+      // 3. Create Default Phase 4 Roles
+      const adminRole = await tx.role.create({
+        data: { organizationId: orgId, name: 'Admin', isSystemRole: true }
       });
-      const managerRole = await tx.role.create({
-        data: { organizationId: orgId, name: 'Manager', isSystemRole: true }
+      await tx.role.create({
+        data: { organizationId: orgId, name: 'Accountant', isSystemRole: true }
       });
-      const staffRole = await tx.role.create({
-        data: { organizationId: orgId, name: 'Staff', isSystemRole: true }
+      await tx.role.create({
+        data: { organizationId: orgId, name: 'Cashier', isSystemRole: true }
+      });
+      await tx.role.create({
+        data: { organizationId: orgId, name: 'Sales Person', isSystemRole: true }
+      });
+      await tx.role.create({
+        data: { organizationId: orgId, name: 'Store Manager', isSystemRole: true }
       });
 
-      // 4. Create the User (Owner)
+      // 4. Create the User (Admin Owner)
       const user = await tx.user.create({
         data: {
           id: userId,
           organizationId: orgId,
-          roleId: ownerRole.id,
+          roleId: adminRole.id,
           email: userPayload.email,
           password: userPayload.passwordHash,
           name: userPayload.name,
@@ -80,9 +86,9 @@ export class OrganizationService {
       // 5. Re-enable foreign key checks
       await tx.$executeRawUnsafe(`SET FOREIGN_KEY_CHECKS=1;`);
 
-      // 6. Assign all permissions to the Owner Role
+      // 6. Assign all permissions to the Admin Role
       const rolePermissionsData = allPermissions.map(p => ({
-        roleId: ownerRole.id,
+        roleId: adminRole.id,
         permissionId: p.id,
       }));
       

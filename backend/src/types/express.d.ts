@@ -6,6 +6,7 @@ declare global {
         email: string;
         organizationId: string;
         roleId: string;
+        isPlatformOrg?: boolean;
       };
     }
   }
