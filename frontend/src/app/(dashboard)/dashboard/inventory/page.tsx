@@ -8,6 +8,8 @@ import {
   ArrowRightLeft,
   AlertTriangle,
   Building,
+  Pencil,
+  Trash2,
   Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,6 +81,17 @@ export default function InventoryManagementPage() {
     warehouse: 'Main HQ Warehouse',
   });
 
+  // Edit state
+  const [editMov, setEditMov] = useState<{
+    id: string; type: StockMovement['type']; sku: string; itemName: string; quantity: number; warehouse: string;
+  } | null>(null);
+  const [openEdit, setOpenEdit] = useState(false);
+  // Delete state
+  const [deleteMovId, setDeleteMovId] = useState<string | null>(null);
+  const [deleteMovName, setDeleteMovName] = useState('');
+  const [openDelete, setOpenDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -121,6 +134,61 @@ export default function InventoryManagementPage() {
       setError(err instanceof ApiError ? err.message : 'Failed to record stock movement');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const openEditDialog = (m: StockMovement) => {
+    setEditMov({
+      id: m.id,
+      type: m.type,
+      sku: m.sku,
+      itemName: m.itemName,
+      quantity: m.quantity,
+      warehouse: m.warehouse,
+    });
+    setOpenEdit(true);
+  };
+
+  const handleEditMovement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editMov) return;
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await apiFetch(`/api/v1/inventory/${editMov.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          type: editMov.type,
+          sku: editMov.sku,
+          itemName: editMov.itemName,
+          quantity: editMov.quantity,
+          warehouse: editMov.warehouse,
+        }),
+      });
+      setOpenEdit(false);
+      setEditMov(null);
+      fetchData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to update stock movement');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteMovement = async () => {
+    if (!deleteMovId) return;
+    setIsDeleting(true);
+    setError('');
+    try {
+      await apiFetch(`/api/v1/inventory/${deleteMovId}`, { method: 'DELETE' });
+      setOpenDelete(false);
+      setDeleteMovId(null);
+      setDeleteMovName('');
+      fetchData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to delete stock movement');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -349,12 +417,13 @@ export default function InventoryManagementPage() {
                   <TableHead>Warehouse Location</TableHead>
                   <TableHead>Date Recorded</TableHead>
                   <TableHead className="text-right">Status</TableHead>
+                  {canEdit && <TableHead className="text-right w-20">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {movements.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={canEdit ? 7 : 6} className="text-center py-6 text-muted-foreground">
                       No stock movements recorded yet. Click &quot;Record Movement&quot; to log stock ins/outs.
                     </TableCell>
                   </TableRow>
@@ -390,6 +459,21 @@ export default function InventoryManagementPage() {
                       <TableCell className="text-right">
                         <Badge variant="secondary" className="text-xs">{m.status || 'Completed'}</Badge>
                       </TableCell>
+                      <TableCell className="text-right">
+                        {canEdit && (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button onClick={() => openEditDialog(m)} variant="ghost" size="icon-sm" className="h-8 w-8 cursor-pointer" title="Edit">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              onClick={() => { setDeleteMovId(m.id); setDeleteMovName(m.itemName); setOpenDelete(true); }}
+                              variant="ghost" size="icon-sm" className="h-8 w-8 text-destructive cursor-pointer" title="Delete"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -398,6 +482,95 @@ export default function InventoryManagementPage() {
           )}
         </CardContent>
       </Card>
+      {/* Edit Stock Movement Dialog */}
+      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+        <DialogContent className="max-w-md">
+          <form onSubmit={handleEditMovement}>
+            <DialogHeader>
+              <DialogTitle>Edit Stock Movement</DialogTitle>
+              <DialogDescription>Update movement details.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Movement Type</Label>
+                <Select
+                  value={editMov?.type || ''}
+                  onValueChange={(val) => setEditMov(editMov ? { ...editMov, type: val as StockMovement['type'] } : null)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Stock In">Stock In</SelectItem>
+                    <SelectItem value="Stock Out">Stock Out</SelectItem>
+                    <SelectItem value="Transfer">Transfer</SelectItem>
+                    <SelectItem value="Damaged">Damaged</SelectItem>
+                    <SelectItem value="Adjustment">Adjustment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Item Name</Label>
+                <Input required value={editMov?.itemName || ''} onChange={(e) => setEditMov(editMov ? { ...editMov, itemName: e.target.value } : null)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>SKU</Label>
+                  <Input required value={editMov?.sku || ''} onChange={(e) => setEditMov(editMov ? { ...editMov, sku: e.target.value } : null)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Quantity</Label>
+                  <Input type="number" min="1" value={editMov?.quantity || 1} onChange={(e) => setEditMov(editMov ? { ...editMov, quantity: Number(e.target.value) } : null)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Warehouse</Label>
+                {warehouses.length > 0 ? (
+                  <Select
+                    value={editMov?.warehouse || ''}
+                    onValueChange={(val) => setEditMov(editMov ? { ...editMov, warehouse: val } : null)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select Warehouse" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses.map((wh) => (
+                        <SelectItem key={wh.id} value={wh.name}>{wh.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input value={editMov?.warehouse || ''} onChange={(e) => setEditMov(editMov ? { ...editMov, warehouse: e.target.value } : null)} />
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Stock Movement Confirmation */}
+      <Dialog open={openDelete} onOpenChange={setOpenDelete}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Stock Movement</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the movement record for <strong>{deleteMovName}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setOpenDelete(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteMovement} disabled={isDeleting}>
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -11,6 +11,8 @@ router.use(authenticate);
 
 router.get('/', requirePermission('products.view'), InventoryController.list);
 router.post('/', requirePermission('products.edit'), validate(recordMovementSchema), InventoryController.recordMovement);
+router.patch('/:id', requirePermission('products.edit'), InventoryController.updateMovement);
+router.delete('/:id', requirePermission('products.edit'), InventoryController.deleteMovement);
 router.get('/warehouses', requirePermission('products.view'), InventoryController.listWarehouses);
 router.post('/warehouses', requirePermission('products.edit'), InventoryController.createWarehouse);
 

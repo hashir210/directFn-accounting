@@ -26,6 +26,24 @@ export class InventoryController {
     }
   }
 
+  static async updateMovement(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await InventoryService.updateMovement(req.user!.organizationId, req.params.id, req.body);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteMovement(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await InventoryService.deleteMovement(req.user!.organizationId, req.params.id);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async listWarehouses(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await InventoryService.listWarehouses(req.user!.organizationId);

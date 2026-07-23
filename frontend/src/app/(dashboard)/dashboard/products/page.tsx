@@ -7,6 +7,8 @@ import {
   Search,
   Barcode,
   AlertTriangle,
+  Pencil,
+  Trash2,
   Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,6 +74,18 @@ export default function ProductManagementPage() {
     stockQuantity: '10',
   });
 
+  // Edit state
+  const [editProd, setEditProd] = useState<{
+    id: string; name: string; sku: string; barcode: string; category: string;
+    unit: string; purchasePrice: string; sellingPrice: string; imageUrl: string; stockQuantity: string;
+  } | null>(null);
+  const [openEdit, setOpenEdit] = useState(false);
+  // Delete state
+  const [deleteProdId, setDeleteProdId] = useState<string | null>(null);
+  const [deleteProdName, setDeleteProdName] = useState('');
+  const [openDelete, setOpenDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const fetchProducts = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -114,6 +128,69 @@ export default function ProductManagementPage() {
       setError(err instanceof ApiError ? err.message : 'Failed to create product');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const openEditDialog = (p: Product) => {
+    setEditProd({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      barcode: p.barcode || '',
+      category: p.category || 'Hardware',
+      unit: p.unit,
+      purchasePrice: p.purchasePrice,
+      sellingPrice: p.sellingPrice,
+      imageUrl: p.imageUrl || '',
+      stockQuantity: String(p.stockQuantity),
+    });
+    setOpenEdit(true);
+  };
+
+  const handleEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editProd) return;
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await apiFetch(`/api/v1/products/${editProd.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: editProd.name,
+          sku: editProd.sku,
+          barcode: editProd.barcode || undefined,
+          category: editProd.category || undefined,
+          unit: editProd.unit,
+          purchasePrice: parseFloat(editProd.purchasePrice) || 0,
+          sellingPrice: parseFloat(editProd.sellingPrice) || 0,
+          imageUrl: editProd.imageUrl || undefined,
+          stockQuantity: parseInt(editProd.stockQuantity) || 0,
+        }),
+      });
+      setOpenEdit(false);
+      setEditProd(null);
+      fetchProducts();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to update product');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!deleteProdId) return;
+    setIsDeleting(true);
+    setError('');
+    try {
+      await apiFetch(`/api/v1/products/${deleteProdId}`, { method: 'DELETE' });
+      setOpenDelete(false);
+      setDeleteProdId(null);
+      setDeleteProdName('');
+      fetchProducts();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to delete product');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -322,12 +399,13 @@ export default function ProductManagementPage() {
                   <TableHead>Stock Level</TableHead>
                   <TableHead>Cost Price</TableHead>
                   <TableHead className="text-right">Selling Price</TableHead>
+                  {canEdit && <TableHead className="text-right w-20">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {products.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={canEdit ? 7 : 6} className="text-center py-6 text-muted-foreground">
                       No products found. Click &quot;Add Product&quot; to create your first catalog item.
                     </TableCell>
                   </TableRow>
@@ -380,6 +458,21 @@ export default function ProductManagementPage() {
                       </TableCell>
                       <TableCell className="font-mono text-sm text-muted-foreground">${Number(p.purchasePrice).toFixed(2)}</TableCell>
                       <TableCell className="text-right font-mono font-semibold text-sm">${Number(p.sellingPrice).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">
+                        {canEdit && (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button onClick={() => openEditDialog(p)} variant="ghost" size="icon-sm" className="h-8 w-8 cursor-pointer" title="Edit">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              onClick={() => { setDeleteProdId(p.id); setDeleteProdName(p.name); setOpenDelete(true); }}
+                              variant="ghost" size="icon-sm" className="h-8 w-8 text-destructive cursor-pointer" title="Delete"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -388,6 +481,71 @@ export default function ProductManagementPage() {
           )}
         </CardContent>
       </Card>
+      {/* Edit Product Dialog */}
+      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+        <DialogContent className="max-w-md">
+          <form onSubmit={handleEditProduct}>
+            <DialogHeader>
+              <DialogTitle>Edit Product</DialogTitle>
+              <DialogDescription>Update product details and pricing.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Product Name</Label>
+                <Input required value={editProd?.name || ''} onChange={(e) => setEditProd(editProd ? { ...editProd, name: e.target.value } : null)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>SKU</Label>
+                  <Input value={editProd?.sku || ''} onChange={(e) => setEditProd(editProd ? { ...editProd, sku: e.target.value } : null)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Barcode</Label>
+                  <Input value={editProd?.barcode || ''} onChange={(e) => setEditProd(editProd ? { ...editProd, barcode: e.target.value } : null)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Purchase Cost ($)</Label>
+                  <Input type="number" value={editProd?.purchasePrice || '0'} onChange={(e) => setEditProd(editProd ? { ...editProd, purchasePrice: e.target.value } : null)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Selling Price ($)</Label>
+                  <Input type="number" required value={editProd?.sellingPrice || '0'} onChange={(e) => setEditProd(editProd ? { ...editProd, sellingPrice: e.target.value } : null)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Stock Quantity</Label>
+                <Input type="number" value={editProd?.stockQuantity || '0'} onChange={(e) => setEditProd(editProd ? { ...editProd, stockQuantity: e.target.value } : null)} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Product Confirmation */}
+      <Dialog open={openDelete} onOpenChange={setOpenDelete}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Product</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deleteProdName}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setOpenDelete(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteProduct} disabled={isDeleting}>
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

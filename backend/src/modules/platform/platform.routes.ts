@@ -15,6 +15,7 @@ router.get('/organizations', PlatformController.listOrganizations);
 router.post('/organizations', PlatformController.createOrganization);
 router.patch('/organizations/:id/status', PlatformController.updateOrganizationStatus);
 router.patch('/organizations/:id/limits', PlatformController.updateOrganizationLimits);
+router.patch('/organizations/:id/settings', PlatformController.updateOrganizationSettings);
 router.get('/organizations/:id/screens', PlatformController.getOrganizationScreens);
 router.put('/organizations/:id/screens', PlatformController.updateOrganizationScreens);
 router.get('/stats', PlatformController.getStats);

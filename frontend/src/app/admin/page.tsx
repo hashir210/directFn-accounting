@@ -2,42 +2,33 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '@/features/auth/useAuth';
 import { apiFetch, ApiError } from '@/lib/api';
-import { Shield, Building2, Users, DollarSign, Loader2, ArrowLeft, Pencil, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import { Building2, Users, DollarSign, Loader2, Plus, CheckCircle2, AlertCircle, Mail, Globe, MapPin, Clock, Hash, Pencil, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 
-interface PlanOption {
-  id: string;
-  name: string;
-}
+interface PlanOption { id: string; name: string; }
 
 interface OrgSummary {
-  id: string;
-  name: string;
-  planId?: string | null;
+  id: string; name: string; planId?: string | null;
   plan: { id: string; name: string } | null;
-  status: string;
-  isPlatform: boolean;
+  status: string; isPlatform: boolean;
   maxUsers?: number | null;
-  contactEmail?: string | null;
+  contactEmail?: string | null; gstVatNumber?: string | null;
+  address?: string | null; fiscalYear?: string | null;
+  currency?: string | null; timeZone?: string | null; logoUrl?: string | null;
   createdAt: string;
   _count: { users: number; invoices: number; customers: number };
 }
 
 interface PlatformStats {
-  totalOrganizations: number;
-  totalUsers: number;
-  totalInvoiced: number;
-  totalPaid: number;
-  totalExpenses: number;
-  invoiceCount: number;
+  totalOrganizations: number; totalUsers: number;
+  totalInvoiced: number; totalPaid: number;
 }
 
 export default function AdminPage() {
@@ -49,34 +40,26 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Provision Tenant Modal State
-  const [isProvisionOpen, setIsProvisionOpen] = useState(false);
-  const [newOrgName, setNewOrgName] = useState('');
-  const [newOrgPlanId, setNewOrgPlanId] = useState('');
-  const [newOwnerName, setNewOwnerName] = useState('');
-  const [newOwnerEmail, setNewOwnerEmail] = useState('');
-  const [newOwnerPassword, setNewOwnerPassword] = useState('');
-  const [newContactEmail, setNewContactEmail] = useState('');
-  const [newMaxUsers, setNewMaxUsers] = useState('5');
-  const [isProvisioning, setIsProvisioning] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [regForm, setRegForm] = useState({
+    orgName: '', ownerName: '', ownerEmail: '', password: '',
+    contactEmail: '', maxUsers: '5', planId: '',
+    address: '', gstVatNumber: '', fiscalYear: 'jan-dec', currency: 'PKR', timeZone: 'UTC-5',
+  });
+  const [isRegistering, setIsRegistering] = useState(false);
 
-  // Edit Limits & Plan Modal State
-  const [isLimitsModalOpen, setIsLimitsModalOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
-  const [editPlanId, setEditPlanId] = useState<string>('');
-  const [editMaxUsers, setEditMaxUsers] = useState<string>('');
-  const [editContactEmail, setEditContactEmail] = useState<string>('');
-  const [isSavingLimits, setIsSavingLimits] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '', contactEmail: '', gstVatNumber: '', address: '',
+    fiscalYear: 'jan-dec', currency: 'PKR', timeZone: 'UTC-5', logoUrl: '',
+    planId: '', maxUsers: '5',
+  });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.replace('/login');
-      return;
-    }
-    if (!loading && (!user?.isPlatformOrg || !hasPermission('platform.view'))) {
-      router.replace('/dashboard');
-      return;
-    }
+    if (!loading && !isAuthenticated) { router.replace('/login'); return; }
+    if (!loading && (!user?.isPlatformOrg || !hasPermission('platform.view'))) { router.replace('/dashboard'); return; }
   }, [loading, isAuthenticated, user, hasPermission, router]);
 
   const fetchData = useCallback(async () => {
@@ -89,401 +72,345 @@ export default function AdminPage() {
       setOrgs(orgsData);
       setStats(statsData);
       setPlans(plansData);
-      if (plansData.length > 0 && !newOrgPlanId) {
-        setNewOrgPlanId(plansData[0].id);
-      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load platform data');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [newOrgPlanId]);
+    } finally { setIsLoading(false); }
+  }, []);
 
-  useEffect(() => { 
-    if (isAuthenticated && hasPermission('platform.view')) fetchData(); 
+  useEffect(() => {
+    if (isAuthenticated && hasPermission('platform.view')) fetchData();
   }, [isAuthenticated, hasPermission, fetchData]);
 
-  // Handle Provisioning B2B Tenant
-  const handleProvisionTenant = async (e: React.FormEvent) => {
+  const openRegister = () => {
+    setRegForm({ orgName: '', ownerName: '', ownerEmail: '', password: '', contactEmail: '', maxUsers: '5', planId: plans[0]?.id || '', address: '', gstVatNumber: '', fiscalYear: 'jan-dec', currency: 'PKR', timeZone: 'UTC-5' });
+    setError('');
+    setIsRegisterOpen(true);
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsProvisioning(true);
+    setIsRegistering(true);
     setError('');
     try {
       await apiFetch('/api/v1/platform/organizations', {
         method: 'POST',
         body: JSON.stringify({
-          orgName: newOrgName,
-          planId: newOrgPlanId || undefined,
-          ownerName: newOwnerName,
-          ownerEmail: newOwnerEmail,
-          password: newOwnerPassword,
-          contactEmail: newContactEmail || undefined,
-          maxUsers: newMaxUsers ? parseInt(newMaxUsers, 10) : undefined,
+          orgName: regForm.orgName, planId: regForm.planId || undefined,
+          ownerName: regForm.ownerName, ownerEmail: regForm.ownerEmail,
+          password: regForm.password, contactEmail: regForm.contactEmail || undefined,
+          maxUsers: regForm.maxUsers ? parseInt(regForm.maxUsers, 10) : undefined,
         }),
       });
-      setIsProvisionOpen(false);
-      setNewOrgName('');
-      setNewOwnerName('');
-      setNewOwnerEmail('');
-      setNewOwnerPassword('');
-      setNewContactEmail('');
-      setNewMaxUsers('5');
+      const orgsList = await apiFetch<OrgSummary[]>('/api/v1/platform/organizations');
+      const created = orgsList.find(o => o.name === regForm.orgName);
+      if (created) {
+        await apiFetch(`/api/v1/platform/organizations/${created.id}/settings`, { method: 'PATCH', body: JSON.stringify({ address: regForm.address || undefined, gstVatNumber: regForm.gstVatNumber || undefined, fiscalYear: regForm.fiscalYear, currency: regForm.currency, timeZone: regForm.timeZone }) });
+      }
+      setIsRegisterOpen(false);
       fetchData();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to provision tenant organization');
-    } finally {
-      setIsProvisioning(false);
-    }
+      setError(err instanceof ApiError ? err.message : 'Failed to register company');
+    } finally { setIsRegistering(false); }
   };
 
-  // Toggle Org Active/Suspended Status
-  const handleToggleOrgStatus = async (orgId: string, currentStatus: string) => {
-    const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
+  const toggleStatus = async (orgId: string, current: string) => {
+    const next = current === 'active' ? 'suspended' : 'active';
     try {
-      await apiFetch(`/api/v1/platform/organizations/${orgId}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: nextStatus }),
-      });
+      await apiFetch(`/api/v1/platform/organizations/${orgId}/status`, { method: 'PATCH', body: JSON.stringify({ status: next }) });
       fetchData();
-    } catch (err) {
-      alert(err instanceof ApiError ? err.message : 'Failed to update status');
-    }
+    } catch (err) { alert(err instanceof ApiError ? err.message : 'Failed'); }
   };
 
-  // Open Edit Limits & Plan Modal
-  const openEditLimitsModal = (org: OrgSummary) => {
+  const openEdit = (org: OrgSummary) => {
     setEditingOrgId(org.id);
-    setEditPlanId(org.planId || org.plan?.id || (plans.length > 0 ? plans[0].id : ''));
-    setEditMaxUsers(org.maxUsers?.toString() || '');
-    setEditContactEmail(org.contactEmail || '');
-    setIsLimitsModalOpen(true);
+    setEditForm({
+      name: org.name || '', contactEmail: org.contactEmail || '',
+      gstVatNumber: org.gstVatNumber || '', address: org.address || '',
+      fiscalYear: org.fiscalYear || 'jan-dec', currency: org.currency || 'PKR',
+      timeZone: org.timeZone || 'UTC-5', logoUrl: org.logoUrl || '',
+      planId: org.planId || org.plan?.id || (plans.length > 0 ? plans[0].id : ''),
+      maxUsers: org.maxUsers?.toString() || '5',
+    });
+    setIsEditOpen(true);
   };
 
-  const handleSaveLimits = async () => {
+  const handleSaveEdit = async () => {
     if (!editingOrgId) return;
-    setIsSavingLimits(true);
+    setIsSavingEdit(true);
     try {
-      await apiFetch(`/api/v1/platform/organizations/${editingOrgId}/limits`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          planId: editPlanId || null,
-          maxUsers: editMaxUsers ? parseInt(editMaxUsers, 10) : null,
-          contactEmail: editContactEmail || null,
-        }),
-      });
-      setIsLimitsModalOpen(false);
+      await Promise.all([
+        apiFetch(`/api/v1/platform/organizations/${editingOrgId}/settings`, { method: 'PATCH', body: JSON.stringify({ name: editForm.name, contactEmail: editForm.contactEmail || undefined, gstVatNumber: editForm.gstVatNumber || undefined, address: editForm.address || undefined, fiscalYear: editForm.fiscalYear, currency: editForm.currency, timeZone: editForm.timeZone, logoUrl: editForm.logoUrl || undefined }) }),
+        apiFetch(`/api/v1/platform/organizations/${editingOrgId}/limits`, { method: 'PATCH', body: JSON.stringify({ planId: editForm.planId || null, maxUsers: editForm.maxUsers ? parseInt(editForm.maxUsers, 10) : null }) }),
+      ]);
+      setIsEditOpen(false);
       fetchData();
-    } catch (err) {
-      alert(err instanceof ApiError ? err.message : 'Failed to save organization details');
-    } finally {
-      setIsSavingLimits(false);
-    }
+    } catch (err) { alert(err instanceof ApiError ? err.message : 'Failed to save'); }
+    finally { setIsSavingEdit(false); }
   };
 
   if (loading || isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-svh">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <div className="flex items-center justify-center min-h-svh"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
 
   return (
     <div className="min-h-svh bg-background">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="max-w-7xl mx-auto p-6 space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <Shield className="h-4 w-4 text-primary" />
-              <span>FinFlow Platform Administration</span>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight">Platform Dashboard</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Companies</h1>
+            <p className="text-sm text-muted-foreground">Manage all registered tenant companies on FinFlow.</p>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={() => router.push('/admin/plans')} className="cursor-pointer">
-              Configure Subscription Tiers
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => router.push('/admin/plans')}>Plans</Button>
+            <Button size="sm" onClick={openRegister}>
+              <Plus className="h-4 w-4 mr-1" /> Register Company
             </Button>
-
-            {/* Provision New B2B Tenant Modal */}
-            <Dialog open={isProvisionOpen} onOpenChange={setIsProvisionOpen}>
-              <DialogTrigger asChild>
-                <Button variant="default" className="cursor-pointer">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Provision B2B Tenant
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[480px]">
-                <form onSubmit={handleProvisionTenant}>
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5 text-primary" /> Provision B2B Client Organization
-                    </DialogTitle>
-                    <DialogDescription>
-                      Create a new client organization on FinFlow and set up their owner account.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="space-y-4 py-4">
-                    {error && (
-                      <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md">
-                        {error}
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <Label htmlFor="org-name">Organization Name</Label>
-                      <Input id="org-name" required value={newOrgName} onChange={(e) => setNewOrgName(e.target.value)} placeholder="Acme Global Financial" />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="org-plan">Subscription Plan Tier</Label>
-                      <select
-                        id="org-plan"
-                        className="w-full h-9 px-3 py-1 bg-background border rounded-md text-xs font-medium focus:ring-2 focus:ring-primary cursor-pointer"
-                        value={newOrgPlanId}
-                        onChange={(e) => setNewOrgPlanId(e.target.value)}
-                      >
-                        {plans.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="owner-name">Owner Name</Label>
-                        <Input id="owner-name" placeholder="Sarah Jenkins" value={newOwnerName} onChange={(e) => setNewOwnerName(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="owner-email">Owner Email</Label>
-                        <Input id="owner-email" type="email" required placeholder="sarah@acme.com" value={newOwnerEmail} onChange={(e) => setNewOwnerEmail(e.target.value)} />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="owner-pass">Initial Password</Label>
-                      <Input id="owner-pass" type="password" required placeholder="••••••••" value={newOwnerPassword} onChange={(e) => setNewOwnerPassword(e.target.value)} />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="contact-email">Billing Email</Label>
-                        <Input id="contact-email" type="email" placeholder="billing@acme.com" value={newContactEmail} onChange={(e) => setNewContactEmail(e.target.value)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="max-users">Max Users Allowed</Label>
-                        <Input id="max-users" type="number" value={newMaxUsers} onChange={(e) => setNewMaxUsers(e.target.value)} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button type="button" variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button type="submit" disabled={isProvisioning} className="cursor-pointer">
-                      {isProvisioning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                      Provision B2B Tenant
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            <Button variant="outline" onClick={() => router.push('/dashboard')} className="cursor-pointer">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
+            <Button variant="ghost" size="icon-sm" onClick={() => router.push('/dashboard')} title="Back"><X className="h-4 w-4" /></Button>
           </div>
         </div>
 
-        {error && (
-          <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md">
-            {error}
-          </div>
-        )}
+        {error && <div className="p-2 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded">{error}</div>}
 
-        {/* Stats Cards */}
+        {/* Stats — two compact cards */}
         {stats && (
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Organizations</CardTitle>
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalOrganizations}</div>
-              </CardContent>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+            <Card className="p-3 flex items-center gap-3">
+              <Building2 className="h-5 w-5 text-primary shrink-0" />
+              <div><div className="text-lg font-bold">{stats.totalOrganizations}</div><div className="text-xs text-muted-foreground">Companies</div></div>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalUsers}</div>
-              </CardContent>
+            <Card className="p-3 flex items-center gap-3">
+              <Users className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div><div className="text-lg font-bold">{stats.totalUsers}</div><div className="text-xs text-muted-foreground">Users</div></div>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Invoiced</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${stats.totalInvoiced.toLocaleString()}</div>
-              </CardContent>
+            <Card className="p-3 flex items-center gap-3">
+              <DollarSign className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div><div className="text-lg font-bold">PKR {stats.totalInvoiced.toLocaleString()}</div><div className="text-xs text-muted-foreground">Invoiced</div></div>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Collected</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-emerald-600">${stats.totalPaid.toLocaleString()}</div>
-              </CardContent>
+            <Card className="p-3 flex items-center gap-3">
+              <DollarSign className="h-5 w-5 text-emerald-500 shrink-0" />
+              <div><div className="text-lg font-bold text-emerald-600">PKR {stats.totalPaid.toLocaleString()}</div><div className="text-xs text-muted-foreground">Collected</div></div>
             </Card>
           </div>
         )}
 
-        {/* Organizations Management Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>B2B Client Organizations ({orgs.length})</CardTitle>
-            <CardDescription>
-              Manage tenant client organizations, change subscription tiers (revoke/grant screen access), and control account statuses.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Organization Name</TableHead>
-                  <TableHead>Subscription Tier</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Active Users</TableHead>
-                  <TableHead>Max Limit</TableHead>
-                  <TableHead>Billing Email</TableHead>
-                  <TableHead>Created Date</TableHead>
-                  <TableHead className="text-right">Controls</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orgs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                      No client organizations found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  orgs.map((org) => {
-                    return (
-                      <TableRow key={org.id} className="hover:bg-muted/40 transition-colors">
-                        <TableCell className="font-bold text-xs">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-primary shrink-0" />
-                            {org.name}
-                            {org.isPlatform && (
-                              <Badge variant="secondary" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200">
-                                Platform HQ
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs font-semibold">
-                            {org.plan?.name || 'Free'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={org.status === 'active' ? 'secondary' : 'destructive'}
-                            className={`text-[10px] capitalize cursor-pointer ${
-                              org.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : ''
-                            }`}
-                            onClick={() => !org.isPlatform && handleToggleOrgStatus(org.id, org.status)}
-                          >
-                            {org.status === 'active' ? <CheckCircle2 className="h-3 w-3 mr-1 inline" /> : <AlertCircle className="h-3 w-3 mr-1 inline" />}
-                            {org.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs font-medium">{org._count.users} members</TableCell>
-                        <TableCell className="text-xs font-medium">{org.maxUsers || '∞'}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{org.contactEmail || 'N/A'}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {new Date(org.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => openEditLimitsModal(org)}
-                            className="text-xs h-8 cursor-pointer"
-                          >
-                            <Pencil className="h-3.5 w-3.5 mr-1 text-primary" /> Edit Plan & Limits
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        {/* Company Cards */}
+        {orgs.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground border rounded-xl bg-muted/10">
+            <Building2 className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            No companies registered yet. Click &quot;Register Company&quot; to add one.
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {orgs.map((org) => (
+              <Card key={org.id} className="relative hover:shadow-md transition-shadow cursor-pointer border-border/60" onClick={() => openEdit(org)}>
+                <CardHeader className="pb-2 pt-3 px-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Building2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      <CardTitle className="text-sm font-semibold truncate">{org.name}</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge variant={org.status === 'active' ? 'secondary' : 'destructive'} className={`text-[10px] h-5 px-1.5 ${org.status === 'active' ? 'bg-emerald-50 text-emerald-600' : ''}`}>
+                        {org.status === 'active' ? <CheckCircle2 className="h-2.5 w-2.5 mr-0.5 inline" /> : <AlertCircle className="h-2.5 w-2.5 mr-0.5 inline" />}
+                        {org.status}
+                      </Badge>
+                      <Button variant="ghost" size="icon-xs" className="h-6 w-6 -mr-1" onClick={(e) => { e.stopPropagation(); openEdit(org); }} title="Edit">
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-3 space-y-1.5 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-foreground">{org.plan?.name || 'Free'}</span>
+                    <span>{org._count.users}/{org.maxUsers || 5} users</span>
+                  </div>
+                  {org.contactEmail && <div className="flex items-center gap-1.5"><Mail className="h-3 w-3 shrink-0" /><span className="truncate">{org.contactEmail}</span></div>}
+                  {org.address && <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{org.address}</span></div>}
+                  {org.gstVatNumber && <div className="flex items-center gap-1.5"><Hash className="h-3 w-3 shrink-0" /><span>{org.gstVatNumber}</span></div>}
+                  <div className="flex items-center gap-1.5"><Globe className="h-3 w-3 shrink-0" />{org.currency || 'PKR'} &middot; {org.fiscalYear || 'jan-dec'} &middot; {org.timeZone || 'UTC-5'}</div>
+                  <div className="flex items-center gap-1.5"><Clock className="h-3 w-3 shrink-0" />{new Date(org.createdAt).toLocaleDateString()}</div>
+                  <div className="flex gap-1.5 pt-1.5 border-t border-border/40 mt-1.5">
+                    <Button variant="outline" size="xs" className="flex-1 h-7 text-[10px]" onClick={(e) => { e.stopPropagation(); openEdit(org); }}>Edit Details</Button>
+                    <Button variant={org.status === 'active' ? 'destructive' : 'secondary'} size="xs" className="h-7 text-[10px]" onClick={(e) => { e.stopPropagation(); toggleStatus(org.id, org.status); }}>
+                      {org.status === 'active' ? 'Suspend' : 'Activate'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Edit Plan & Limits Modal */}
-      <Dialog open={isLimitsModalOpen} onOpenChange={setIsLimitsModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      {/* Register Modal */}
+      <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
+        <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
+          <form onSubmit={handleRegister}>
+            <DialogHeader>
+              <DialogTitle>Register New Company</DialogTitle>
+              <DialogDescription>Create a new client company with owner account and details.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Company Name</Label>
+                <Input required value={regForm.orgName} onChange={(e) => setRegForm({ ...regForm, orgName: e.target.value })} placeholder="Acme Corp" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Contact Email</Label>
+                  <Input type="email" value={regForm.contactEmail} onChange={(e) => setRegForm({ ...regForm, contactEmail: e.target.value })} placeholder="billing@acme.com" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">GST / VAT Number</Label>
+                  <Input value={regForm.gstVatNumber} onChange={(e) => setRegForm({ ...regForm, gstVatNumber: e.target.value })} placeholder="GST-98420-DFN" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Address</Label>
+                <Input value={regForm.address} onChange={(e) => setRegForm({ ...regForm, address: e.target.value })} placeholder="Address, City, Country" />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Fiscal Year</Label>
+                  <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={regForm.fiscalYear} onChange={(e) => setRegForm({ ...regForm, fiscalYear: e.target.value })}>
+                    <option value="jan-dec">Jan-Dec</option>
+                    <option value="apr-mar">Apr-Mar</option>
+                    <option value="jul-jun">Jul-Jun</option>
+                    <option value="oct-sep">Oct-Sep</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Currency</Label>
+                  <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={regForm.currency} onChange={(e) => setRegForm({ ...regForm, currency: e.target.value })}>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="PKR">PKR</option>
+                    <option value="AED">AED</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Time Zone</Label>
+                  <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={regForm.timeZone} onChange={(e) => setRegForm({ ...regForm, timeZone: e.target.value })}>
+                    <option value="UTC-5">EST</option>
+                    <option value="UTC+0">GMT</option>
+                    <option value="UTC+5">PKT</option>
+                    <option value="UTC+4">GST</option>
+                  </select>
+                </div>
+              </div>
+              <div className="border-t pt-3">
+                <h4 className="text-xs font-semibold mb-2">Owner Account & Subscription</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Owner Name</Label>
+                    <Input value={regForm.ownerName} onChange={(e) => setRegForm({ ...regForm, ownerName: e.target.value })} placeholder="Jane Doe" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Owner Email</Label>
+                    <Input type="email" required value={regForm.ownerEmail} onChange={(e) => setRegForm({ ...regForm, ownerEmail: e.target.value })} placeholder="jane@acme.com" />
+                  </div>
+                </div>
+                <div className="space-y-1.5 mt-2">
+                  <Label className="text-xs">Initial Password</Label>
+                  <Input type="password" required value={regForm.password} onChange={(e) => setRegForm({ ...regForm, password: e.target.value })} placeholder="••••••••" />
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Plan</Label>
+                    <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={regForm.planId} onChange={(e) => setRegForm({ ...regForm, planId: e.target.value })}>
+                      {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Max Users</Label>
+                    <Input type="number" value={regForm.maxUsers} onChange={(e) => setRegForm({ ...regForm, maxUsers: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild><Button type="button" variant="outline" size="sm">Cancel</Button></DialogClose>
+              <Button type="submit" size="sm" disabled={isRegistering}>
+                {isRegistering ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null} Register Company
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Subscription Tier & Limits</DialogTitle>
-            <DialogDescription>
-              Changing the subscription plan tier will instantly update allowed features and revoke/grant screen access for this organization.
-            </DialogDescription>
+            <DialogTitle>Edit Company Details</DialogTitle>
+            <DialogDescription>Update company profile, plan, and limits.</DialogDescription>
           </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>Subscription Plan Tier</Label>
-              <select
-                className="w-full h-9 px-3 py-1 bg-background border rounded-md text-xs font-medium focus:ring-2 focus:ring-primary cursor-pointer"
-                value={editPlanId}
-                onChange={(e) => setEditPlanId(e.target.value)}
-              >
-                {plans.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+          <div className="grid gap-3 py-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Company Name</Label>
+              <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
             </div>
-
-            <div className="space-y-2">
-              <Label>Max User Limit</Label>
-              <Input
-                type="number"
-                placeholder="e.g. 10 (leave blank for unlimited)"
-                value={editMaxUsers}
-                onChange={(e) => setEditMaxUsers(e.target.value)}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Contact Email</Label>
+                <Input type="email" value={editForm.contactEmail} onChange={(e) => setEditForm({ ...editForm, contactEmail: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">GST / VAT</Label>
+                <Input value={editForm.gstVatNumber} onChange={(e) => setEditForm({ ...editForm, gstVatNumber: e.target.value })} />
+              </div>
             </div>
-
-            <div className="space-y-2">
-              <Label>Contact / Billing Email</Label>
-              <Input
-                type="email"
-                placeholder="billing@company.com"
-                value={editContactEmail}
-                onChange={(e) => setEditContactEmail(e.target.value)}
-              />
+            <div className="space-y-1.5">
+              <Label className="text-xs">Address</Label>
+              <Input value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Fiscal Year</Label>
+                <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={editForm.fiscalYear} onChange={(e) => setEditForm({ ...editForm, fiscalYear: e.target.value })}>
+                  <option value="jan-dec">Jan-Dec</option><option value="apr-mar">Apr-Mar</option><option value="jul-jun">Jul-Jun</option><option value="oct-sep">Oct-Sep</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Currency</Label>
+                <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })}>
+                  <option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="PKR">PKR</option><option value="AED">AED</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Time Zone</Label>
+                <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={editForm.timeZone} onChange={(e) => setEditForm({ ...editForm, timeZone: e.target.value })}>
+                  <option value="UTC-5">EST</option><option value="UTC+0">GMT</option><option value="UTC+5">PKT</option><option value="UTC+4">GST</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Logo URL</Label>
+              <Input value={editForm.logoUrl} onChange={(e) => setEditForm({ ...editForm, logoUrl: e.target.value })} />
+            </div>
+            <div className="border-t pt-3">
+              <h4 className="text-xs font-semibold mb-2">Subscription & Limits</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Plan</Label>
+                  <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={editForm.planId} onChange={(e) => setEditForm({ ...editForm, planId: e.target.value })}>
+                    {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Max Users</Label>
+                  <Input type="number" value={editForm.maxUsers} onChange={(e) => setEditForm({ ...editForm, maxUsers: e.target.value })} />
+                </div>
+              </div>
             </div>
           </div>
-
           <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button onClick={handleSaveLimits} disabled={isSavingLimits} className="cursor-pointer">
-              {isSavingLimits ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-              Save Changes
+            <DialogClose asChild><Button variant="outline" size="sm">Cancel</Button></DialogClose>
+            <Button onClick={handleSaveEdit} size="sm" disabled={isSavingEdit}>
+              {isSavingEdit ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null} Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

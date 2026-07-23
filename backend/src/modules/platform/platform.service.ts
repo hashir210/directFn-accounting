@@ -15,6 +15,12 @@ export class PlatformService {
         isPlatform: true,
         disabledScreens: true,
         contactEmail: true,
+        gstVatNumber: true,
+        address: true,
+        fiscalYear: true,
+        currency: true,
+        timeZone: true,
+        logoUrl: true,
         maxUsers: true,
         createdAt: true,
         _count: { select: { users: true, invoices: true, customers: true } },
@@ -158,6 +164,44 @@ export class PlatformService {
       where: { id: orgId },
       data: { status },
       select: { id: true, name: true, planId: true, status: true },
+    });
+  }
+
+  static async updateOrganizationSettings(
+    orgId: string,
+    data: {
+      name?: string;
+      contactEmail?: string;
+      gstVatNumber?: string;
+      address?: string;
+      fiscalYear?: string;
+      currency?: string;
+      timeZone?: string;
+      logoUrl?: string;
+    }
+  ) {
+    const org = await prisma.organization.findUnique({ where: { id: orgId } });
+    if (!org) throw new NotFoundError('Organization not found');
+
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.contactEmail !== undefined) updateData.contactEmail = data.contactEmail;
+    if (data.gstVatNumber !== undefined) updateData.gstVatNumber = data.gstVatNumber;
+    if (data.address !== undefined) updateData.address = data.address;
+    if (data.fiscalYear !== undefined) updateData.fiscalYear = data.fiscalYear;
+    if (data.currency !== undefined) updateData.currency = data.currency;
+    if (data.timeZone !== undefined) updateData.timeZone = data.timeZone;
+    if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl;
+
+    if (Object.keys(updateData).length === 0) return org;
+
+    return prisma.organization.update({
+      where: { id: orgId },
+      data: updateData,
+      select: {
+        id: true, name: true, contactEmail: true, gstVatNumber: true,
+        address: true, fiscalYear: true, currency: true, timeZone: true, logoUrl: true,
+      },
     });
   }
 

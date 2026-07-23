@@ -1,4 +1,5 @@
 import prisma from '../../config/db';
+import { NotFoundError } from '../../utils/errors';
 
 export class InventoryService {
   static async listWarehouses(organizationId: string) {
@@ -78,6 +79,41 @@ export class InventoryService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  static async updateMovement(organizationId: string, id: string, data: {
+    type?: 'Stock In' | 'Stock Out' | 'Transfer' | 'Damaged' | 'Adjustment';
+    sku?: string;
+    itemName?: string;
+    quantity?: number;
+    warehouse?: string;
+    warehouseId?: string;
+  }) {
+    const existing = await prisma.stockMovement.findFirst({
+      where: { id, organizationId },
+    });
+    if (!existing) throw new NotFoundError('Stock movement not found');
+
+    return prisma.stockMovement.update({
+      where: { id },
+      data: {
+        ...(data.type && { type: data.type }),
+        ...(data.sku && { sku: data.sku }),
+        ...(data.itemName && { itemName: data.itemName }),
+        ...(data.quantity && { quantity: data.quantity }),
+        ...(data.warehouse && { warehouse: data.warehouse }),
+        ...(data.warehouseId !== undefined && { warehouseId: data.warehouseId }),
+      },
+    });
+  }
+
+  static async deleteMovement(organizationId: string, id: string) {
+    const existing = await prisma.stockMovement.findFirst({
+      where: { id, organizationId },
+    });
+    if (!existing) throw new NotFoundError('Stock movement not found');
+
+    return prisma.stockMovement.delete({ where: { id } });
   }
 
   static async recordMovement(organizationId: string, data: {

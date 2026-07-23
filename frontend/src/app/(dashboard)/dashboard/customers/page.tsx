@@ -9,6 +9,8 @@ import {
   Download,
   AlertTriangle,
   FileText,
+  Pencil,
+  Trash2,
   Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,6 +79,15 @@ export default function CustomerManagementPage() {
   const [selectedStatement, setSelectedStatement] = useState<CustomerStatement | null>(null);
   const [openStatement, setOpenStatement] = useState(false);
 
+  // Edit state
+  const [editCust, setEditCust] = useState<{ id: string; name: string; email: string; phone: string; address: string; creditLimit: string } | null>(null);
+  const [openEdit, setOpenEdit] = useState(false);
+  // Delete state
+  const [deleteCustId, setDeleteCustId] = useState<string | null>(null);
+  const [deleteCustName, setDeleteCustName] = useState('');
+  const [openDelete, setOpenDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const fetchCustomers = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -125,6 +136,61 @@ export default function CustomerManagementPage() {
       setOpenStatement(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load customer statement');
+    }
+  };
+
+  const openEditDialog = (c: Customer) => {
+    setEditCust({
+      id: c.id,
+      name: c.name,
+      email: c.email || '',
+      phone: c.phone || '',
+      address: c.address || '',
+      creditLimit: String(c.creditLimit || '0'),
+    });
+    setOpenEdit(true);
+  };
+
+  const handleEditCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCust) return;
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await apiFetch(`/api/v1/customers/${editCust.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: editCust.name,
+          email: editCust.email || undefined,
+          phone: editCust.phone || undefined,
+          address: editCust.address || undefined,
+          creditLimit: parseFloat(editCust.creditLimit) || 0,
+        }),
+      });
+      setOpenEdit(false);
+      setEditCust(null);
+      fetchCustomers();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to update customer');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (!deleteCustId) return;
+    setIsDeleting(true);
+    setError('');
+    try {
+      await apiFetch(`/api/v1/customers/${deleteCustId}`, { method: 'DELETE' });
+      setOpenDelete(false);
+      setDeleteCustId(null);
+      setDeleteCustName('');
+      fetchCustomers();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to delete customer');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -305,9 +371,24 @@ export default function CustomerManagementPage() {
                       <TableCell className="font-mono text-sm">${Number(c.creditLimit || 0).toLocaleString()}</TableCell>
                       <TableCell className="font-mono font-semibold text-sm">${Number(c.outstanding || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-right">
-                        <Button onClick={() => handleViewStatement(c.id)} variant="ghost" size="sm" className="cursor-pointer">
-                          <FileText className="h-4 w-4 mr-1" /> Statement
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          {canEdit && (
+                            <>
+                              <Button onClick={() => openEditDialog(c)} variant="ghost" size="icon-sm" className="h-8 w-8 cursor-pointer" title="Edit">
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                onClick={() => { setDeleteCustId(c.id); setDeleteCustName(c.name); setOpenDelete(true); }}
+                                variant="ghost" size="icon-sm" className="h-8 w-8 text-destructive cursor-pointer" title="Delete"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
+                          <Button onClick={() => handleViewStatement(c.id)} variant="ghost" size="sm" className="cursor-pointer">
+                            <FileText className="h-4 w-4 mr-1" /> Statement
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -317,6 +398,62 @@ export default function CustomerManagementPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Customer Dialog */}
+      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+        <DialogContent>
+          <form onSubmit={handleEditCustomer}>
+            <DialogHeader>
+              <DialogTitle>Edit Customer</DialogTitle>
+              <DialogDescription>Update customer profile details.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Customer Name</Label>
+                <Input required value={editCust?.name || ''} onChange={(e) => setEditCust(editCust ? { ...editCust, name: e.target.value } : null)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input type="email" value={editCust?.email || ''} onChange={(e) => setEditCust(editCust ? { ...editCust, email: e.target.value } : null)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone</Label>
+                  <Input value={editCust?.phone || ''} onChange={(e) => setEditCust(editCust ? { ...editCust, phone: e.target.value } : null)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Credit Limit ($)</Label>
+                <Input type="number" value={editCust?.creditLimit || '0'} onChange={(e) => setEditCust(editCust ? { ...editCust, creditLimit: e.target.value } : null)} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Customer Confirmation */}
+      <Dialog open={openDelete} onOpenChange={setOpenDelete}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Customer</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deleteCustName}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setOpenDelete(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteCustomer} disabled={isDeleting}>
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Statement Modal Dialog */}
       <Dialog open={openStatement} onOpenChange={setOpenStatement}>

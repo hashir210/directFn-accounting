@@ -7,6 +7,8 @@ import {
   Search,
   Clock,
   FileText,
+  Pencil,
+  Trash2,
   Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,6 +62,15 @@ export default function SupplierManagementPage() {
   const [error, setError] = useState('');
 
   const [newSup, setNewSup] = useState({ name: '', category: '', email: '', phone: '', terms: 'Net 30' });
+
+  // Edit state
+  const [editSup, setEditSup] = useState<{ id: string; name: string; category: string; email: string; phone: string; terms: string } | null>(null);
+  const [openEdit, setOpenEdit] = useState(false);
+  // Delete state
+  const [deleteSupId, setDeleteSupId] = useState<string | null>(null);
+  const [deleteSupName, setDeleteSupName] = useState('');
+  const [openDelete, setOpenDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchSuppliers = useCallback(async () => {
     try {
@@ -123,6 +134,61 @@ export default function SupplierManagementPage() {
       setError(err instanceof ApiError ? err.message : 'Failed to create purchase bill');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const openEditDialog = (s: Supplier) => {
+    setEditSup({
+      id: s.id,
+      name: s.name,
+      category: s.category || '',
+      email: s.contactEmail || '',
+      phone: s.phone || '',
+      terms: s.paymentTerms,
+    });
+    setOpenEdit(true);
+  };
+
+  const handleEditSupplier = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editSup) return;
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await apiFetch(`/api/v1/suppliers/${editSup.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: editSup.name,
+          category: editSup.category || undefined,
+          contactEmail: editSup.email || undefined,
+          phone: editSup.phone || undefined,
+          paymentTerms: editSup.terms,
+        }),
+      });
+      setOpenEdit(false);
+      setEditSup(null);
+      fetchSuppliers();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to update supplier');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteSupplier = async () => {
+    if (!deleteSupId) return;
+    setIsDeleting(true);
+    setError('');
+    try {
+      await apiFetch(`/api/v1/suppliers/${deleteSupId}`, { method: 'DELETE' });
+      setOpenDelete(false);
+      setDeleteSupId(null);
+      setDeleteSupName('');
+      fetchSuppliers();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to delete supplier');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -367,12 +433,13 @@ export default function SupplierManagementPage() {
                   <TableHead>Status</TableHead>
                   <TableHead>Payment Terms</TableHead>
                   <TableHead className="text-right">Due Amount</TableHead>
+                  {canEdit && <TableHead className="text-right w-20">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {suppliers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={canEdit ? 6 : 5} className="text-center py-6 text-muted-foreground">
                       No suppliers found. Click &quot;Add Supplier&quot; to register a vendor.
                     </TableCell>
                   </TableRow>
@@ -395,6 +462,21 @@ export default function SupplierManagementPage() {
                       <TableCell className="text-right font-mono font-semibold text-sm">
                         ${Number(s.dueAmount || 0).toLocaleString()}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {canEdit && (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button onClick={() => openEditDialog(s)} variant="ghost" size="icon-sm" className="h-8 w-8 cursor-pointer" title="Edit">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              onClick={() => { setDeleteSupId(s.id); setDeleteSupName(s.name); setOpenDelete(true); }}
+                              variant="ghost" size="icon-sm" className="h-8 w-8 text-destructive cursor-pointer" title="Delete"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -403,6 +485,61 @@ export default function SupplierManagementPage() {
           )}
         </CardContent>
       </Card>
+      {/* Edit Supplier Dialog */}
+      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+        <DialogContent>
+          <form onSubmit={handleEditSupplier}>
+            <DialogHeader>
+              <DialogTitle>Edit Supplier</DialogTitle>
+              <DialogDescription>Update vendor profile details.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Supplier Name</Label>
+                <Input required value={editSup?.name || ''} onChange={(e) => setEditSup(editSup ? { ...editSup, name: e.target.value } : null)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Input value={editSup?.category || ''} onChange={(e) => setEditSup(editSup ? { ...editSup, category: e.target.value } : null)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input type="email" value={editSup?.email || ''} onChange={(e) => setEditSup(editSup ? { ...editSup, email: e.target.value } : null)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Payment Terms</Label>
+                <Input value={editSup?.terms || ''} onChange={(e) => setEditSup(editSup ? { ...editSup, terms: e.target.value } : null)} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Supplier Confirmation */}
+      <Dialog open={openDelete} onOpenChange={setOpenDelete}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Supplier</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deleteSupName}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setOpenDelete(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteSupplier} disabled={isDeleting}>
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

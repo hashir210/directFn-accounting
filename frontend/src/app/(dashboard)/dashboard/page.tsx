@@ -14,6 +14,12 @@ import {
   Pencil,
   SlidersHorizontal,
   LayoutGrid,
+  Building2,
+  Users,
+  Globe,
+  Loader2,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import {
   AreaChart,
@@ -106,7 +112,191 @@ interface TopCustomer {
   avatarColor: string;
 }
 
-export default function DashboardPage() {
+// --- Platform admin dashboard ---
+interface PlatformStats {
+  totalOrganizations: number;
+  totalUsers: number;
+  totalInvoiced: number;
+  totalPaid: number;
+}
+
+interface OrgSummary {
+  id: string; name: string; planId?: string | null;
+  plan: { id: string; name: string } | null;
+  status: string; isPlatform: boolean;
+  maxUsers?: number | null;
+  contactEmail?: string | null;
+  createdAt: string;
+  _count: { users: number; invoices: number; customers: number };
+}
+
+function PlatformDashboard() {
+  const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [orgs, setOrgs] = useState<OrgSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [statsData, orgsData] = await Promise.all([
+          apiFetch<PlatformStats>('/api/v1/platform/stats'),
+          apiFetch<OrgSummary[]>('/api/v1/platform/organizations'),
+        ]);
+        setStats(statsData);
+        setOrgs(orgsData);
+      } catch (err) {
+        console.error('Failed to load platform dashboard', err);
+      } finally { setLoading(false); }
+    }
+    load();
+  }, []);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[50vh]"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  }
+
+  const activeOrgs = orgs.filter(o => o.status === 'active').length;
+  const suspendedOrgs = orgs.filter(o => o.status !== 'active').length;
+  const totalUsers = orgs.reduce((s, o) => s + o._count.users, 0);
+  const recentOrgs = [...orgs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
+
+  return (
+    <div className="space-y-6 pb-10">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Platform Overview</h1>
+        <p className="text-sm text-muted-foreground">Monitor and manage all companies on FinFlow.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Companies</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.totalOrganizations || 0}</div>
+            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+              <span className="text-emerald-600 font-medium">{activeOrgs} active</span>
+              {suspendedOrgs > 0 && <span className="text-rose-600 font-medium">{suspendedOrgs} suspended</span>}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Users</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalUsers}</div>
+            <div className="text-xs text-muted-foreground mt-1">Across all companies</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Invoiced</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">PKR {stats?.totalInvoiced.toLocaleString() || '0'}</div>
+            <div className="text-xs text-muted-foreground mt-1">Platform-wide revenue</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Collected</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">PKR {stats?.totalPaid.toLocaleString() || '0'}</div>
+            <div className="text-xs text-muted-foreground mt-1">Successfully collected</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Registered Companies</CardTitle>
+            <CardDescription>{orgs.length} total companies on FinFlow</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>Users</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Registered</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orgs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">No companies registered.</TableCell>
+                  </TableRow>
+                ) : (
+                  orgs.map(org => (
+                    <TableRow key={org.id}>
+                      <TableCell className="font-medium">{org.name}</TableCell>
+                      <TableCell>{org.plan?.name || 'Free'}</TableCell>
+                      <TableCell>{org._count.users}/{org.maxUsers || 5}</TableCell>
+                      <TableCell>
+                        <Badge variant={org.status === 'active' ? 'secondary' : 'destructive'} className={org.status === 'active' ? 'bg-emerald-50 text-emerald-600' : ''}>
+                          {org.status === 'active' ? <CheckCircle2 className="h-3 w-3 mr-1 inline" /> : <XCircle className="h-3 w-3 mr-1 inline" />}
+                          {org.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">{new Date(org.createdAt).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Recently Registered</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {recentOrgs.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No companies yet.</p>
+              ) : (
+                recentOrgs.map(org => (
+                  <div key={org.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/30">
+                    <div>
+                      <p className="text-xs font-semibold">{org.name}</p>
+                      <span className="text-[10px] text-muted-foreground">{org.plan?.name || 'Free'} &middot; {org._count.users} users</span>
+                    </div>
+                    <Badge variant={org.status === 'active' ? 'secondary' : 'destructive'} className="text-[9px] h-5">
+                      {org.status}
+                    </Badge>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-primary/90 to-primary text-primary-foreground">
+            <CardContent className="pt-5">
+              <Badge className="bg-primary-foreground/20 text-primary-foreground border-0 text-[10px]">
+                <Sparkles className="h-3 w-3 mr-1" /> Quick Action
+              </Badge>
+              <h4 className="text-sm font-semibold mt-3">Register New Company</h4>
+              <p className="text-xs text-primary-foreground/70 leading-relaxed mt-1">
+                Onboard a new client company with an owner account and subscription plan.
+              </p>
+              <Button variant="secondary" className="w-full mt-4 cursor-pointer" size="sm" onClick={() => window.location.href = '/admin'}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Register Company
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Tenant dashboard ---
+function TenantDashboard() {
   const [mounted, setMounted] = useState(false);
   const [dateFilter, setDateFilter] = useState("30");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -250,9 +440,6 @@ export default function DashboardPage() {
 
   const pendingRevenue = transactions.filter(t => t.type === "Invoice" && t.status !== "Paid").reduce((s, t) => s + t.amount, 0);
   const netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-  // Bank liquidity is the actual aggregated balance from the API — do NOT add
-  // netProfit on top of it (that double-counts revenue already reflected in
-  // the account balances).
   const bankBalance = totalBalance;
 
   const handleCreateTransaction = async (e: React.FormEvent) => {
@@ -395,7 +582,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-heading font-semibold">
-              ${totalRevenue.toLocaleString("en-US")}
+              PKR {totalRevenue.toLocaleString("en-US")}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
               <Badge variant="secondary" className="gap-1 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400">
@@ -415,7 +602,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-heading font-semibold">
-              ${totalExpenses.toLocaleString("en-US")}
+              PKR {totalExpenses.toLocaleString("en-US")}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
               <Badge variant="secondary" className="gap-1 text-rose-600 bg-rose-50 dark:bg-rose-950/20 dark:text-rose-400">
@@ -435,7 +622,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-heading font-semibold">
-              ${netProfit.toLocaleString("en-US")}
+              PKR {netProfit.toLocaleString("en-US")}
             </div>
             <div className="flex items-center gap-2 mt-1 text-xs">
               <Progress value={Math.max(0, Math.min(100, netProfitMargin))} className="h-1.5 flex-1" />
@@ -452,11 +639,11 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-heading font-semibold">
-              ${bankBalance.toLocaleString("en-US")}
+              PKR {bankBalance.toLocaleString("en-US")}
             </div>
             <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
               <span>{bankAccounts.length} account{bankAccounts.length === 1 ? "" : "s"}</span>
-              <span>{bankAccounts[0]?.currency || "USD"}</span>
+              <span>{bankAccounts[0]?.currency || "PKR"}</span>
             </div>
           </CardContent>
         </Card>
@@ -611,7 +798,7 @@ export default function DashboardPage() {
                             {tx.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-semibold">${tx.amount.toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-semibold">PKR {tx.amount.toLocaleString()}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -667,7 +854,7 @@ export default function DashboardPage() {
               <CardTitle>Pending Receivables</CardTitle>
               <CardAction>
                 <Badge variant="outline" className="text-amber-600">
-                  Unpaid: ${pendingRevenue.toLocaleString()}
+                  Unpaid: PKR {pendingRevenue.toLocaleString()}
                 </Badge>
               </CardAction>
             </CardHeader>
@@ -693,7 +880,7 @@ export default function DashboardPage() {
                           {tx.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-semibold">${tx.amount.toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-semibold">PKR {tx.amount.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -777,7 +964,7 @@ export default function DashboardPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{cust.email}</TableCell>
                       <TableCell>{cust.salesCount} files</TableCell>
-                      <TableCell className="text-right font-semibold">${cust.billing.toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-semibold">PKR {cust.billing.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -832,7 +1019,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Amount (USD)</Label>
+              <Label>Amount (PKR)</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -888,4 +1075,15 @@ export default function DashboardPage() {
       </Dialog>
     </div>
   );
+}
+
+// --- Root: choose dashboard based on role ---
+export default function DashboardPage() {
+  const { user } = useAuth();
+
+  if (user?.isPlatformOrg) {
+    return <PlatformDashboard />;
+  }
+
+  return <TenantDashboard />;
 }
