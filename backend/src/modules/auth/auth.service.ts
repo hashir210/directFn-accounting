@@ -20,6 +20,7 @@ import {
   sendPasswordResetEmail 
 } from '../../utils/mailer';
 import logger from '../../utils/logger';
+import eventEmitter, { EventTypes } from '../../utils/events';
 
 import { OrganizationService } from '../organization/organization.service';
 
@@ -157,8 +158,8 @@ export class AuthService {
   /**
    * Handles user login, checking password and whether 2FA is required
    */
-  static async login(data: { email: string; password?: string; organizationId?: string }) {
-    const { email, password, organizationId } = data;
+  static async login(data: { email: string; password?: string; organizationId?: string; ip?: string; browser?: string }) {
+    const { email, password, organizationId, ip, browser } = data;
     if (!password) {
       throw new BadRequestError('Password is required');
     }
@@ -252,6 +253,14 @@ export class AuthService {
 
     const planFeatures = org?.plan?.features.map(pf => pf.featureKey) || [];
     const blockedScreens = screenBlocks.map(b => b.screenKey);
+
+    // Emit security alert for login
+    eventEmitter.emit(EventTypes.AUTH_LOGIN_ALERT, {
+      organizationId: user.organizationId,
+      userId: user.id,
+      ip: ip || 'Unknown',
+      browser: browser || 'Unknown'
+    });
 
     return {
       twoFactorRequired: false as const,

@@ -33,8 +33,8 @@ export default function NotificationsPage() {
   const fetchNotifs = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await apiFetch<{ data: NotificationItem[]; unreadCount: number }>('/api/v1/dashboard/notifications?limit=50');
-      setNotifs(result.data || []);
+      const result = await apiFetch<NotificationItem[]>('/api/v1/notifications?limit=50');
+      setNotifs(result || []);
     } catch {
       setNotifs([]);
     } finally {
@@ -52,18 +52,15 @@ export default function NotificationsPage() {
   });
 
   const handleMarkAllRead = async () => {
-    const unread = notifs.filter((n) => !n.read);
-    for (const n of unread) {
-      try {
-        await apiFetch(`/api/v1/dashboard/notifications/${n.id}/read`, { method: 'PATCH' });
-      } catch {}
-    }
+    try {
+      await apiFetch('/api/v1/notifications/read-all', { method: 'PUT' });
+    } catch {}
     fetchNotifs();
   };
 
   const handleToggleRead = async (id: string) => {
     try {
-      await apiFetch(`/api/v1/dashboard/notifications/${id}/read`, { method: 'PATCH' });
+      await apiFetch(`/api/v1/notifications/${id}/read`, { method: 'PUT' });
       fetchNotifs();
     } catch {}
   };

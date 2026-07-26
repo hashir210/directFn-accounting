@@ -28,9 +28,12 @@ import {
   DollarSign,
   FileText,
   Loader2,
+  Eye,
 } from 'lucide-react';
 import apiFetch from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
+import { useRouter } from 'next/navigation';
+import { InvoiceViewerDialog } from '@/components/invoices/InvoiceViewerDialog';
 
 interface InvoiceItem {
   id: string;
@@ -46,17 +49,14 @@ interface InvoiceItem {
 export default function InvoicesPage() {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('invoices.edit');
+  const router = useRouter();
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  const [newCustomer, setNewCustomer] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [newAmount, setNewAmount] = useState('');
-  const [newDueDate, setNewDueDate] = useState('');
-  const [creating, setCreating] = useState(false);
+  
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
@@ -81,31 +81,6 @@ export default function InvoicesPage() {
   const totalPaid = invoices.filter((i) => i.status === 'paid').reduce((acc, inv) => acc + inv.amount, 0);
   const totalPending = invoices.filter((i) => i.status === 'pending').reduce((acc, inv) => acc + inv.amount, 0);
   const totalOverdue = invoices.filter((i) => i.status === 'overdue').reduce((acc, inv) => acc + inv.amount, 0);
-
-  const handleCreateInvoice = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCustomer || !newAmount) return;
-    setCreating(true);
-    try {
-      await apiFetch('/api/v1/invoices', {
-        method: 'POST',
-        body: JSON.stringify({
-          customerName: newCustomer,
-          customerEmail: newEmail || undefined,
-          amount: parseFloat(newAmount),
-          dueAt: newDueDate || undefined,
-        }),
-      });
-      setNewCustomer('');
-      setNewEmail('');
-      setNewAmount('');
-      setNewDueDate('');
-      setDialogOpen(false);
-      fetchInvoices();
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const handleMarkPaid = async (id: string) => {
     try {
@@ -147,75 +122,10 @@ export default function InvoicesPage() {
         </div>
 
         {canEdit && (
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="cursor-pointer">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Invoice
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[480px]">
-            <form onSubmit={handleCreateInvoice}>
-              <DialogHeader>
-                <DialogTitle>Create New Invoice</DialogTitle>
-                <DialogDescription>Fill out invoice details to generate a new customer bill.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customer">Customer / Business Name</Label>
-                  <Input
-                    id="customer"
-                    required
-                    placeholder="Acme Global Inc."
-                    value={newCustomer}
-                    onChange={(e) => setNewCustomer(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Customer Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="billing@acme.com"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Amount ($)</Label>
-                    <Input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      required
-                      placeholder="2500.00"
-                      value={newAmount}
-                      onChange={(e) => setNewAmount(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dueDate">Due Date</Label>
-                    <Input
-                      id="dueDate"
-                      type="date"
-                      value={newDueDate}
-                      onChange={(e) => setNewDueDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="cursor-pointer" disabled={creating}>
-                  {creating ? 'Creating...' : 'Generate Invoice'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+          <Button className="cursor-pointer" onClick={() => router.push('/dashboard/invoices/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Invoice
+          </Button>
         )}
       </div>
 
@@ -370,11 +280,11 @@ export default function InvoicesPage() {
                             <CheckCircle2 className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer">
-                          <Download className="h-3.5 w-3.5" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => { setSelectedInvoiceId(inv.id); setViewerOpen(true); }} title="View Invoice">
+                          <Eye className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer">
-                          <MoreVertical className="h-3.5 w-3.5" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => { setSelectedInvoiceId(inv.id); setViewerOpen(true); }} title="Download / Print">
+                          <Download className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </TableCell>
@@ -385,6 +295,12 @@ export default function InvoicesPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <InvoiceViewerDialog 
+        invoiceId={selectedInvoiceId}
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+      />
     </div>
   );
 }

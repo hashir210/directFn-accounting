@@ -46,7 +46,11 @@ export class AuthController {
 
   static async login(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await AuthService.login(req.body);
+      const result = await AuthService.login({
+        ...req.body,
+        ip: req.ip,
+        browser: req.headers['user-agent']
+      });
       
       if (result.twoFactorRequired) {
         return res.status(200).json({

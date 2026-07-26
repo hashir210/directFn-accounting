@@ -71,21 +71,7 @@ import {
 import { useAuth } from "@/features/auth/useAuth";
 import { apiFetch } from "@/lib/api";
 
-interface Notification {
-  id: string;
-  title: string;
-  desc: string;
-  type: "warning" | "success" | "info" | "error" | "system";
-  time: string;
-}
-
-interface NotificationApiData {
-  id: string;
-  title: string;
-  message: string;
-  type: string;
-  createdAt: string;
-}
+import { useNotifications } from "@/hooks/useNotifications";
 
 export default function DashboardLayout({
   children,
@@ -95,8 +81,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, isAuthenticated, hasPermission, isScreenAllowed, logout } = useAuth();
+  const { notifications, unreadCount, markAllAsRead } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   // Auth guard: redirect unauthenticated users to /login
   useEffect(() => {
@@ -105,48 +91,13 @@ export default function DashboardLayout({
     }
   }, [loading, isAuthenticated, router]);
 
-  // Load notifications for the current user
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    apiFetch<{ data: NotificationApiData[] }>("/api/v1/dashboard/notifications?limit=10")
-      .then((d) => {
-        setNotifications(
-          d.data.map((n: NotificationApiData) => ({
-            id: n.id,
-            title: n.title,
-            desc: n.message,
-            type: (n.type === "system" ? "system" : n.type) as Notification["type"],
-            time: new Date(n.createdAt).toLocaleDateString(),
-          }))
-        );
-      })
-      .catch(() => {});
-  }, [isAuthenticated]);
-
   const handleLogout = async () => {
     await logout();
     router.push("/login");
   };
 
   const handleMarkAllRead = async () => {
-    await Promise.allSettled(
-      notifications.map((n) =>
-        apiFetch(`/api/v1/dashboard/notifications/${n.id}/read`, { method: "PATCH" })
-      )
-    );
-    apiFetch<{ data: NotificationApiData[] }>("/api/v1/dashboard/notifications?limit=10")
-      .then((d) =>
-        setNotifications(
-          d.data.map((n: NotificationApiData) => ({
-            id: n.id,
-            title: n.title,
-            desc: n.message,
-            type: (n.type === "system" ? "system" : n.type) as Notification["type"],
-            time: new Date(n.createdAt).toLocaleDateString(),
-          }))
-        )
-      )
-      .catch(() => {});
+    await markAllAsRead();
   };
 
   const initials = (user?.name || user?.email || "U")
@@ -443,7 +394,7 @@ export default function DashboardLayout({
           <SidebarSeparator />
           <SidebarMenu>
              <SidebarMenuItem>
-              <SidebarMenuButton render={<Link href="#" />} tooltip="Help Center">
+              <SidebarMenuButton render={<Link href="/" />} tooltip="Help Center">
                 <HelpCircle />
                 <span>Help Center</span>
               </SidebarMenuButton>
@@ -455,7 +406,7 @@ export default function DashboardLayout({
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton render={<Link href="#" />} tooltip="Invite teams">
+              <SidebarMenuButton render={<Link href="/dashboard/settings" />} tooltip="Invite teams">
                 <Users />
                 <span>Invite teams</span>
               </SidebarMenuButton>
@@ -562,8 +513,10 @@ export default function DashboardLayout({
                   />
                 }>
                     <Bell className="h-4 w-4" />
-                    {notifications.length > 0 && (
-                      <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-0.5 right-0.5 h-3 w-3 flex items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white ring-2 ring-background">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
                     )}
                 </TooltipTrigger>
                 <TooltipContent>Notifications</TooltipContent>
@@ -579,8 +532,8 @@ export default function DashboardLayout({
                     {notifications.length === 0 ? (
                       <div className="p-4 text-xs text-muted-foreground text-center">No notifications</div>
                     ) : (
-                      notifications.map((notif) => (
-                        <div key={notif.id} className="p-3 hover:bg-muted/50 transition-colors">
+                      notifications.slice(0, 10).map((notif) => (
+                        <div key={notif.id} className={`p-3 hover:bg-muted/50 transition-colors ${!notif.read ? 'bg-muted/20' : ''}`}>
                           <div className="flex justify-between items-start mb-1">
                             <Badge variant={
                               notif.type === "warning" ? "destructive" :
@@ -589,13 +542,21 @@ export default function DashboardLayout({
                             } className="text-[10px] h-5">
                               {notif.type}
                             </Badge>
-                            <span className="text-[10px] text-muted-foreground">{notif.time}</span>
+                            <span className="text-[10px] text-muted-foreground">{new Date(notif.createdAt).toLocaleDateString()}</span>
                           </div>
-                          <h4 className="text-xs font-semibold mt-1">{notif.title}</h4>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{notif.desc}</p>
+                          <h4 className="text-xs font-semibold mt-1 flex items-center gap-2">
+                            {notif.title}
+                            {!notif.read && <span className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />}
+                          </h4>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{notif.message}</p>
                         </div>
                       ))
                     )}
+                  </div>
+                  <div className="p-2 border-t bg-muted/30">
+                    <Button variant="ghost" size="sm" className="w-full text-xs h-7 cursor-pointer" onClick={() => router.push('/dashboard/notifications')}>
+                      View all notifications
+                    </Button>
                   </div>
                 </div>
               )}

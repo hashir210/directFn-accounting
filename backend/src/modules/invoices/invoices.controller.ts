@@ -61,4 +61,14 @@ export class InvoicesController {
       next(error);
     }
   }
+
+  static async emailInvoice(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      const result = await InvoicesService.emailInvoice(req.user!.organizationId, req.params.id, email);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

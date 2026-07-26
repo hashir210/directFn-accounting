@@ -124,45 +124,6 @@ This document tracks all implemented phases, module scopes, and feature checklis
 
 ---
 
-## Phase 9 — Expenses & Reporting
-
-**Scope:**
-- [x] Expense tracking (category, description, amount, date)
-- [x] Expense categorization
-- [x] `Expense` model
-- [x] Reports page (`/dashboard/reports`)
-
----
-
-## Phase 10 — Notifications
-
-**Scope:**
-- [x] In-app notifications (title, message, type, read/unread)
-- [x] Notification Center at `/dashboard/notifications`
-- [x] `Notification` model linked to user + organization
-
----
-
-## Phase 11 — Platform & Admin
-
-**Scope:**
-- [x] Platform-level organization (`isPlatform` flag)
-- [x] Admin dashboard at `/admin`
-- [x] Admin plan management at `/admin/plans`
-- [x] Integrations page (`/dashboard/integrations`)
-- [x] Inbox page (`/dashboard/inbox`)
-
----
-
-## Phase 12 — Landing & Public Pages
-
-**Scope:**
-- [x] Landing page (Hero, FeatureGrid, PerformanceStats, ProcessWorkflow, Testimonials, FAQ, CTA)
-- [x] Responsive navbar
-- [x] Auth pages: login, register, forgot password, reset password, verify email
-
----
-
 ## Phase 14 — Payments
 
 **Scope:**
@@ -172,6 +133,48 @@ This document tracks all implemented phases, module scopes, and feature checklis
 - [x] Tenant-focused feature with screen blocking (`payments` screen key)
 - [x] Payments API (CRUD, status management)
 - [x] Payments Dashboard (`/dashboard/payments`)
+
+---
+
+## Phase 15 — Advanced Invoice System
+
+**Scope:**
+- [x] Dedicated `InvoiceItem` model for line items
+- [x] Tax calculation and subtotal/discount logic
+- [x] Advanced Invoice Builder page (`/dashboard/invoices/new`)
+- [x] Professional Invoice Viewer page (`/dashboard/invoices/[id]`)
+- [x] PDF Generation and Print formatting
+- [x] QR Code generation for invoices
+- [x] Email invoice functionality
+
+---
+
+## Phase 16 — Advanced Reports System
+
+**Scope:**
+- [ ] Reports Center Dashboard (`/dashboard/reports`)
+- [ ] Financial Statements (Profit/Loss, Balance Sheet, Cash Flow)
+- [ ] Sales & Income Reports (Sales Report, Income Report)
+- [ ] Expense & Purchase Reports (Expense Report, Purchase Report)
+- [ ] Statements & Inventory (Customer Statement, Supplier Statement, Inventory Report, Tax Report)
+- [ ] Aggregation API for generating report data
+
+---
+
+## Phase 17 — Notifications & Real-Time Alerts
+
+**Scope:**
+- [ ] Notification infrastructure (WebSocket / Server-Sent Events for real-time delivery)
+- [ ] Database storage for notifications (to persist history/unread status)
+- [ ] Low Stock alerts (triggered on inventory movement or cron job)
+- [ ] Due Payment alerts (triggered when an invoice or bill approaches due date or becomes overdue)
+- [ ] Invoice Paid notifications (real-time alert when an invoice status changes to paid)
+- [ ] Purchase Received notifications (real-time alert when a supplier delivery is marked as received)
+- [ ] User Login security alerts (notification on new IP, device, or suspicious login attempt)
+- [ ] Notification Center UI (dropdown in topbar, dedicated page, mark as read/unread, clear all)
+- [ ] User Notification Preferences (opt-in/opt-out for specific alert types via email, in-app, SMS)
+- [ ] `Notification` model enhancements for categorization and target linking
+
 
 ---
 
@@ -190,6 +193,7 @@ This document tracks all implemented phases, module scopes, and feature checklis
 | `EmailVerificationToken` | Email verification links |
 | `Customer` | Customers with credit limit |
 | `Invoice` | Invoices with status, amounts, due dates |
+| `InvoiceItem` | Line items for invoices |
 | `Expense` | Expenses by category |
 | `Product` | Products with SKU, barcode, pricing, tax, stock |
 | `Supplier` | Suppliers with due amounts & payment terms |

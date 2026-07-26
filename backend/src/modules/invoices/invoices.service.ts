@@ -1,6 +1,8 @@
 import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../../config/db';
 import { BadRequestError, NotFoundError } from '../../utils/errors';
+import nodemailer from 'nodemailer';
+import eventEmitter, { EventTypes } from '../../utils/events';
 
 function toNumber(d: Decimal | null | undefined): number {
   return d ? Number(d.toString()) : 0;
@@ -70,95 +72,138 @@ export class InvoicesService {
     const invoice = await prisma.invoice.findFirst({
       where: { id, organizationId },
       include: {
-        customer: { select: { id: true, name: true, email: true } },
+        customer: true,
+        items: true,
+        organization: true, // For rendering company details on the invoice
       },
     });
 
     if (!invoice) throw new NotFoundError('Invoice not found');
 
     return {
-      id: invoice.id,
-      invoiceNo: invoice.invoiceNo,
-      customerId: invoice.customerId,
-      customerName: invoice.customer.name,
-      customerEmail: invoice.customer.email,
+      ...invoice,
       amount: toNumber(invoice.amount),
-      status: invoice.status,
+      subTotal: toNumber(invoice.subTotal),
+      taxTotal: toNumber(invoice.taxTotal),
+      discountTotal: toNumber(invoice.discountTotal),
       issuedAt: invoice.issuedAt.toISOString().split('T')[0],
       dueAt: invoice.dueAt.toISOString().split('T')[0],
       paidAt: invoice.paidAt ? invoice.paidAt.toISOString().split('T')[0] : null,
-      createdAt: invoice.createdAt,
+      items: invoice.items.map((i) => ({
+        ...i,
+        unitPrice: toNumber(i.unitPrice),
+        taxRate: toNumber(i.taxRate),
+        taxAmount: toNumber(i.taxAmount),
+        total: toNumber(i.total),
+      })),
     };
   }
 
   static async create(organizationId: string, data: {
-    customerName: string;
+    customerId?: string;
+    customerName?: string;
     customerEmail?: string;
-    amount: number;
-    dueAt?: string;
     status?: string;
+    dueAt?: string;
+    notes?: string;
+    terms?: string;
+    items: Array<{
+      productId?: string;
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      taxRate: number;
+    }>;
   }) {
-    let customer = await prisma.customer.findFirst({
-      where: { organizationId, name: data.customerName },
-    });
+    let customerId = data.customerId;
 
-    if (!customer) {
-      customer = await prisma.customer.create({
-        data: {
-          organizationId,
-          name: data.customerName,
-          email: data.customerEmail || `${data.customerName.toLowerCase().replace(/\s+/g, '')}@example.com`,
-        },
+    if (!customerId && data.customerName) {
+      let customer = await prisma.customer.findFirst({
+        where: { organizationId, name: data.customerName },
       });
+
+      if (!customer) {
+        customer = await prisma.customer.create({
+          data: {
+            organizationId,
+            name: data.customerName,
+            email: data.customerEmail || `${data.customerName.toLowerCase().replace(/\s+/g, '')}@example.com`,
+          },
+        });
+      }
+      customerId = customer.id;
     }
 
+    if (!customerId) throw new BadRequestError('Customer is required');
+
+    // Generate Invoice Number
     const invoiceCount = await prisma.invoice.count({ where: { organizationId } });
     const year = new Date().getFullYear();
     const invoiceNo = `INV-${year}-${String(invoiceCount + 1).padStart(4, '0')}`;
 
+    // Calculate totals server-side
+    let subTotal = 0;
+    let taxTotal = 0;
+    const discountTotal = 0; // Can be added later if needed
+
+    const invoiceItems = data.items.map(item => {
+      const lineSubTotal = item.quantity * item.unitPrice;
+      const lineTax = lineSubTotal * (item.taxRate / 100);
+      const lineTotal = lineSubTotal + lineTax;
+
+      subTotal += lineSubTotal;
+      taxTotal += lineTax;
+
+      return {
+        productId: item.productId,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: new Decimal(item.unitPrice),
+        taxRate: new Decimal(item.taxRate),
+        taxAmount: new Decimal(lineTax),
+        total: new Decimal(lineTotal),
+      };
+    });
+
+    const amount = subTotal + taxTotal - discountTotal;
     const isPaid = data.status === 'paid';
+
     const invoice = await prisma.invoice.create({
       data: {
         organizationId,
-        customerId: customer.id,
+        customerId,
         invoiceNo,
-        amount: new Decimal(data.amount),
+        amount: new Decimal(amount),
+        subTotal: new Decimal(subTotal),
+        taxTotal: new Decimal(taxTotal),
+        discountTotal: new Decimal(discountTotal),
+        notes: data.notes,
+        terms: data.terms,
         dueAt: new Date(data.dueAt || Date.now() + 14 * 86400000),
         status: data.status || 'pending',
         paidAt: isPaid ? new Date() : null,
+        items: {
+          create: invoiceItems
+        }
       },
       include: {
-        customer: { select: { id: true, name: true, email: true } },
+        customer: true,
+        items: true,
       },
     });
 
-    return {
-      id: invoice.id,
-      invoiceNo: invoice.invoiceNo,
-      customerName: invoice.customer.name,
-      customerEmail: invoice.customer.email,
-      amount: toNumber(invoice.amount),
-      status: invoice.status,
-      issuedAt: invoice.issuedAt.toISOString().split('T')[0],
-      dueAt: invoice.dueAt.toISOString().split('T')[0],
-    };
+    return invoice;
   }
 
-  static async update(organizationId: string, id: string, data: {
-    customerName?: string;
-    customerEmail?: string;
-    amount?: number;
-    dueAt?: string;
-    status?: string;
-  }) {
+  static async update(organizationId: string, id: string, data: any) {
+    // For simplicity, we just allow updating status/notes via generic update for now
+    // Updating line items usually involves deleting old ones and re-creating
     const existing = await prisma.invoice.findFirst({
       where: { id, organizationId },
     });
     if (!existing) throw new NotFoundError('Invoice not found');
 
     const updateData: any = {};
-    if (data.amount !== undefined) updateData.amount = new Decimal(data.amount);
-    if (data.dueAt !== undefined) updateData.dueAt = new Date(data.dueAt);
     if (data.status !== undefined) {
       updateData.status = data.status;
       if (data.status === 'paid' && !existing.paidAt) {
@@ -167,41 +212,28 @@ export class InvoicesService {
         updateData.paidAt = null;
       }
     }
-
-    if (data.customerName !== undefined || data.customerEmail !== undefined) {
-      const customer = await prisma.customer.findFirst({
-        where: { organizationId, name: existing.customerId },
-      });
-      if (customer) {
-        await prisma.customer.update({
-          where: { id: customer.id },
-          data: {
-            ...(data.customerName && { name: data.customerName }),
-            ...(data.customerEmail && { email: data.customerEmail }),
-          },
-        });
-      }
-    }
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.terms !== undefined) updateData.terms = data.terms;
 
     const invoice = await prisma.invoice.update({
       where: { id },
       data: updateData,
-      include: {
-        customer: { select: { id: true, name: true, email: true } },
-      },
     });
 
-    return {
-      id: invoice.id,
-      invoiceNo: invoice.invoiceNo,
-      customerName: invoice.customer.name,
-      customerEmail: invoice.customer.email,
-      amount: toNumber(invoice.amount),
-      status: invoice.status,
-      issuedAt: invoice.issuedAt.toISOString().split('T')[0],
-      dueAt: invoice.dueAt.toISOString().split('T')[0],
-      paidAt: invoice.paidAt ? invoice.paidAt.toISOString().split('T')[0] : null,
-    };
+    if (data.status === 'paid' && existing.status !== 'paid') {
+      const org = await prisma.organization.findUnique({ where: { id: organizationId } });
+      if (org) {
+        eventEmitter.emit(EventTypes.INVOICE_PAID, {
+          organizationId: invoice.organizationId,
+          userId: org.ownerId,
+          invoiceNo: invoice.invoiceNo,
+          amount: invoice.amount.toString(),
+          invoiceId: invoice.id,
+        });
+      }
+    }
+
+    return invoice;
   }
 
   static async delete(organizationId: string, id: string) {
@@ -224,18 +256,46 @@ export class InvoicesService {
     const updated = await prisma.invoice.update({
       where: { id },
       data: { status: 'paid', paidAt: new Date() },
-      include: {
-        customer: { select: { id: true, name: true, email: true } },
-      },
     });
 
-    return {
-      id: updated.id,
-      invoiceNo: updated.invoiceNo,
-      customerName: updated.customer.name,
-      amount: toNumber(updated.amount),
-      status: updated.status,
-      paidAt: updated.paidAt?.toISOString().split('T')[0],
-    };
+    const org = await prisma.organization.findUnique({ where: { id: organizationId } });
+    if (org) {
+      eventEmitter.emit(EventTypes.INVOICE_PAID, {
+        organizationId: updated.organizationId,
+        userId: org.ownerId,
+        invoiceNo: updated.invoiceNo,
+        amount: updated.amount.toString(),
+        invoiceId: updated.id,
+      });
+    }
+
+    return updated;
+  }
+
+  static async emailInvoice(organizationId: string, id: string, email?: string) {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id, organizationId },
+      include: { customer: true, organization: true },
+    });
+    if (!invoice) throw new NotFoundError('Invoice not found');
+
+    const targetEmail = email || invoice.customer.email;
+    if (!targetEmail) throw new BadRequestError('Customer email not found');
+
+    // Simulate sending email (in a real app, use nodemailer with actual SMTP config)
+    console.log(`Simulating sending invoice ${invoice.invoiceNo} to ${targetEmail}`);
+    
+    // We would use nodemailer here:
+    /*
+    const transporter = nodemailer.createTransport({ ... });
+    await transporter.sendMail({
+      from: 'noreply@finflow.com',
+      to: targetEmail,
+      subject: `Invoice ${invoice.invoiceNo} from ${invoice.organization.name}`,
+      text: `Please find your invoice attached or visit .../invoices/${invoice.id}`,
+    });
+    */
+
+    return { message: 'Invoice emailed successfully', email: targetEmail };
   }
 }

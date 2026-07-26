@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Roboto } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/features/auth/useAuth";
+import { SocketProvider } from "@/context/SocketContext";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -31,7 +32,11 @@ export default function RootLayout({
         className={`${outfit.variable} ${roboto.variable} antialiased`}
       >
         <TooltipProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <SocketProvider>
+              {children}
+            </SocketProvider>
+          </AuthProvider>
         </TooltipProvider>
       </body>
     </html>

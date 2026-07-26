@@ -169,6 +169,11 @@ model Invoice {
   customerId     String
   customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
   amount         Decimal       @db.Decimal(12, 2)
+  subTotal       Decimal       @default(0.00) @db.Decimal(12, 2)
+  taxTotal       Decimal       @default(0.00) @db.Decimal(12, 2)
+  discountTotal  Decimal       @default(0.00) @db.Decimal(12, 2)
+  notes          String?       @db.Text
+  terms          String?       @db.Text
   status         String        @default("pending")
   issuedAt       DateTime      @default(now())
   dueAt          DateTime
@@ -177,9 +182,29 @@ model Invoice {
   updatedAt      DateTime      @updatedAt
 
   payments       Payment[]
+  items          InvoiceItem[]
 
   @@unique([organizationId, invoiceNo])
   @@index([organizationId, status, paidAt])
+}
+
+model InvoiceItem {
+  id             String       @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId      String?
+  product        Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  description    String
+  quantity       Int          @default(1)
+  unitPrice      Decimal      @db.Decimal(12, 2)
+  taxRate        Decimal      @default(0.00) @db.Decimal(5, 2)
+  taxAmount      Decimal      @default(0.00) @db.Decimal(12, 2)
+  total          Decimal      @db.Decimal(12, 2)
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([invoiceId])
 }
 
 model Expense {
@@ -215,6 +240,7 @@ model Product {
   updatedAt         DateTime @updatedAt
 
   stockMovements    StockMovement[]
+  invoiceItems      InvoiceItem[]
 
   @@unique([organizationId, sku])
 }
@@ -330,6 +356,8 @@ model Notification {
   message        String
   type           String   @default("info")
   read           Boolean  @default(false)
+  referenceType  String?
+  referenceId    String?
   createdAt      DateTime @default(now())
 
   @@index([userId, createdAt])

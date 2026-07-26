@@ -16,6 +16,9 @@ import suppliersRoutes from './modules/suppliers/suppliers.routes';
 import productsRoutes from './modules/products/products.routes';
 import inventoryRoutes from './modules/inventory/inventory.routes';
 import paymentsRoutes from './modules/payments/payments.routes';
+import notificationRoutes from './modules/notification/notification.routes';
+// Import notification service to register event listeners globally
+import './modules/notification/notification.service';
 import logger from './utils/logger';
 
 const app = express();
@@ -53,6 +56,7 @@ app.use('/api/v1/suppliers', suppliersRoutes);
 app.use('/api/v1/products', productsRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/payments', paymentsRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // Centralized Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

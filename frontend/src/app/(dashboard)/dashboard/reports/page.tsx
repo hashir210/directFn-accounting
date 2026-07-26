@@ -1,243 +1,112 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import {
+import { 
+  LineChart, 
+  BarChart4, 
+  PieChart, 
+  TrendingUp, 
+  TrendingDown, 
+  Users, 
+  ShoppingCart, 
+  Box, 
+  Receipt,
   FileText,
-  Download,
-  TrendingUp,
-  PieChart,
-  BarChart3,
-  DollarSign,
-  ShieldCheck,
-  CheckCircle2,
-  Loader2,
+  DollarSign
 } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
 
-interface IncomeReport {
-  totalRevenue: number;
-  totalExpenses: number;
-  netProfit: number;
-  grossMargin: number;
-}
-
-interface BalanceReport {
-  assets?: { totalAssets: number };
-  liabilities?: { totalLiabilities: number };
-  equity?: { totalEquity: number };
-}
-
-interface CashFlowReport {
-  summary?: {
-    totalOperatingInflow: number;
-    totalOperatingOutflow: number;
-    netCashFlow: number;
-  };
-}
-
-export default function ReportsPage() {
-  const [selectedPeriod, setSelectedPeriod] = useState(new Date().getFullYear().toString());
-  const [income, setIncome] = useState<IncomeReport | null>(null);
-  const [balance, setBalance] = useState<BalanceReport | null>(null);
-  const [cashFlow, setCashFlow] = useState<CashFlowReport | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const [incomeData, balanceData, cashData] = await Promise.all([
-          apiFetch<IncomeReport>(`/api/v1/reports/income-statement?year=${selectedPeriod}`),
-          apiFetch<BalanceReport>('/api/v1/reports/balance-sheet'),
-          apiFetch<CashFlowReport>(`/api/v1/reports/cash-flow?year=${selectedPeriod}`),
-        ]);
-        setIncome(incomeData);
-        setBalance(balanceData);
-        setCashFlow(cashData);
-      } catch {
-        setIncome(null);
-        setBalance(null);
-        setCashFlow(null);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [selectedPeriod]);
-
-  const handleExportReport = () => {
-    window.print();
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+const reportCategories = [
+  {
+    title: 'Financial Statements',
+    description: 'Core financial reports to understand the overall health of your business.',
+    reports: [
+      { id: 'profit-loss', title: 'Profit & Loss', description: 'Income, expenses, and net profit over time.', icon: LineChart, active: true },
+      { id: 'balance-sheet', title: 'Balance Sheet', description: 'What you own (assets) and what you owe (liabilities).', icon: BarChart4, active: false },
+      { id: 'cash-flow', title: 'Cash Flow', description: 'Money moving in and out of your business.', icon: TrendingUp, active: false },
+    ]
+  },
+  {
+    title: 'Sales & Customers',
+    description: 'Insights into your revenue streams and customer behavior.',
+    reports: [
+      { id: 'sales', title: 'Sales Report', description: 'Total sales grouped by customer and time.', icon: TrendingUp, active: true },
+      { id: 'income', title: 'Income Report', description: 'Detailed breakdown of all income sources.', icon: DollarSign, active: false },
+      { id: 'customer-statement', title: 'Customer Statement', description: 'Account balance and transaction history per customer.', icon: Users, active: false },
+    ]
+  },
+  {
+    title: 'Purchases & Suppliers',
+    description: 'Track where your money is going and who you owe.',
+    reports: [
+      { id: 'expenses', title: 'Expense Report', description: 'Breakdown of your spending by category.', icon: PieChart, active: true },
+      { id: 'purchases', title: 'Purchase Report', description: 'Total purchases made from suppliers.', icon: ShoppingCart, active: false },
+      { id: 'supplier-statement', title: 'Supplier Statement', description: 'Account balance and transaction history per supplier.', icon: FileText, active: false },
+    ]
+  },
+  {
+    title: 'Inventory & Tax',
+    description: 'Manage your stock valuation and tax liabilities.',
+    reports: [
+      { id: 'inventory', title: 'Inventory Valuation', description: 'Total value of items currently in stock.', icon: Box, active: false },
+      { id: 'tax', title: 'Tax Report', description: 'Sales tax collected vs purchase tax paid.', icon: Receipt, active: false },
+    ]
   }
+];
+
+export default function ReportsHubPage() {
+  const router = useRouter();
+
+  const handleReportClick = (id: string, active: boolean) => {
+    if (active) {
+      router.push(`/dashboard/reports/${id}`);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Financial Reports</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Generate, view, and export official financial statements and compliance audits.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-muted p-1 rounded-lg text-xs font-medium">
-            {[2026, 2025, 2024].map((y) => (
-              <button
-                key={y}
-                onClick={() => setSelectedPeriod(y.toString())}
-                className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                  selectedPeriod === y.toString() ? 'bg-background text-foreground shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {y}
-              </button>
-            ))}
-          </div>
-
-          <Button onClick={handleExportReport} variant="outline" size="sm" className="cursor-pointer">
-            <Download className="h-4 w-4 mr-2" />
-            Print / Export Report
-          </Button>
-        </div>
+    <div className="space-y-8 pb-8 animate-in fade-in zoom-in duration-300">
+      <div>
+        <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">Reports Center</h1>
+        <p className="text-muted-foreground mt-2">
+          Comprehensive financial and operational insights for your organization.
+        </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-primary/20 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <div className="space-y-10">
+        {reportCategories.map((category) => (
+          <div key={category.title} className="space-y-4">
             <div>
-              <CardTitle className="text-base font-bold">Income Statement</CardTitle>
-              <CardDescription className="text-xs">Revenue & Expense Breakdown</CardDescription>
+              <h2 className="text-xl font-bold tracking-tight">{category.title}</h2>
+              <p className="text-sm text-muted-foreground">{category.description}</p>
             </div>
-            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-2">
-            <div className="flex justify-between items-center text-sm border-b pb-1.5">
-              <span className="text-muted-foreground">Gross Revenue</span>
-              <span className="font-bold text-foreground">${(income?.totalRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm border-b pb-1.5">
-              <span className="text-muted-foreground">Operating Expenses</span>
-              <span className="font-bold text-destructive">-${(income?.totalExpenses || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm font-bold pt-1">
-              <span>Net Profit</span>
-              <span className={(income?.netProfit ?? 0) >= 0 ? 'text-emerald-600' : 'text-destructive'}>
-                {(income?.netProfit ?? 0) >= 0 ? '+' : '-'}${Math.abs(income?.netProfit || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Margin: {(income?.grossMargin || 0).toFixed(1)}%
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-primary/20 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-base font-bold">Balance Sheet</CardTitle>
-              <CardDescription className="text-xs">Assets, Liabilities & Equity</CardDescription>
-            </div>
-            <div className="h-9 w-9 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-2">
-            <div className="flex justify-between items-center text-sm border-b pb-1.5">
-              <span className="text-muted-foreground">Total Assets</span>
-              <span className="font-bold text-foreground">${(balance?.assets?.totalAssets || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm border-b pb-1.5">
-              <span className="text-muted-foreground">Total Liabilities</span>
-              <span className="font-bold text-amber-600">${(balance?.liabilities?.totalLiabilities || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm font-bold pt-1">
-              <span>Owner Equity</span>
-              <span className="text-primary">${(balance?.equity?.totalEquity || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-primary/20 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-base font-bold">Cash Flow Statement</CardTitle>
-              <CardDescription className="text-xs">Operating & Investing Inflows</CardDescription>
-            </div>
-            <div className="h-9 w-9 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <BarChart3 className="h-5 w-5" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-2">
-            <div className="flex justify-between items-center text-sm border-b pb-1.5">
-              <span className="text-muted-foreground">Operating Inflow</span>
-              <span className="font-bold text-emerald-600">+${(cashFlow?.summary?.totalOperatingInflow || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm border-b pb-1.5">
-              <span className="text-muted-foreground">Operating Outflow</span>
-              <span className="font-bold text-muted-foreground">-${(cashFlow?.summary?.totalOperatingOutflow || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm font-bold pt-1">
-              <span>Net Cash Flow</span>
-              <span className={(cashFlow?.summary?.netCashFlow || 0) >= 0 ? 'text-emerald-600' : 'text-destructive'}>
-                {(cashFlow?.summary?.netCashFlow || 0) >= 0 ? '+' : '-'}${Math.abs(cashFlow?.summary?.netCashFlow || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="shadow-sm">
-        <CardHeader className="p-4 border-b">
-          <CardTitle className="text-base font-bold flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" />
-            {selectedPeriod} Financial Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Metric</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[
-                { label: 'Total Revenue', value: income?.totalRevenue || 0, positive: true },
-                { label: 'Total Expenses', value: -(income?.totalExpenses || 0), positive: false },
-                { label: 'Net Profit', value: income?.netProfit || 0, positive: (income?.netProfit || 0) >= 0 },
-                { label: 'Operating Cash Flow', value: cashFlow?.summary?.netCashFlow || 0, positive: (cashFlow?.summary?.netCashFlow || 0) >= 0 },
-              ].map((row, i) => (
-                <TableRow key={i}>
-                  <TableCell className="font-semibold text-xs">{row.label}</TableCell>
-                  <TableCell className={`font-bold text-xs ${row.positive ? 'text-emerald-600' : 'text-destructive'}`}>
-                    {row.positive ? '+' : '-'}${Math.abs(row.value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={row.positive ? 'secondary' : 'destructive'} className="text-[10px]">
-                      {row.positive ? 'Profitable' : 'Loss'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {category.reports.map((report) => (
+                <Card 
+                  key={report.id} 
+                  className={`border-border/50 transition-all duration-200 ${report.active ? 'hover:shadow-md hover:border-primary/30 cursor-pointer group' : 'opacity-70 grayscale-[30%] cursor-not-allowed'}`}
+                  onClick={() => handleReportClick(report.id, report.active)}
+                >
+                  <CardHeader className="flex flex-row items-start justify-between pb-2">
+                    <div className={`p-2 rounded-lg ${report.active ? 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors' : 'bg-muted text-muted-foreground'}`}>
+                      <report.icon className="h-5 w-5" />
+                    </div>
+                    {!report.active && (
+                      <Badge variant="outline" className="text-[10px] font-semibold bg-muted/50">COMING SOON</Badge>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <CardTitle className="text-lg mb-1">{report.title}</CardTitle>
+                    <CardDescription className="text-sm leading-snug">{report.description}</CardDescription>
+                  </CardContent>
+                </Card>
               ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,33 +1,46 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { ReportsService } from './reports.service';
 
 export class ReportsController {
-  static async getIncomeStatement(req: Request, res: Response, next: NextFunction) {
+  static async getProfitLoss(req: Request, res: Response) {
     try {
-      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
-      const result = await ReportsService.getIncomeStatement(req.user!.organizationId, year);
-      res.status(200).json({ success: true, data: result });
-    } catch (error) {
-      next(error);
+      const { startDate, endDate } = req.query;
+      const data = await ReportsService.getProfitLoss(
+        req.user!.organizationId,
+        startDate as string,
+        endDate as string
+      );
+      res.json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
     }
   }
 
-  static async getBalanceSheet(req: Request, res: Response, next: NextFunction) {
+  static async getSalesReport(req: Request, res: Response) {
     try {
-      const result = await ReportsService.getBalanceSheet(req.user!.organizationId);
-      res.status(200).json({ success: true, data: result });
-    } catch (error) {
-      next(error);
+      const { startDate, endDate } = req.query;
+      const data = await ReportsService.getSalesReport(
+        req.user!.organizationId,
+        startDate as string,
+        endDate as string
+      );
+      res.json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
     }
   }
 
-  static async getCashFlow(req: Request, res: Response, next: NextFunction) {
+  static async getExpenseReport(req: Request, res: Response) {
     try {
-      const year = req.query.year ? parseInt(req.query.year as string) : undefined;
-      const result = await ReportsService.getCashFlow(req.user!.organizationId, year);
-      res.status(200).json({ success: true, data: result });
-    } catch (error) {
-      next(error);
+      const { startDate, endDate } = req.query;
+      const data = await ReportsService.getExpenseReport(
+        req.user!.organizationId,
+        startDate as string,
+        endDate as string
+      );
+      res.json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
     }
   }
 }

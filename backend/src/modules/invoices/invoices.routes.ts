@@ -8,6 +8,7 @@ import {
   updateInvoiceSchema,
   invoiceIdParamSchema,
   payInvoiceSchema,
+  emailInvoiceSchema,
 } from './invoices.validation';
 
 const router = Router();
@@ -20,5 +21,6 @@ router.get('/:id', requirePermission('invoices.view'), validate(invoiceIdParamSc
 router.patch('/:id', requirePermission('invoices.edit'), validate(invoiceIdParamSchema), validate(updateInvoiceSchema), InvoicesController.update);
 router.delete('/:id', requirePermission('invoices.edit'), validate(invoiceIdParamSchema), InvoicesController.delete);
 router.post('/:id/pay', requirePermission('invoices.edit'), validate(payInvoiceSchema), InvoicesController.recordPayment);
+router.post('/:id/email', requirePermission('invoices.view'), validate(emailInvoiceSchema), InvoicesController.emailInvoice);
 
 export default router;

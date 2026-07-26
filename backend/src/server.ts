@@ -4,12 +4,17 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import app from './app';
+import { initSocket } from './socket';
 
 const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
   console.log(`[server]: Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
+
+// Initialize WebSockets
+initSocket(server);
+
 
 // Handle graceful shutdown or unhandled rejections
 process.on('unhandledRejection', (err: Error) => {

@@ -1,152 +1,153 @@
-import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../../config/db';
+import { Decimal } from '@prisma/client/runtime/library';
 
-function toNumber(d: Decimal | null | undefined): number {
+function toNumber(d: Decimal | any): number {
   return d ? Number(d.toString()) : 0;
 }
 
 export class ReportsService {
-  static async getIncomeStatement(organizationId: string, year?: number) {
-    const targetYear = year ?? new Date().getFullYear();
-    const yearStart = new Date(targetYear, 0, 1);
-    const yearEnd = new Date(targetYear + 1, 0, 1);
+  static async getProfitLoss(organizationId: string, startDate?: string, endDate?: string) {
+    const whereInvoice: any = { organizationId, status: { not: 'cancelled' } };
+    const whereExpense: any = { organizationId };
 
-    const [paidInvoices, expenses] = await Promise.all([
-      prisma.invoice.findMany({
-        where: {
-          organizationId,
-          status: 'paid',
-          paidAt: { gte: yearStart, lt: yearEnd },
-        },
-        select: { amount: true, paidAt: true },
-      }),
-      prisma.expense.findMany({
-        where: {
-          organizationId,
-          date: { gte: yearStart, lt: yearEnd },
-        },
-        select: { amount: true, category: true },
-      }),
-    ]);
-
-    const totalRevenue = paidInvoices.reduce((acc, inv) => acc + toNumber(inv.amount), 0);
-    const totalExpenses = expenses.reduce((acc, exp) => acc + toNumber(exp.amount), 0);
-
-    const categoryBreakdown: Record<string, number> = {};
-    for (const exp of expenses) {
-      const cat = exp.category || 'General';
-      categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + toNumber(exp.amount);
+    if (startDate || endDate) {
+      const dateFilter: any = {};
+      if (startDate) dateFilter.gte = new Date(startDate);
+      if (endDate) dateFilter.lte = new Date(endDate);
+      whereInvoice.issuedAt = dateFilter;
+      whereExpense.date = dateFilter;
     }
 
-    return {
-      year: targetYear,
-      totalRevenue,
-      totalExpenses,
-      netProfit: totalRevenue - totalExpenses,
-      grossMargin: totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0,
-      expenseBreakdown: Object.entries(categoryBreakdown).map(([category, amount]) => ({
-        category,
-        amount,
-        percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0,
-      })),
-    };
-  }
+    // Revenue from Invoices
+    const invoices = await prisma.invoice.findMany({ where: whereInvoice });
+    const totalRevenue = invoices.reduce((sum: number, inv: any) => sum + toNumber(inv.amount), 0);
 
-  static async getBalanceSheet(organizationId: string) {
-    const [accounts, pendingInvoices, unpaidExpenses] = await Promise.all([
-      prisma.bankAccount.findMany({
-        where: { organizationId, isActive: true },
-        select: { id: true, name: true, bankName: true, balance: true },
-      }),
-      prisma.invoice.findMany({
-        where: { organizationId, status: 'pending' },
-        select: { amount: true },
-      }),
-      prisma.invoice.findMany({
-        where: { organizationId, status: 'overdue' },
-        select: { amount: true },
-      }),
-    ]);
+    // Expenses
+    const expenses = await prisma.expense.findMany({ where: whereExpense });
+    const totalExpenses = expenses.reduce((sum: number, exp: any) => sum + toNumber(exp.amount), 0);
 
-    const totalAssets = accounts.reduce((acc, a) => acc + toNumber(a.balance), 0);
-    const receivables = pendingInvoices.reduce((acc, inv) => acc + toNumber(inv.amount), 0);
-    const overdueReceivables = unpaidExpenses.reduce((acc, inv) => acc + toNumber(inv.amount), 0);
+    const netProfit = totalRevenue - totalExpenses;
 
-    return {
-      assets: {
-        bankAccounts: accounts.map((a) => ({
-          id: a.id,
-          name: a.name,
-          bankName: a.bankName,
-          balance: toNumber(a.balance),
-        })),
-        totalBankBalance: totalAssets,
-        accountsReceivable: receivables,
-        overdueReceivables,
-        totalAssets: totalAssets + receivables + overdueReceivables,
-      },
-      liabilities: {
-        overduePayables: overdueReceivables,
-        totalLiabilities: overdueReceivables,
-      },
-      equity: {
-        retainedEarnings: totalAssets - overdueReceivables,
-        totalEquity: totalAssets - overdueReceivables,
-      },
-    };
-  }
+    // Monthly breakdown for chart (simple logic)
+    const monthlyData: Record<string, { revenue: number; expenses: number }> = {};
+    
+    invoices.forEach((inv: any) => {
+      const month = inv.issuedAt.toISOString().slice(0, 7); // YYYY-MM
+      if (!monthlyData[month]) monthlyData[month] = { revenue: 0, expenses: 0 };
+      monthlyData[month].revenue += toNumber(inv.amount);
+    });
 
-  static async getCashFlow(organizationId: string, year?: number) {
-    const targetYear = year ?? new Date().getFullYear();
-    const yearStart = new Date(targetYear, 0, 1);
-    const yearEnd = new Date(targetYear + 1, 0, 1);
+    expenses.forEach((exp: any) => {
+      const month = exp.date.toISOString().slice(0, 7);
+      if (!monthlyData[month]) monthlyData[month] = { revenue: 0, expenses: 0 };
+      monthlyData[month].expenses += toNumber(exp.amount);
+    });
 
-    const [paidInvoices, expenses] = await Promise.all([
-      prisma.invoice.findMany({
-        where: {
-          organizationId,
-          status: 'paid',
-          paidAt: { gte: yearStart, lt: yearEnd },
-        },
-        select: { amount: true, paidAt: true },
-      }),
-      prisma.expense.findMany({
-        where: {
-          organizationId,
-          date: { gte: yearStart, lt: yearEnd },
-        },
-        select: { amount: true, date: true },
-      }),
-    ]);
-
-    const monthlyInflow = new Array(12).fill(0);
-    const monthlyOutflow = new Array(12).fill(0);
-
-    for (const inv of paidInvoices) {
-      if (inv.paidAt) monthlyInflow[inv.paidAt.getMonth()] += toNumber(inv.amount);
-    }
-    for (const exp of expenses) {
-      if (exp.date) monthlyOutflow[exp.date.getMonth()] += toNumber(exp.amount);
-    }
-
-    const monthlyData = Array.from({ length: 12 }, (_, i) => ({
-      month: i + 1,
-      inflow: monthlyInflow[i],
-      outflow: monthlyOutflow[i],
-      net: monthlyInflow[i] - monthlyOutflow[i],
+    const chartData = Object.keys(monthlyData).sort().map(month => ({
+      month,
+      revenue: monthlyData[month].revenue,
+      expenses: monthlyData[month].expenses,
+      profit: monthlyData[month].revenue - monthlyData[month].expenses
     }));
 
-    const totalOperatingInflow = paidInvoices.reduce((acc, inv) => acc + toNumber(inv.amount), 0);
-    const totalOperatingOutflow = expenses.reduce((acc, exp) => acc + toNumber(exp.amount), 0);
+    return {
+      summary: {
+        totalRevenue,
+        totalExpenses,
+        netProfit,
+        profitMargin: totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
+      },
+      chartData
+    };
+  }
+
+  static async getSalesReport(organizationId: string, startDate?: string, endDate?: string) {
+    const where: any = { organizationId, status: { not: 'cancelled' } };
+    if (startDate || endDate) {
+      where.issuedAt = {};
+      if (startDate) where.issuedAt.gte = new Date(startDate);
+      if (endDate) where.issuedAt.lte = new Date(endDate);
+    }
+
+    const invoices = await prisma.invoice.findMany({
+      where,
+      include: { customer: true }
+    });
+
+    // Group by customer
+    const customerSales: Record<string, { name: string; email: string; totalAmount: number; count: number }> = {};
+    let totalSales = 0;
+
+    invoices.forEach((inv: any) => {
+      const amount = toNumber(inv.amount);
+      totalSales += amount;
+      
+      const cid = inv.customerId;
+      if (!customerSales[cid]) {
+        customerSales[cid] = {
+          name: inv.customer ? inv.customer.name : 'Unknown',
+          email: inv.customer && inv.customer.email ? inv.customer.email : '',
+          totalAmount: 0,
+          count: 0
+        };
+      }
+      customerSales[cid].totalAmount += amount;
+      customerSales[cid].count += 1;
+    });
+
+    const tableData = Object.values(customerSales).sort((a, b) => b.totalAmount - a.totalAmount);
+    const topCustomers = tableData.slice(0, 5).map(c => ({ name: c.name, sales: c.totalAmount }));
 
     return {
-      year: targetYear,
-      monthlyData,
       summary: {
-        totalOperatingInflow,
-        totalOperatingOutflow,
-        netCashFlow: totalOperatingInflow - totalOperatingOutflow,
+        totalSales,
+        totalCustomers: Object.keys(customerSales).length,
+        totalInvoices: invoices.length
       },
+      chartData: topCustomers,
+      tableData
+    };
+  }
+
+  static async getExpenseReport(organizationId: string, startDate?: string, endDate?: string) {
+    const where: any = { organizationId };
+    if (startDate || endDate) {
+      where.date = {};
+      if (startDate) where.date.gte = new Date(startDate);
+      if (endDate) where.date.lte = new Date(endDate);
+    }
+
+    const expenses = await prisma.expense.findMany({ where });
+
+    // Group by category
+    const categoryExpenses: Record<string, { category: string; totalAmount: number; count: number }> = {};
+    let totalExpenses = 0;
+
+    expenses.forEach((exp: any) => {
+      const amount = toNumber(exp.amount);
+      totalExpenses += amount;
+      
+      const cat = exp.category || 'Uncategorized';
+      if (!categoryExpenses[cat]) {
+        categoryExpenses[cat] = { category: cat, totalAmount: 0, count: 0 };
+      }
+      categoryExpenses[cat].totalAmount += amount;
+      categoryExpenses[cat].count += 1;
+    });
+
+    const tableData = Object.values(categoryExpenses).sort((a, b) => b.totalAmount - a.totalAmount);
+    
+    // For pie chart
+    const chartData = tableData.map(c => ({ name: c.category, value: c.totalAmount }));
+
+    return {
+      summary: {
+        totalExpenses,
+        totalCategories: Object.keys(categoryExpenses).length,
+        totalTransactions: expenses.length
+      },
+      chartData,
+      tableData
     };
   }
 }
