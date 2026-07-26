@@ -89,7 +89,7 @@ export default function PaymentsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Processing Volume</CardTitle>
             <TrendingUp className="h-4 w-4 text-emerald-600" />
@@ -100,7 +100,7 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Net Settlement</CardTitle>
             <DollarSign className="h-4 w-4 text-primary" />
@@ -111,7 +111,7 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Gateway Fees</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -122,7 +122,7 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Paid Invoices</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
@@ -134,7 +134,7 @@ export default function PaymentsPage() {
         </Card>
       </div>
 
-      <Card className="shadow-2xs">
+      <Card className="shadow-sm">
         <CardHeader className="p-4 border-b">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="relative w-full sm:w-72">
@@ -154,7 +154,7 @@ export default function PaymentsPage() {
                     key={m}
                     onClick={() => setMethodFilter(m)}
                     className={`px-3 py-1 rounded-md capitalize transition-colors cursor-pointer ${
-                      methodFilter === m ? 'bg-background text-foreground shadow-2xs font-semibold' : 'text-muted-foreground hover:text-foreground'
+                      methodFilter === m ? 'bg-background text-foreground shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     {m}

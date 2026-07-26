@@ -128,7 +128,7 @@ export default function InboxPage() {
       {/* Main Inbox Panel */}
       <div className="grid gap-6 lg:grid-cols-3 min-h-[560px]">
         {/* Thread List Sidebar */}
-        <Card className="shadow-2xs flex flex-col">
+        <Card className="shadow-sm flex flex-col">
           <CardHeader className="p-3 border-b space-y-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -171,7 +171,7 @@ export default function InboxPage() {
         </Card>
 
         {/* Conversation View */}
-        <Card className="lg:col-span-2 shadow-2xs flex flex-col">
+        <Card className="lg:col-span-2 shadow-sm flex flex-col">
           {activeThread ? (
             <>
               {/* Thread Header */}

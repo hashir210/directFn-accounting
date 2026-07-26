@@ -29,7 +29,7 @@ export default function ActiveMetricsPage() {
 
       {/* Real-time KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="shadow-2xs border-emerald-500/20">
+        <Card className="shadow-sm border-emerald-500/20">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Active Sessions</CardTitle>
             <Users className="h-4 w-4 text-emerald-600" />
@@ -40,7 +40,7 @@ export default function ActiveMetricsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">API Throughput</CardTitle>
             <Activity className="h-4 w-4 text-primary" />
@@ -51,7 +51,7 @@ export default function ActiveMetricsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Avg Latency</CardTitle>
             <Zap className="h-4 w-4 text-amber-500" />
@@ -62,7 +62,7 @@ export default function ActiveMetricsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">DB Pool Load</CardTitle>
             <Server className="h-4 w-4 text-indigo-600" />
@@ -75,7 +75,7 @@ export default function ActiveMetricsPage() {
       </div>
 
       {/* Active User Sessions Table */}
-      <Card className="shadow-2xs">
+      <Card className="shadow-sm">
         <CardHeader className="p-4 border-b">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
             <Cpu className="h-4 w-4 text-primary" /> Live User Activity Log

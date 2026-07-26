@@ -85,10 +85,39 @@ export function requirePermission(permissionKey: string, options: PermissionOpti
         }
       }
 
+      let isAdmin = false;
+      if (req.user.roleId) {
+        const userRole = await prisma.role.findUnique({ where: { id: req.user.roleId } });
+        if (userRole?.isSystemRole && (userRole.name === 'Admin' || userRole.name === 'Owner')) {
+          isAdmin = true;
+        }
+      }
+
+      const isOwnerOrAdmin = org.ownerId === req.user.id || isAdmin;
+
       // FinFlow platform org Owner/Admin: full access to everything, bypassing Layer 2 & 3.
-      const isOwnerOrAdmin = org.ownerId === req.user.id;
       if (org.isPlatform && isOwnerOrAdmin) {
         return next();
+      }
+
+      // Layer 2 — Role -> Permission check (Bypassed for Org Owners)
+      if (!isOwnerOrAdmin) {
+        if (!req.user.roleId) {
+          throw new ForbiddenError('You do not have a role assigned to perform this action');
+        }
+
+        const rolePermission = await prisma.rolePermission.findFirst({
+          where: {
+            roleId: req.user.roleId,
+            permission: {
+              key: permissionKey,
+            },
+          },
+        });
+
+        if (!rolePermission) {
+          throw new ForbiddenError(`You do not have the required permission (${permissionKey}) to perform this action`);
+        }
       }
 
       // Layer 3 — Screen gates (Manual Org Screen Block & Subscription Plan limits)

@@ -19,7 +19,7 @@ export function Navbar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full pt-4 px-4 sm:px-6 md:px-8">
       {/* Container holding the glass navbar */}
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-16 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-800/50 rounded-full px-4 sm:px-6 md:px-8 shadow-xs transition-all duration-300">
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-16 bg-background border border-border/50 rounded-full px-4 sm:px-6 md:px-8 shadow-sm transition-all duration-300">
         
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2 group">
@@ -77,7 +77,7 @@ export function Navbar() {
 
       {/* Mobile Menu Panel */}
       {mobileMenuOpen && (
-        <div className="md:hidden mt-2 mx-auto max-w-[calc(100vw-2rem)] bg-white/95 dark:bg-zinc-950/95 backdrop-blur-lg border border-zinc-200/60 dark:border-zinc-800/60 rounded-3xl p-6 shadow-xl animate-in slide-in-from-top-4 duration-300">
+        <div className="md:hidden mt-2 mx-auto max-w-[calc(100vw-2rem)] bg-card border border-border/50 rounded-2xl p-6 shadow-sm animate-in slide-in-from-top-4 duration-300">
           <div className="flex flex-col space-y-4">
             {navLinks.map((link) => (
               <Link

@@ -93,7 +93,7 @@ export default function IntegrationsPage() {
       {/* Integration Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filtered.map((item) => (
-          <Card key={item.id} className="flex flex-col justify-between shadow-2xs hover:border-primary/40 transition-all">
+          <Card key={item.id} className="flex flex-col justify-between shadow-sm hover:border-primary/40 transition-all">
             <CardHeader className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className={`h-11 w-11 rounded-xl ${item.iconBg} text-white font-bold flex items-center justify-center text-lg shadow-sm shrink-0`}>

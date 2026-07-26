@@ -275,16 +275,16 @@ function PlatformDashboard() {
               )}
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-primary/90 to-primary text-primary-foreground">
+          <Card>
             <CardContent className="pt-5">
-              <Badge className="bg-primary-foreground/20 text-primary-foreground border-0 text-[10px]">
+              <Badge variant="secondary" className="text-[10px]">
                 <Sparkles className="h-3 w-3 mr-1" /> Quick Action
               </Badge>
               <h4 className="text-sm font-semibold mt-3">Register New Company</h4>
-              <p className="text-xs text-primary-foreground/70 leading-relaxed mt-1">
+              <p className="text-xs text-muted-foreground leading-relaxed mt-1">
                 Onboard a new client company with an owner account and subscription plan.
               </p>
-              <Button variant="secondary" className="w-full mt-4 cursor-pointer" size="sm" onClick={() => window.location.href = '/admin'}>
+              <Button className="w-full mt-4 cursor-pointer" size="sm" onClick={() => window.location.href = '/admin'}>
                 <Plus className="h-3.5 w-3.5 mr-1" /> Register Company
               </Button>
             </CardContent>
@@ -829,16 +829,16 @@ function TenantDashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-primary/90 to-primary text-primary-foreground">
+              <Card>
                 <CardContent className="pt-5">
-                  <Badge className="bg-primary-foreground/20 text-primary-foreground border-0 text-[10px]">
+                  <Badge variant="secondary" className="text-[10px]">
                     <Sparkles className="h-3 w-3 mr-1" /> Pro Feature
                   </Badge>
                   <h4 className="text-sm font-semibold mt-3">DirectFN Ledger Engine</h4>
-                  <p className="text-xs text-primary-foreground/70 leading-relaxed mt-1">
-                    Simulate ledger changes! Click Add Entry to create mock invoices or expenses and watch stats recalculate.
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+                    Simulate ledger changes. Click Add Entry to create mock invoices or expenses and watch stats recalculate.
                   </p>
-                  <Button variant="secondary" className="w-full mt-4 cursor-pointer" size="sm" onClick={openModal}>
+                  <Button className="w-full mt-4 cursor-pointer" size="sm" onClick={openModal}>
                     <Plus className="h-3.5 w-3.5 mr-1" /> Simulate Activity
                   </Button>
                 </CardContent>

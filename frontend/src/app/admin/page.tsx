@@ -11,6 +11,7 @@ import { apiFetch, ApiError } from '@/lib/api';
 import { Building2, Users, DollarSign, Loader2, Plus, CheckCircle2, AlertCircle, Mail, Globe, MapPin, Clock, Hash, Pencil, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 interface PlanOption { id: string; name: string; }
 
@@ -274,31 +275,46 @@ export default function AdminPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Fiscal Year</Label>
-                  <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={regForm.fiscalYear} onChange={(e) => setRegForm({ ...regForm, fiscalYear: e.target.value })}>
-                    <option value="jan-dec">Jan-Dec</option>
-                    <option value="apr-mar">Apr-Mar</option>
-                    <option value="jul-jun">Jul-Jun</option>
-                    <option value="oct-sep">Oct-Sep</option>
-                  </select>
+                  <Select value={regForm.fiscalYear} onValueChange={(v) => setRegForm({ ...regForm, fiscalYear: v })}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="jan-dec">Jan-Dec</SelectItem>
+                      <SelectItem value="apr-mar">Apr-Mar</SelectItem>
+                      <SelectItem value="jul-jun">Jul-Jun</SelectItem>
+                      <SelectItem value="oct-sep">Oct-Sep</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Currency</Label>
-                  <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={regForm.currency} onChange={(e) => setRegForm({ ...regForm, currency: e.target.value })}>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                    <option value="PKR">PKR</option>
-                    <option value="AED">AED</option>
-                  </select>
+                  <Select value={regForm.currency} onValueChange={(v) => setRegForm({ ...regForm, currency: v })}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="GBP">GBP</SelectItem>
+                      <SelectItem value="PKR">PKR</SelectItem>
+                      <SelectItem value="AED">AED</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Time Zone</Label>
-                  <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={regForm.timeZone} onChange={(e) => setRegForm({ ...regForm, timeZone: e.target.value })}>
-                    <option value="UTC-5">EST</option>
-                    <option value="UTC+0">GMT</option>
-                    <option value="UTC+5">PKT</option>
-                    <option value="UTC+4">GST</option>
-                  </select>
+                  <Select value={regForm.timeZone} onValueChange={(v) => setRegForm({ ...regForm, timeZone: v })}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UTC-5">EST</SelectItem>
+                      <SelectItem value="UTC+0">GMT</SelectItem>
+                      <SelectItem value="UTC+5">PKT</SelectItem>
+                      <SelectItem value="UTC+4">GST</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="border-t pt-3">
@@ -320,9 +336,14 @@ export default function AdminPage() {
                 <div className="grid grid-cols-2 gap-3 mt-2">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Plan</Label>
-                    <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={regForm.planId} onChange={(e) => setRegForm({ ...regForm, planId: e.target.value })}>
-                      {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+                    <Select value={regForm.planId} onValueChange={(v) => setRegForm({ ...regForm, planId: v })}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Max Users</Label>
@@ -370,21 +391,30 @@ export default function AdminPage() {
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Fiscal Year</Label>
-                <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={editForm.fiscalYear} onChange={(e) => setEditForm({ ...editForm, fiscalYear: e.target.value })}>
-                  <option value="jan-dec">Jan-Dec</option><option value="apr-mar">Apr-Mar</option><option value="jul-jun">Jul-Jun</option><option value="oct-sep">Oct-Sep</option>
-                </select>
+                <Select value={editForm.fiscalYear} onValueChange={(v) => setEditForm({ ...editForm, fiscalYear: v })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="jan-dec">Jan-Dec</SelectItem><SelectItem value="apr-mar">Apr-Mar</SelectItem><SelectItem value="jul-jun">Jul-Jun</SelectItem><SelectItem value="oct-sep">Oct-Sep</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Currency</Label>
-                <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={editForm.currency} onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })}>
-                  <option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="PKR">PKR</option><option value="AED">AED</option>
-                </select>
+                <Select value={editForm.currency} onValueChange={(v) => setEditForm({ ...editForm, currency: v })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD</SelectItem><SelectItem value="EUR">EUR</SelectItem><SelectItem value="GBP">GBP</SelectItem><SelectItem value="PKR">PKR</SelectItem><SelectItem value="AED">AED</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Time Zone</Label>
-                <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={editForm.timeZone} onChange={(e) => setEditForm({ ...editForm, timeZone: e.target.value })}>
-                  <option value="UTC-5">EST</option><option value="UTC+0">GMT</option><option value="UTC+5">PKT</option><option value="UTC+4">GST</option>
-                </select>
+                <Select value={editForm.timeZone} onValueChange={(v) => setEditForm({ ...editForm, timeZone: v })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UTC-5">EST</SelectItem><SelectItem value="UTC+0">GMT</SelectItem><SelectItem value="UTC+5">PKT</SelectItem><SelectItem value="UTC+4">GST</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-1.5">
@@ -396,9 +426,12 @@ export default function AdminPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Plan</Label>
-                  <select className="w-full h-8 px-2 bg-background border rounded text-xs cursor-pointer" value={editForm.planId} onChange={(e) => setEditForm({ ...editForm, planId: e.target.value })}>
-                    {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
+                  <Select value={editForm.planId} onValueChange={(v) => setEditForm({ ...editForm, planId: v })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Max Users</Label>

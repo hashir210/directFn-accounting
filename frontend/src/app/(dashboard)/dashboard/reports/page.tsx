@@ -97,7 +97,7 @@ export default function ReportsPage() {
                 key={y}
                 onClick={() => setSelectedPeriod(y.toString())}
                 className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                  selectedPeriod === y.toString() ? 'bg-background text-foreground shadow-2xs font-semibold' : 'text-muted-foreground hover:text-foreground'
+                  selectedPeriod === y.toString() ? 'bg-background text-foreground shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {y}
@@ -113,7 +113,7 @@ export default function ReportsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-primary/20 shadow-2xs">
+        <Card className="border-primary/20 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-base font-bold">Income Statement</CardTitle>
@@ -144,7 +144,7 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-primary/20 shadow-2xs">
+        <Card className="border-primary/20 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-base font-bold">Balance Sheet</CardTitle>
@@ -170,7 +170,7 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-primary/20 shadow-2xs">
+        <Card className="border-primary/20 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-base font-bold">Cash Flow Statement</CardTitle>
@@ -199,7 +199,7 @@ export default function ReportsPage() {
         </Card>
       </div>
 
-      <Card className="shadow-2xs">
+      <Card className="shadow-sm">
         <CardHeader className="p-4 border-b">
           <CardTitle className="text-base font-bold flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />

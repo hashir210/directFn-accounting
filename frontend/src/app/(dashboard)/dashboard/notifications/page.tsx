@@ -116,7 +116,7 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      <Card className="shadow-2xs">
+      <Card className="shadow-sm">
         <CardHeader className="p-4 border-b">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-1 bg-muted p-1 rounded-lg text-xs font-medium">
@@ -132,7 +132,7 @@ export default function NotificationsPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-3 py-1 rounded-md capitalize transition-colors cursor-pointer ${
                     activeTab === tab.id
-                      ? 'bg-background text-foreground shadow-2xs font-semibold'
+                      ? 'bg-background text-foreground shadow-sm font-semibold'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >

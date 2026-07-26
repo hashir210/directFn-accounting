@@ -13,6 +13,7 @@ import {
   NotFoundError, 
   UnauthorizedError,
   ForbiddenError,
+  ConflictError,
 } from '../../utils/errors';
 import { 
   sendVerificationEmail, 
@@ -41,10 +42,12 @@ export class AuthService {
       throw new BadRequestError('Password is required');
     }
 
-    // NOTE: registration always provisions a brand-new organization, and email
-    // uniqueness is scoped per-organization (@@unique([organizationId, email])),
-    // so there is no global-duplicate check here — the same person may own more
-    // than one workspace.
+    // NOTE: registration provisions a brand-new organization.
+    // Ensure email is globally unique for registration.
+    const existingUser = await prisma.user.findFirst({ where: { email } });
+    if (existingUser) {
+      throw new ConflictError('Email is already registered');
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -196,9 +199,6 @@ export class AuthService {
       };
     }
 
-    // Standard session tokens
-    const tokens = await this.createSession(user.id, user.email, user.roleId || '', user.organizationId);
-
     const [allPermissions, role, org, screenBlocks] = await Promise.all([
       prisma.permission.findMany({ select: { key: true } }),
       user.roleId ? prisma.role.findUnique({
@@ -226,6 +226,10 @@ export class AuthService {
 
     const isOwner = org?.ownerId === user.id;
     const isAdmin = role?.isSystemRole && (role.name === 'Admin' || role.name === 'Owner');
+
+    // Standard session tokens
+    const isPlatformOrg = org?.isPlatform || false;
+    const tokens = await this.createSession(user.id, user.email, user.roleId || '', user.organizationId, isPlatformOrg);
 
     let orgDisabledScreens: string[] = [];
     if (org?.disabledScreens) {
@@ -271,8 +275,8 @@ export class AuthService {
   /**
    * Helper to create access & refresh token pair and save refresh token in DB
    */
-  private static async createSession(userId: string, email: string, roleId: string, organizationId: string) {
-    const accessToken = generateAccessToken({ id: userId, email, roleId, organizationId });
+  private static async createSession(userId: string, email: string, roleId: string, organizationId: string, isPlatformOrg: boolean = false) {
+    const accessToken = generateAccessToken({ id: userId, email, roleId, organizationId, isPlatformOrg });
     const rawRefreshToken = generateRefreshToken();
     const hashedRefreshToken = hashToken(rawRefreshToken);
 
@@ -381,9 +385,6 @@ export class AuthService {
       throw new UnauthorizedError('Invalid verification code');
     }
 
-    // Complete login session
-    const tokens = await this.createSession(user.id, user.email, user.roleId || '', user.organizationId);
-
     const [allPermissions, role, org, screenBlocks] = await Promise.all([
       prisma.permission.findMany({ select: { key: true } }),
       user.roleId ? prisma.role.findUnique({
@@ -411,6 +412,10 @@ export class AuthService {
 
     const isOwner = org?.ownerId === user.id;
     const isAdmin = role?.isSystemRole && (role.name === 'Admin' || role.name === 'Owner');
+
+    // Complete login session
+    const isPlatformOrg = org?.isPlatform || false;
+    const tokens = await this.createSession(user.id, user.email, user.roleId || '', user.organizationId, isPlatformOrg);
 
     let permissionKeys: string[] = [];
     if (isOwner || isAdmin) {
@@ -477,7 +482,9 @@ export class AuthService {
     }
 
     // Generate new pair
-    const tokens = await this.createSession(tokenRecord.userId, tokenRecord.user.email, tokenRecord.user.roleId || '', tokenRecord.user.organizationId);
+    const org = await prisma.organization.findUnique({ where: { id: tokenRecord.user.organizationId }, select: { isPlatform: true } });
+    const isPlatformOrg = org?.isPlatform || false;
+    const tokens = await this.createSession(tokenRecord.userId, tokenRecord.user.email, tokenRecord.user.roleId || '', tokenRecord.user.organizationId, isPlatformOrg);
 
     // Rotate: revoke the current token (kept for reuse detection instead of deleted)
     await prisma.refreshToken.update({

@@ -206,7 +206,7 @@ export default function OrganizationsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {orgs.map((org) => (
-          <Card key={org.id} className="hover:border-primary/30 transition-colors shadow-2xs">
+          <Card key={org.id} className="hover:border-primary/30 transition-colors shadow-sm">
             <CardHeader className="pb-3 border-b">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">

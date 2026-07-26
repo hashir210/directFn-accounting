@@ -220,7 +220,7 @@ export default function InvoicesPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total Invoiced</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -231,7 +231,7 @@ export default function InvoicesPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Collected</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -242,7 +242,7 @@ export default function InvoicesPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Pending</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -253,7 +253,7 @@ export default function InvoicesPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Overdue</CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -265,7 +265,7 @@ export default function InvoicesPage() {
         </Card>
       </div>
 
-      <Card className="shadow-2xs">
+      <Card className="shadow-sm">
         <CardHeader className="p-4 border-b">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="relative w-full sm:w-72">
@@ -285,7 +285,7 @@ export default function InvoicesPage() {
                     key={st}
                     onClick={() => setStatusFilter(st)}
                     className={`px-3 py-1 rounded-md capitalize transition-colors cursor-pointer ${
-                      statusFilter === st ? 'bg-background text-foreground shadow-2xs font-semibold' : 'text-muted-foreground hover:text-foreground'
+                      statusFilter === st ? 'bg-background text-foreground shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     {st}

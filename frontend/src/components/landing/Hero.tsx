@@ -152,8 +152,8 @@ export function Hero() {
               </div>
             </div>
 
-            {/* Overlapping Glassmorphism Card (3D Floating Overlay) */}
-            <div className="absolute -bottom-6 -left-6 z-20 bg-white/10 dark:bg-zinc-900/40 backdrop-blur-md border border-white/20 dark:border-zinc-800/40 p-4 rounded-xl shadow-xl max-w-[200px] text-left transform -rotate-2 hover:rotate-0 transition-transform duration-300 pointer-events-none">
+            {/* Floating overlay card */}
+            <div className="absolute -bottom-6 -left-6 z-20 bg-card border border-border/50 p-4 rounded-xl shadow-sm max-w-[200px] text-left transform -rotate-2 hover:rotate-0 transition-transform duration-300 pointer-events-none">
               <div className="flex items-center space-x-2 mb-2">
                 <div className="p-1.5 bg-violet-500/20 text-violet-300 rounded-lg">
                   <Shield className="h-4 w-4" />

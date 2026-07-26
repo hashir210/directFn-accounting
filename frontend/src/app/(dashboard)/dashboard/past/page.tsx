@@ -47,7 +47,7 @@ export default function PastMetricsPage() {
 
       {/* Historical Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">3-Year Cumulative Revenue</CardTitle>
             <TrendingUp className="h-4 w-4 text-emerald-600" />
@@ -58,7 +58,7 @@ export default function PastMetricsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Average Profit Margin</CardTitle>
             <BarChart2 className="h-4 w-4 text-primary" />
@@ -69,7 +69,7 @@ export default function PastMetricsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Locked Audit Years</CardTitle>
             <History className="h-4 w-4 text-muted-foreground" />
@@ -82,7 +82,7 @@ export default function PastMetricsPage() {
       </div>
 
       {/* Archives Table */}
-      <Card className="shadow-2xs">
+      <Card className="shadow-sm">
         <CardHeader className="p-4 border-b">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" /> Fiscal Year Ledger Summaries

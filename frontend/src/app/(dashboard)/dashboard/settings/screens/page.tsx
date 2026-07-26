@@ -247,7 +247,7 @@ function ScreenAccessContent() {
               <button
                 onClick={() => setActiveTab('tenants')}
                 className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md transition-colors cursor-pointer ${
-                  activeTab === 'tenants' ? 'bg-background text-foreground shadow-2xs font-semibold' : 'text-muted-foreground hover:text-foreground'
+                  activeTab === 'tenants' ? 'bg-background text-foreground shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Building2 className="h-3.5 w-3.5 text-primary" /> B2B Client Tenants ({orgs.length})
@@ -255,7 +255,7 @@ function ScreenAccessContent() {
               <button
                 onClick={() => setActiveTab('users')}
                 className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md transition-colors cursor-pointer ${
-                  activeTab === 'users' ? 'bg-background text-foreground shadow-2xs font-semibold' : 'text-muted-foreground hover:text-foreground'
+                  activeTab === 'users' ? 'bg-background text-foreground shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Users className="h-3.5 w-3.5" /> Team Members ({targetUsers.length})

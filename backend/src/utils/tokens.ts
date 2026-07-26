@@ -6,6 +6,7 @@ interface UserPayload {
   email: string;
   organizationId: string;
   roleId: string;
+  isPlatformOrg?: boolean;
   /**
    * Present (and true) only on short-lived pre-authentication tokens issued
    * mid-2FA login. Full access tokens never carry this claim.
@@ -22,7 +23,13 @@ const JWT_ACCESS_SECRET: string = process.env.JWT_ACCESS_SECRET || (() => {
  */
 export function generateAccessToken(user: UserPayload): string {
   return jwt.sign(
-    { id: user.id, email: user.email, organizationId: user.organizationId, roleId: user.roleId },
+    { 
+      id: user.id, 
+      email: user.email, 
+      organizationId: user.organizationId, 
+      roleId: user.roleId,
+      isPlatformOrg: user.isPlatformOrg || false
+    },
     JWT_ACCESS_SECRET,
     { expiresIn: '15m' }
   );

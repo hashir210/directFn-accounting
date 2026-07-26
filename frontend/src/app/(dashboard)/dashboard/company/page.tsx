@@ -62,7 +62,7 @@ export default function CompanyManagementPage() {
 
   const loadTenant = useCallback(async () => {
     try {
-      const data = await apiFetch<any>('/api/v1/organization/current');
+      const data = await apiFetch<Record<string, string | null>>('/api/v1/organization/current');
       setTenantCompany({
         name: data.name || '', contactEmail: data.contactEmail || '',
         gstVatNumber: data.gstVatNumber || '', address: data.address || '',

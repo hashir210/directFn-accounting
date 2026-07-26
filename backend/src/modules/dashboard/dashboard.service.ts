@@ -47,9 +47,7 @@ export class DashboardService {
       }),
     ]);
 
-    const totalRevenue = paidInvoices.reduce((acc, inv) => acc + toNumber(inv.amount), 0);
-    const totalExpenses = expenses.reduce((acc, exp) => acc + toNumber(exp.amount), 0);
-    const netProfit = totalRevenue - totalExpenses;
+
 
     // Build 12-month cash flow array in memory
     const monthlyRev = new Array(12).fill(0);
@@ -69,6 +67,10 @@ export class DashboardService {
         monthlyExp[m] += toNumber(exp.amount);
       }
     }
+
+    const totalRevenue = monthlyRev.reduce((acc, val) => acc + val, 0);
+    const totalExpenses = monthlyExp.reduce((acc, val) => acc + val, 0);
+    const netProfit = totalRevenue - totalExpenses;
 
     const cashFlow = Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,

@@ -231,7 +231,7 @@ export default function ExpensesPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total Outflow</CardTitle>
             <TrendingDown className="h-4 w-4 text-destructive" />
@@ -242,7 +242,7 @@ export default function ExpensesPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Top Category</CardTitle>
             <PieChart className="h-4 w-4 text-primary" />
@@ -255,7 +255,7 @@ export default function ExpensesPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Approved Outflow</CardTitle>
             <FileCheck className="h-4 w-4 text-emerald-600" />
@@ -266,7 +266,7 @@ export default function ExpensesPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-2xs">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total Records</CardTitle>
             <CreditCard className="h-4 w-4 text-amber-500" />
@@ -278,7 +278,7 @@ export default function ExpensesPage() {
         </Card>
       </div>
 
-      <Card className="shadow-2xs">
+      <Card className="shadow-sm">
         <CardHeader className="p-4 border-b">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="relative w-full sm:w-72">
@@ -298,7 +298,7 @@ export default function ExpensesPage() {
                     key={cat}
                     onClick={() => setCategoryFilter(cat)}
                     className={`px-3 py-1 rounded-md capitalize transition-colors cursor-pointer ${
-                      categoryFilter === cat ? 'bg-background text-foreground shadow-2xs font-semibold' : 'text-muted-foreground hover:text-foreground'
+                      categoryFilter === cat ? 'bg-background text-foreground shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     {cat}

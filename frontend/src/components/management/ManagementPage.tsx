@@ -203,10 +203,10 @@ const configs: Record<ManagementType, ManagementConfig> = {
 };
 
 const toneClass = {
-  green: "text-emerald-700 bg-emerald-50 border-emerald-200",
-  amber: "text-amber-700 bg-amber-50 border-amber-200",
-  red: "text-rose-700 bg-rose-50 border-rose-200",
-  blue: "text-blue-700 bg-blue-50 border-blue-200",
+  green: "text-emerald-600 bg-emerald-50/60 border-emerald-200",
+  amber: "text-amber-600 bg-amber-50/60 border-amber-200",
+  red: "text-rose-600 bg-rose-50/60 border-rose-200",
+  blue: "text-blue-600 bg-blue-50/60 border-blue-200",
 };
 
 export function ManagementPage({ type }: { type: ManagementType }) {
@@ -368,12 +368,8 @@ export function ManagementPage({ type }: { type: ManagementType }) {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Phase Coverage</CardTitle>
-          <CardDescription>This page is a non-functional UI shell for the management phase.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="flex items-center justify-between p-5">
+          <div className="flex items-center gap-6">
             {[
               { label: "Access rules", icon: ShieldCheck },
               { label: "Documents", icon: FileText },
@@ -382,9 +378,9 @@ export function ManagementPage({ type }: { type: ManagementType }) {
             ].map((item) => {
               const ItemIcon = item.icon;
               return (
-                <div key={item.label} className="flex items-center gap-3 rounded-lg border p-3">
-                  <ItemIcon className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">{item.label}</span>
+                <div key={item.label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <ItemIcon className="h-4 w-4" />
+                  <span>{item.label}</span>
                 </div>
               );
             })}

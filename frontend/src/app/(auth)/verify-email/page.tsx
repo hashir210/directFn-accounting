@@ -83,10 +83,8 @@ function VerifyInner() {
 
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center items-center space-y-3 pb-2">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center shadow-sm">
-            <div className="h-full w-full rounded-[10px] bg-[#7c3aed] flex items-center justify-center">
-              <Activity className="h-5 w-5 text-emerald-400" />
-            </div>
+          <div className="h-11 w-11 rounded-xl bg-primary flex items-center justify-center">
+            <Activity className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
             <CardTitle className="text-xl">Email Verification</CardTitle>

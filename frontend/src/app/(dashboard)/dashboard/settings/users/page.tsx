@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -263,20 +264,18 @@ export default function UsersPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="invite-role">Role</Label>
-                    <select
-                      id="invite-role"
-                      required
-                      value={inviteRoleId}
-                      onChange={(e) => setInviteRoleId(e.target.value)}
-                      className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-                    >
-                      <option value="" disabled>Select a role...</option>
-                      {roles.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </select>
+                    <Select value={inviteRoleId} onValueChange={setInviteRoleId}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Select a role..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roles.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <DialogFooter>
@@ -308,7 +307,7 @@ export default function UsersPage() {
       )}
 
       {/* Main Card */}
-      <Card className="shadow-2xs">
+      <Card className="shadow-sm">
         <CardHeader className="p-4 border-b">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">

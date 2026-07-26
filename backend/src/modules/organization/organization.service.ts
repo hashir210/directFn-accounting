@@ -55,7 +55,7 @@ export class OrganizationService {
 
       // 3. Create Default Phase 4 Roles
       const adminRole = await tx.role.create({
-        data: { organizationId: orgId, name: 'Admin', isSystemRole: true }
+        data: { organizationId: orgId, name: 'Owner', isSystemRole: true }
       });
       await tx.role.create({
         data: { organizationId: orgId, name: 'Accountant', isSystemRole: true }

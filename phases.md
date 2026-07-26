@@ -17,7 +17,7 @@ This document tracks all implemented phases, module scopes, and feature checklis
 - [x] JWT Access Token issuing + verification middleware
 - [x] Refresh Token flow (rotation + revoke-on-logout)
 - [x] Two-Factor Authentication (2FA setup, TOTP verification, pre-auth verification flow)
-- [x] Session Management (v1.1 active session list/revoke)
+- [x] Session Management (active session list/revoke)
 
 ---
 
@@ -36,110 +36,156 @@ This document tracks all implemented phases, module scopes, and feature checklis
 - [x] Low Stock alert widget (Inventory stock alerts & threshold indicators)
 - [x] Notifications panel (Topbar dropdown + dedicated Notification Center at `/dashboard/notifications`)
 
+---
 
-3. Company Management
+## Phase 2 — Organization & Workspace
 
-Company Profile
+**Scope:**
+- [x] Organization profile (name, logo, address, contact email)
+- [x] GST/VAT Number
+- [x] Fiscal Year configuration
+- [x] Currency & Time Zone settings
+- [x] Workspace management (multi-organization support)
+- [x] Subscription Plan management (admin: plans list, feature assignment)
+- [x] Plan features (per-plan feature key gating)
+- [x] `SubscriptionPlan` + `PlanFeature` models
 
-GST/VAT Number
+---
 
-Logo
+## Phase 3 — User & Role Management
 
-Address
+**Scope:**
+- [x] Role-based access control (RBAC) with CRUD for roles
+- [x] Predefined roles: Admin, Accountant, Cashier, Sales Person, Store Manager
+- [x] Granular permissions: Create, Read, Update, Delete, Export, Approve
+- [x] `Role` + `Permission` + `RolePermission` models
+- [x] User management (add/edit/remove users, assign roles)
+- [x] Screen-level block (`UserScreenBlock` model, per-user screen visibility)
+- [x] Role and user management UI under `/dashboard/settings/roles`, `/dashboard/settings/users`, `/dashboard/settings/screens`
 
-Fiscal Year
+---
 
-Currency
+## Phase 4 — Customer Management
 
-Time Zone
+**Scope:**
+- [x] Customer profile (name, email, phone, address)
+- [x] Credit Limit
+- [x] Outstanding Balance
+- [x] Transaction History (linked invoices)
+- [x] Customer statements
+- [x] `Customer` model with organization scoping
 
-4. User & Role Management
+---
 
-Admin
+## Phase 5 — Supplier Management
 
-Accountant
+**Scope:**
+- [x] Supplier details (name, category, contact email, phone)
+- [x] Purchase History (purchase bills linked to supplier)
+- [x] Due Payments tracking (`dueAmount` + `SupplierPayment` model)
+- [x] Payment terms configuration
+- [x] `Supplier`, `PurchaseBill`, `SupplierPayment` models
 
-Cashier
+---
 
-Sales Person
+## Phase 6 — Product Management
 
-Store Manager
+**Scope:**
+- [x] Product profile (name, SKU, barcode, category, unit)
+- [x] Purchase Price & Selling Price
+- [x] Tax Rate configuration
+- [x] Product images (via Cloudinary)
+- [x] Low stock threshold configuration
+- [x] `Product` model with stock quantity tracking
 
+---
 
+## Phase 7 — Inventory Management
 
-Permissions:
+**Scope:**
+- [x] Stock In
+- [x] Stock Out
+- [x] Stock Transfers between warehouses
+- [x] Damaged Stock tracking
+- [x] Stock Adjustment
+- [x] Low Stock Alerts (threshold-based)
+- [x] Warehouse Support (multiple warehouses, `Warehouse` model)
+- [x] `StockMovement` model with type, quantity, warehouse tracking
 
+---
 
+## Phase 8 — Invoicing & Payments
 
-Create
+**Scope:**
+- [x] Invoice creation with invoice number, customer, amount, due date
+- [x] Invoice status tracking (pending, paid, overdue)
+- [x] Payment tracking
+- [x] `Invoice` model with organization scoping
 
-Read
+---
 
-Update
+## Phase 9 — Expenses & Reporting
 
-Delete
+**Scope:**
+- [x] Expense tracking (category, description, amount, date)
+- [x] Expense categorization
+- [x] `Expense` model
+- [x] Reports page (`/dashboard/reports`)
 
-Export
+---
 
-Approve
+## Phase 10 — Notifications
 
-5. Customer Management
+**Scope:**
+- [x] In-app notifications (title, message, type, read/unread)
+- [x] Notification Center at `/dashboard/notifications`
+- [x] `Notification` model linked to user + organization
 
-Customer Profile
+---
 
-Credit Limit
+## Phase 11 — Platform & Admin
 
-Outstanding Balance
+**Scope:**
+- [x] Platform-level organization (`isPlatform` flag)
+- [x] Admin dashboard at `/admin`
+- [x] Admin plan management at `/admin/plans`
+- [x] Integrations page (`/dashboard/integrations`)
+- [x] Inbox page (`/dashboard/inbox`)
 
-Transaction History
+---
 
-Statements
+## Phase 12 — Landing & Public Pages
 
-6. Supplier Management
+**Scope:**
+- [x] Landing page (Hero, FeatureGrid, PerformanceStats, ProcessWorkflow, Testimonials, FAQ, CTA)
+- [x] Responsive navbar
+- [x] Auth pages: login, register, forgot password, reset password, verify email
 
-Supplier Details
+---
 
-Purchase History
+## Prisma Schema — All Models
 
-Due Payments
-
-7. Product Management
-
-Categories
-
-Units
-
-Barcode
-
-SKU
-
-Purchase Price
-
-Selling Price
-
-Tax
-
-Images
-
-8. Inventory
-
-Stock In
-
-Stock Out
-
-Transfers
-
-Damaged Stock
-
-Stock Adjustment
-
-Low Stock Alerts
-
-Warehouse Support
-
-
-
-
-
-
-
+| Model | Purpose |
+|---|---|
+| `Organization` | Multi-tenant org with settings (currency, fiscal year, timezone, logo) |
+| `Role` | Roles per org (Admin, Accountant, etc.) |
+| `Permission` | Granular permission keys |
+| `RolePermission` | Many-to-many role ↔ permission |
+| `User` | Users with 2FA, email verification, role assignment |
+| `UserScreenBlock` | Per-user screen visibility blocks |
+| `RefreshToken` | Hashed refresh tokens with rotation & revocation |
+| `PasswordResetToken` | Single-use password reset |
+| `EmailVerificationToken` | Email verification links |
+| `Customer` | Customers with credit limit |
+| `Invoice` | Invoices with status, amounts, due dates |
+| `Expense` | Expenses by category |
+| `Product` | Products with SKU, barcode, pricing, tax, stock |
+| `Supplier` | Suppliers with due amounts & payment terms |
+| `PurchaseBill` | Purchase bills linked to suppliers |
+| `SupplierPayment` | Payments made to suppliers |
+| `Warehouse` | Multi-warehouse support |
+| `StockMovement` | Stock in/out/transfer/damaged/adjustment |
+| `BankAccount` | Bank accounts with balances |
+| `Notification` | User notifications |
+| `SubscriptionPlan` | Plan definitions |
+| `PlanFeature` | Per-plan feature keys |

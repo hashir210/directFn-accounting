@@ -269,10 +269,8 @@ export default function DashboardLayout({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton size="lg" className="cursor-pointer">
-                    <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-tr from-primary to-emerald-400 p-0.5 flex items-center justify-center">
-                      <div className="h-full w-full rounded-md bg-primary flex items-center justify-center">
-                        <Activity className="h-4 w-4 text-emerald-400" />
-                      </div>
+                    <div className="h-8 w-8 shrink-0 rounded-lg bg-primary flex items-center justify-center">
+                      <Activity className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="flex flex-col gap-0.5 leading-none">
                       <span className="font-semibold">FinFlow</span>
@@ -463,7 +461,7 @@ export default function DashboardLayout({
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton size="lg" className="cursor-pointer">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-gradient-to-tr from-primary to-emerald-400 text-white text-xs font-bold">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
@@ -495,15 +493,21 @@ export default function DashboardLayout({
       {/* Main Content Inset */}
       <SidebarInset>
         {/* Top Navbar */}
-        <header className="h-14 sticky top-0 z-30 flex items-center justify-between gap-4 px-4 bg-background/80 backdrop-blur-md border-b">
+        <header className="h-14 sticky top-0 z-30 flex items-center justify-between gap-4 px-6 bg-background border-b border-border/50">
           {/* Left side */}
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="h-4" />
-            <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-              <span>Finance</span>
-              <span className="text-xs">&gt;</span>
-              <span className="font-semibold text-foreground">Dashboard</span>
+            <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <span className="text-muted-foreground/60">Dashboard</span>
+              <span className="text-xs text-muted-foreground/40">/</span>
+              <span className="font-medium text-foreground">
+                {(() => {
+                  const segments = pathname.replace('/dashboard/', '').replace('/dashboard', '').split('/');
+                  if (!segments[0]) return 'Overview';
+                  return segments[segments.length - 1].charAt(0).toUpperCase() + segments[segments.length - 1].slice(1);
+                })()}
+              </span>
             </nav>
           </div>
 
@@ -559,7 +563,7 @@ export default function DashboardLayout({
               </Tooltip>
 
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-card border rounded-xl shadow-lg z-50 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-80 bg-card border border-border/50 rounded-xl shadow-sm z-50 overflow-hidden">
                   <div className="px-4 py-3 border-b flex items-center justify-between bg-muted/50">
                     <span className="text-sm font-semibold">Notifications</span>
                     <button onClick={handleMarkAllRead} className="text-xs text-primary font-medium cursor-pointer hover:underline">Mark all read</button>
@@ -601,8 +605,8 @@ export default function DashboardLayout({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-6">
-          <div className="mx-auto max-w-7xl">
+        <main className="flex-1 p-6 md:p-8">
+          <div className="w-full">
             {isCurrentScreenBlocked ? (
               <div className="py-12 px-4 max-w-2xl mx-auto space-y-6">
                 <Alert variant="destructive" className="border-destructive/30 shadow-sm">
