@@ -27,7 +27,7 @@ export function useNotifications() {
     try {
       setLoading(true);
       const data = await apiFetch<Notification[]>('/api/v1/notifications');
-      setNotifications(data);
+      setNotifications(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -73,7 +73,7 @@ export function useNotifications() {
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = (notifications || []).filter((n) => !n.read).length;
 
   return {
     notifications,

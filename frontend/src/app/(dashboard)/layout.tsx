@@ -23,13 +23,12 @@ import {
   LogOut,
   Plus,
   ChevronsUpDown,
-  Mail,
-  Zap,
   Share2,
   SlidersHorizontal,
   Shield,
   Lock,
   Monitor,
+  ActivitySquare,
 } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
@@ -120,8 +119,6 @@ export default function DashboardLayout({
     if (normalized.startsWith('/products')) return 'products';
     if (normalized.startsWith('/inventory')) return 'inventory';
     if (normalized.startsWith('/notifications')) return 'notifications';
-    if (normalized.startsWith('/integrations')) return 'integrations';
-    if (normalized.startsWith('/inbox')) return 'inbox';
     if (normalized.startsWith('/reports')) return 'reports';
     if (normalized.startsWith('/active')) return 'active';
     if (normalized.startsWith('/past')) return 'past';
@@ -129,6 +126,7 @@ export default function DashboardLayout({
     if (normalized.startsWith('/settings/roles')) return 'roles';
     if (normalized.startsWith('/settings/screens')) return 'screens';
     if (normalized.startsWith('/settings/sessions')) return 'settings';
+    if (normalized.startsWith('/settings/audit')) return 'settings';
     if (normalized.startsWith('/settings/plan')) return 'plan';
     return null;
   };
@@ -190,8 +188,6 @@ export default function DashboardLayout({
 
   const toolItems = [
     { href: "/dashboard/notifications", label: "Notification", icon: Bell, badge: 4, key: 'notifications' },
-    { href: "/dashboard/integrations", label: "Integration", icon: Zap, key: 'integrations' },
-    { href: "/dashboard/inbox", label: "Inbox", icon: Mail, badge: 5, key: 'inbox' },
     { href: "/dashboard/reports", label: "Reporting", icon: FileBarChart2, key: 'reports' },
   ].filter(i => isScreenAllowed(i.key));
 
@@ -206,6 +202,7 @@ export default function DashboardLayout({
   if (hasPermission('settings.view') && isScreenAllowed('settings')) {
     settingsItems.push({ href: "/dashboard/settings", label: "Settings", icon: Settings });
     settingsItems.push({ href: "/dashboard/settings/sessions", label: "Sessions", icon: Monitor });
+    settingsItems.push({ href: "/dashboard/settings/audit", label: "Audit Logs", icon: ActivitySquare });
   }
   if (!isStaff && isScreenAllowed('plan')) {
     settingsItems.push({ href: "/dashboard/settings/plan", label: "Subscription", icon: CreditCard });
@@ -484,7 +481,7 @@ export default function DashboardLayout({
             {/* Manage */}
             <Tooltip>
               <TooltipTrigger render={
-                <Button variant="ghost" size="icon-sm" className="cursor-pointer" />
+                <Button variant="ghost" size="icon-sm" className="cursor-pointer" onClick={() => router.push('/dashboard/settings')} />
               }>
                   <SlidersHorizontal className="h-4 w-4" />
               </TooltipTrigger>
@@ -494,7 +491,7 @@ export default function DashboardLayout({
             {/* Share */}
             <Tooltip>
               <TooltipTrigger render={
-                <Button variant="ghost" size="icon-sm" className="cursor-pointer" />
+                <Button variant="ghost" size="icon-sm" className="cursor-pointer" onClick={() => { navigator.clipboard.writeText(window.location.href); }} />
               }>
                   <Share2 className="h-4 w-4" />
               </TooltipTrigger>

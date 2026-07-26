@@ -14,7 +14,7 @@ export class NotificationController {
       const limit = limitStr ? parseInt(limitStr, 10) : 50;
 
       const notifications = await NotificationService.getNotifications(userId, limit);
-      res.json(notifications);
+      res.json({ success: true, data: notifications });
     } catch (error) {
       console.error('[NotificationController.getNotifications] Error:', error);
       res.status(500).json({ error: 'Failed to fetch notifications' });
@@ -30,7 +30,7 @@ export class NotificationController {
 
       const { id } = req.params;
       const notification = await NotificationService.markAsRead(id, userId);
-      res.json(notification);
+      res.json({ success: true, data: notification });
     } catch (error) {
       console.error('[NotificationController.markAsRead] Error:', error);
       res.status(500).json({ error: 'Failed to mark notification as read' });
@@ -45,7 +45,7 @@ export class NotificationController {
       }
 
       const result = await NotificationService.markAllAsRead(userId);
-      res.json({ message: 'All notifications marked as read', count: result.count });
+      res.json({ success: true, message: 'All notifications marked as read', data: { count: result.count } });
     } catch (error) {
       console.error('[NotificationController.markAllAsRead] Error:', error);
       res.status(500).json({ error: 'Failed to mark notifications as read' });

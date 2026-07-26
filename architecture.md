@@ -175,7 +175,7 @@ Keep controllers thin (no business logic) — logic lives in services, so it's u
 
 - `.env` per app (`backend/.env`, `frontend/.env.local`) — never committed, only `.env.example` templates are
 - Backend needs at minimum: `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CLOUDINARY_*`, `SMTP_*`, `CLIENT_URL`
-- Frontend needs: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SOCKET_URL`
+- Frontend needs: `NEXT_PUBLIC_API_URL`
 
 ---
 

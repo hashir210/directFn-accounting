@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -297,9 +298,12 @@ function PlatformDashboard() {
 
 // --- Tenant dashboard ---
 function TenantDashboard() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [dateFilter, setDateFilter] = useState("30");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showWidgetPanel, setShowWidgetPanel] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
 
   const [customerName, setCustomerName] = useState("");
   const [txType, setTxType] = useState<"Invoice" | "Expense">("Invoice");
@@ -514,12 +518,12 @@ function TenantDashboard() {
     }
   };
 
-  const ActionIcons = () => (
+  const ActionIcons = ({ onEdit, onMaximize, onMore }: { onEdit?: () => void; onMaximize?: () => void; onMore?: () => void }) => (
     <CardAction>
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon-xs" className="cursor-pointer text-muted-foreground"><Pencil /></Button>
-        <Button variant="ghost" size="icon-xs" className="cursor-pointer text-muted-foreground"><Maximize2 /></Button>
-        <Button variant="ghost" size="icon-xs" className="cursor-pointer text-muted-foreground"><MoreHorizontal /></Button>
+        <Button variant="ghost" size="icon-xs" className="cursor-pointer text-muted-foreground" onClick={onEdit}><Pencil /></Button>
+        <Button variant="ghost" size="icon-xs" className="cursor-pointer text-muted-foreground" onClick={onMaximize}><Maximize2 /></Button>
+        <Button variant="ghost" size="icon-xs" className="cursor-pointer text-muted-foreground" onClick={onMore}><MoreHorizontal /></Button>
       </div>
     </CardAction>
   );
@@ -578,7 +582,11 @@ function TenantDashboard() {
         <Card>
           <CardHeader>
             <CardDescription>Corporate Revenue</CardDescription>
-            <ActionIcons />
+            <ActionIcons
+              onEdit={() => { const t = prompt('Set monthly revenue target:'); if (t) console.log('Revenue target:', t); }}
+              onMaximize={() => setShowFilterPanel(!showFilterPanel)}
+              onMore={() => console.log('Revenue details')}
+            />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-heading font-semibold">
@@ -598,7 +606,11 @@ function TenantDashboard() {
         <Card>
           <CardHeader>
             <CardDescription>Business Expenses</CardDescription>
-            <ActionIcons />
+            <ActionIcons
+              onEdit={() => { const t = prompt('Set monthly expense budget:'); if (t) console.log('Expense budget:', t); }}
+              onMaximize={() => setShowFilterPanel(!showFilterPanel)}
+              onMore={() => router.push('/dashboard/expenses')}
+            />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-heading font-semibold">
@@ -618,7 +630,11 @@ function TenantDashboard() {
         <Card>
           <CardHeader>
             <CardDescription>Net Profit / Margin</CardDescription>
-            <ActionIcons />
+            <ActionIcons
+              onEdit={() => { const t = prompt('Set net profit goal:'); if (t) console.log('Profit goal:', t); }}
+              onMaximize={() => setShowFilterPanel(!showFilterPanel)}
+              onMore={() => router.push('/dashboard/reports/profit-loss')}
+            />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-heading font-semibold">
@@ -635,7 +651,11 @@ function TenantDashboard() {
         <Card>
           <CardHeader>
             <CardDescription>Bank Liquidity</CardDescription>
-            <ActionIcons />
+            <ActionIcons
+              onEdit={() => router.push('/dashboard/company')}
+              onMaximize={() => setShowFilterPanel(!showFilterPanel)}
+              onMore={() => router.push('/dashboard/payments')}
+            />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-heading font-semibold">
@@ -742,10 +762,10 @@ function TenantDashboard() {
           </TabsList>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="cursor-pointer">
+            <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => setShowWidgetPanel(!showWidgetPanel)}>
               <LayoutGrid className="h-3.5 w-3.5 mr-1" /> Widgets
             </Button>
-            <Button variant="outline" size="sm" className="cursor-pointer">
+            <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => setShowFilterPanel(!showFilterPanel)}>
               <SlidersHorizontal className="h-3.5 w-3.5 mr-1" /> Filter
             </Button>
             <Button size="sm" className="cursor-pointer" onClick={openModal}>

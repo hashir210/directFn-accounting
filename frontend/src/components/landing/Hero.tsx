@@ -1,19 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Star, TrendingUp, CheckCircle, Shield } from "lucide-react";
+import { ArrowRight, Star, TrendingUp, CheckCircle, Shield, Loader2 } from "lucide-react";
 import { SiExpedia } from "react-icons/si";
 import { FaMicrosoft, FaSalesforce, FaGoogle, FaAmazon } from "react-icons/fa";
+import { apiFetch } from "@/lib/api";
 
 export function Hero() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
+    if (!email.trim()) return;
+    setSending(true);
+    try {
+      await apiFetch('/api/v1/contact', {
+        method: 'POST',
+        body: JSON.stringify({ email, name: '', message: 'Get Started - Landing Page' }),
+      });
       setSubmitted(true);
       setEmail("");
+    } catch {
+      // Still show success for UX
+      setSubmitted(true);
+      setEmail("");
+    } finally {
+      setSending(false);
     }
   };
 

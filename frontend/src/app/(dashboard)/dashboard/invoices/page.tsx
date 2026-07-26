@@ -283,7 +283,7 @@ export default function InvoicesPage() {
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => { setSelectedInvoiceId(inv.id); setViewerOpen(true); }} title="View Invoice">
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => { setSelectedInvoiceId(inv.id); setViewerOpen(true); }} title="Download / Print">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => router.push(`/dashboard/invoices/${inv.id}`)} title="Download / Print">
                           <Download className="h-3.5 w-3.5" />
                         </Button>
                       </div>

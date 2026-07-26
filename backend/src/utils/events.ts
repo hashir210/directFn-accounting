@@ -9,6 +9,7 @@ export const EventTypes = {
   STOCK_LOW: 'stock.low',
   AUTH_LOGIN_ALERT: 'auth.login_alert',
   PURCHASE_RECEIVED: 'purchase.received',
+  AUDIT_LOG: 'audit.log',
 } as const;
 
 export default eventEmitter;

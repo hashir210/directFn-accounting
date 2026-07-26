@@ -112,6 +112,28 @@ export default function PaymentsPage() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (filteredPayments.length === 0) return;
+    const headers = ['Transaction ID', 'Method', 'Type', 'Status', 'Reference', 'Amount', 'Date'];
+    const rows = filteredPayments.map((p) => [
+      p.id,
+      p.method,
+      p.type,
+      p.status,
+      p.invoice?.invoiceNo || p.purchaseBill?.billNo || '',
+      p.amount.toString(),
+      p.createdAt,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `payments_export_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredPayments = payments.filter((p) => {
     const matchesSearch =
       p.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -218,7 +240,7 @@ export default function PaymentsPage() {
                 ))}
               </div>
 
-              <Button variant="outline" size="sm" className="cursor-pointer text-xs h-9">
+              <Button variant="outline" size="sm" className="cursor-pointer text-xs h-9" onClick={handleExportCSV}>
                 <Download className="h-3.5 w-3.5 mr-1.5" />
                 Export
               </Button>

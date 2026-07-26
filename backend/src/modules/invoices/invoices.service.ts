@@ -192,6 +192,14 @@ export class InvoicesService {
       },
     });
 
+    eventEmitter.emit(EventTypes.AUDIT_LOG, {
+      organizationId,
+      action: 'CREATE',
+      entity: 'INVOICE',
+      entityId: invoice.id,
+      details: JSON.stringify({ invoiceNo, amount }),
+    });
+
     return invoice;
   }
 
@@ -233,6 +241,14 @@ export class InvoicesService {
       }
     }
 
+    eventEmitter.emit(EventTypes.AUDIT_LOG, {
+      organizationId,
+      action: 'UPDATE',
+      entity: 'INVOICE',
+      entityId: invoice.id,
+      details: JSON.stringify({ status: data.status, amount: invoice.amount }),
+    });
+
     return invoice;
   }
 
@@ -243,6 +259,15 @@ export class InvoicesService {
     if (!existing) throw new NotFoundError('Invoice not found');
 
     await prisma.invoice.delete({ where: { id } });
+
+    eventEmitter.emit(EventTypes.AUDIT_LOG, {
+      organizationId,
+      action: 'DELETE',
+      entity: 'INVOICE',
+      entityId: id,
+      details: JSON.stringify({ invoiceNo: existing.invoiceNo }),
+    });
+
     return { message: 'Invoice deleted successfully' };
   }
 

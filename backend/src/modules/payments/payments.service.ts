@@ -1,6 +1,7 @@
 import prisma from '../../config/db';
 import { BadRequestError, NotFoundError } from '../../utils/errors';
 import { Prisma } from '@prisma/client';
+import eventEmitter, { EventTypes } from '../../utils/events';
 
 export class PaymentsService {
   static async listPayments(organizationId: string) {
@@ -96,6 +97,14 @@ export class PaymentsService {
         }
       }
 
+      eventEmitter.emit(EventTypes.AUDIT_LOG, {
+        organizationId,
+        action: 'CREATE',
+        entity: 'PAYMENT',
+        entityId: payment.id,
+        details: JSON.stringify({ amount: payment.amount.toString(), method: payment.method }),
+      });
+
       return payment;
     });
   }
@@ -138,6 +147,14 @@ export class PaymentsService {
         }
       }
 
+      eventEmitter.emit(EventTypes.AUDIT_LOG, {
+        organizationId,
+        action: 'UPDATE',
+        entity: 'PAYMENT',
+        entityId: updated.id,
+        details: JSON.stringify({ status: updated.status }),
+      });
+
       return updated;
     });
   }
@@ -159,6 +176,15 @@ export class PaymentsService {
       }
 
       await tx.payment.delete({ where: { id } });
+
+      eventEmitter.emit(EventTypes.AUDIT_LOG, {
+        organizationId,
+        action: 'DELETE',
+        entity: 'PAYMENT',
+        entityId: id,
+        details: JSON.stringify({ amount: payment.amount.toString() }),
+      });
+
       return { message: 'Payment deleted successfully' };
     });
   }

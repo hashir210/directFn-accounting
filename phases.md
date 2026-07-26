@@ -164,17 +164,32 @@ This document tracks all implemented phases, module scopes, and feature checklis
 ## Phase 17 — Notifications & Real-Time Alerts
 
 **Scope:**
-- [ ] Notification infrastructure (WebSocket / Server-Sent Events for real-time delivery)
-- [ ] Database storage for notifications (to persist history/unread status)
-- [ ] Low Stock alerts (triggered on inventory movement or cron job)
-- [ ] Due Payment alerts (triggered when an invoice or bill approaches due date or becomes overdue)
-- [ ] Invoice Paid notifications (real-time alert when an invoice status changes to paid)
-- [ ] Purchase Received notifications (real-time alert when a supplier delivery is marked as received)
-- [ ] User Login security alerts (notification on new IP, device, or suspicious login attempt)
-- [ ] Notification Center UI (dropdown in topbar, dedicated page, mark as read/unread, clear all)
-- [ ] User Notification Preferences (opt-in/opt-out for specific alert types via email, in-app, SMS)
-- [ ] `Notification` model enhancements for categorization and target linking
+- [x] Notification infrastructure (WebSocket / Server-Sent Events for real-time delivery)
+- [x] Database storage for notifications (to persist history/unread status)
+- [x] Low Stock alerts (triggered on inventory movement or cron job)
+- [x] Due Payment alerts (triggered when an invoice or bill approaches due date or becomes overdue)
+- [x] Invoice Paid notifications (real-time alert when an invoice status changes to paid)
+- [x] Purchase Received notifications (real-time alert when a supplier delivery is marked as received)
+- [x] User Login security alerts (notification on new IP, device, or suspicious login attempt)
+- [x] Notification Center UI (dropdown in topbar, dedicated page, mark as read/unread, clear all)
+- [x] User Notification Preferences (opt-in/opt-out for specific alert types via email, in-app, SMS)
+- [x] `Notification` model enhancements for categorization and target linking
 
+---
+
+## Phase 18 — Audit Logs
+
+**Scope:**
+- [x] `AuditLog` database model (OrganizationId, UserId, Action, Entity, EntityId, Details, IpAddress)
+- [x] Decoupled Event-Driven Audit Service (`AUDIT_LOG` event listener)
+- [x] Real-time WebSocket streaming (`org_{id}_admins` room broadcasting)
+- [x] Track core system actions:
+  - User Logins (IP address, browser metadata)
+  - Invoice operations (Create, Update, Delete)
+  - Inventory & Stock movements (In/Out/Transfers/Warehouses)
+  - Payment transactions (Log, Update, Delete)
+- [x] Interactive Activity Timeline UI (`/dashboard/settings/audit`)
+- [x] Search and instant filtering by User, Action, or Entity
 
 ---
 
@@ -206,3 +221,4 @@ This document tracks all implemented phases, module scopes, and feature checklis
 | `SubscriptionPlan` | Plan definitions |
 | `PlanFeature` | Per-plan feature keys |
 | `Payment` | Cash, Bank, Card, Online payments linked to references |
+| `AuditLog` | Real-time audit trail of all system actions |

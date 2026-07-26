@@ -1,5 +1,6 @@
 import prisma from '../../config/db';
 import { NotFoundError } from '../../utils/errors';
+import eventEmitter, { EventTypes } from '../../utils/events';
 
 export class InventoryService {
   static async listWarehouses(organizationId: string) {
@@ -32,7 +33,7 @@ export class InventoryService {
       });
     }
 
-    return prisma.warehouse.create({
+    const warehouse = await prisma.warehouse.create({
       data: {
         organizationId,
         name: data.name,
@@ -41,6 +42,16 @@ export class InventoryService {
         isDefault: data.isDefault || false,
       },
     });
+
+    eventEmitter.emit(EventTypes.AUDIT_LOG, {
+      organizationId,
+      action: 'CREATE',
+      entity: 'WAREHOUSE',
+      entityId: warehouse.id,
+      details: JSON.stringify({ name: warehouse.name }),
+    });
+
+    return warehouse;
   }
 
   static async list(organizationId: string, options: { page?: number; limit?: number; search?: string; type?: string }) {
@@ -94,7 +105,7 @@ export class InventoryService {
     });
     if (!existing) throw new NotFoundError('Stock movement not found');
 
-    return prisma.stockMovement.update({
+    const updated = await prisma.stockMovement.update({
       where: { id },
       data: {
         ...(data.type && { type: data.type }),
@@ -105,6 +116,16 @@ export class InventoryService {
         ...(data.warehouseId !== undefined && { warehouseId: data.warehouseId }),
       },
     });
+
+    eventEmitter.emit(EventTypes.AUDIT_LOG, {
+      organizationId,
+      action: 'UPDATE',
+      entity: 'STOCK',
+      entityId: updated.id,
+      details: JSON.stringify({ sku: updated.sku, type: updated.type }),
+    });
+
+    return updated;
   }
 
   static async deleteMovement(organizationId: string, id: string) {
@@ -113,7 +134,17 @@ export class InventoryService {
     });
     if (!existing) throw new NotFoundError('Stock movement not found');
 
-    return prisma.stockMovement.delete({ where: { id } });
+    await prisma.stockMovement.delete({ where: { id } });
+
+    eventEmitter.emit(EventTypes.AUDIT_LOG, {
+      organizationId,
+      action: 'DELETE',
+      entity: 'STOCK',
+      entityId: id,
+      details: JSON.stringify({ sku: existing.sku }),
+    });
+
+    return existing;
   }
 
   static async recordMovement(organizationId: string, data: {
@@ -173,6 +204,14 @@ export class InventoryService {
         }
       }
     }
+
+    eventEmitter.emit(EventTypes.AUDIT_LOG, {
+      organizationId,
+      action: 'CREATE',
+      entity: 'STOCK',
+      entityId: movement.id,
+      details: JSON.stringify({ type: movement.type, quantity: movement.quantity, sku: movement.sku }),
+    });
 
     return movement;
   }

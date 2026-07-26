@@ -39,8 +39,6 @@ const AVAILABLE_SCREENS = [
   { key: 'products', label: 'Products', category: 'Management', description: 'Categories, units, barcode, SKU, pricing, tax, and images' },
   { key: 'inventory', label: 'Inventory', category: 'Management', description: 'Stock movement, transfers, damaged stock, adjustments, alerts, and warehouses' },
   { key: 'notifications', label: 'Notifications', category: 'Tools', description: 'User alert and notification center' },
-  { key: 'integrations', label: 'Integrations', category: 'Tools', description: 'External service & API connections' },
-  { key: 'inbox', label: 'Inbox', category: 'Tools', description: 'Organization message and query inbox' },
   { key: 'reports', label: 'Reporting', category: 'Tools', description: 'Advanced financial reports and analytics' },
   { key: 'active', label: 'Active Metrics', category: 'Metrics', description: 'Real-time active account metrics' },
   { key: 'past', label: 'Past Metrics', category: 'Metrics', description: 'Historical performance archives' },

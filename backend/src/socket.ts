@@ -8,6 +8,11 @@ let io: Server;
 const connectedUsers = new Map<string, Set<string>>();
 
 export const initSocket = (server: HTTPServer) => {
+  const secret = process.env.JWT_ACCESS_SECRET;
+  if (!secret) {
+    throw new Error('[Socket] JWT_ACCESS_SECRET environment variable is not set. Socket authentication will fail.');
+  }
+
   io = new Server(server, {
     cors: {
       origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -21,15 +26,20 @@ export const initSocket = (server: HTTPServer) => {
     const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
     
     if (!token) {
-      return next(new Error('Authentication error'));
+      return next(new Error('Authentication error: no token provided'));
     }
     
     try {
-      const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'fallback_secret') as { id: string };
-      socket.data.userId = decoded.id; // Assuming payload has 'id'
+      const decoded = jwt.verify(token, secret) as { id: string; organizationId?: string };
+      if (!decoded.id) {
+        return next(new Error('Authentication error: token missing user id'));
+      }
+      socket.data.userId = decoded.id;
+      socket.data.organizationId = decoded.organizationId;
       next();
-    } catch (err) {
-      next(new Error('Authentication error'));
+    } catch (err: any) {
+      const message = err?.message || 'Authentication error';
+      next(new Error(`Authentication error: ${message}`));
     }
   });
 
@@ -44,6 +54,11 @@ export const initSocket = (server: HTTPServer) => {
     
     // Join a room for the user to easily emit to all their devices
     socket.join(userId);
+
+    // Join the organization's admin room for broadcast events (like audit logs)
+    if (socket.data.organizationId) {
+      socket.join(`org_${socket.data.organizationId}_admins`);
+    }
 
     socket.on('disconnect', () => {
       console.log(`[Socket] User disconnected: ${userId} (Socket: ${socket.id})`);

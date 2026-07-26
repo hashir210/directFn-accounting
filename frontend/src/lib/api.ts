@@ -2,6 +2,16 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').rep
 
 const TOKEN_KEY = 'ff_access_token';
 
+type TokenChangeCallback = (token: string | null) => void;
+let tokenChangeListeners: TokenChangeCallback[] = [];
+
+export function onAccessTokenChange(callback: TokenChangeCallback): () => void {
+  tokenChangeListeners.push(callback);
+  return () => {
+    tokenChangeListeners = tokenChangeListeners.filter(cb => cb !== callback);
+  };
+}
+
 export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem(TOKEN_KEY);
@@ -11,6 +21,7 @@ export function setAccessToken(token: string | null) {
   if (typeof window === 'undefined') return;
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);
+  tokenChangeListeners.forEach(cb => cb(token));
 }
 
 export class ApiError extends Error {

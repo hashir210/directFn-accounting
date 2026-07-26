@@ -24,8 +24,8 @@ const reportCategories = [
     description: 'Core financial reports to understand the overall health of your business.',
     reports: [
       { id: 'profit-loss', title: 'Profit & Loss', description: 'Income, expenses, and net profit over time.', icon: LineChart, active: true },
-      { id: 'balance-sheet', title: 'Balance Sheet', description: 'What you own (assets) and what you owe (liabilities).', icon: BarChart4, active: false },
-      { id: 'cash-flow', title: 'Cash Flow', description: 'Money moving in and out of your business.', icon: TrendingUp, active: false },
+      { id: 'balance-sheet', title: 'Balance Sheet', description: 'What you own (assets) and what you owe (liabilities).', icon: BarChart4, active: true },
+      { id: 'cash-flow', title: 'Cash Flow', description: 'Money moving in and out of your business.', icon: TrendingUp, active: true },
     ]
   },
   {
@@ -33,8 +33,8 @@ const reportCategories = [
     description: 'Insights into your revenue streams and customer behavior.',
     reports: [
       { id: 'sales', title: 'Sales Report', description: 'Total sales grouped by customer and time.', icon: TrendingUp, active: true },
-      { id: 'income', title: 'Income Report', description: 'Detailed breakdown of all income sources.', icon: DollarSign, active: false },
-      { id: 'customer-statement', title: 'Customer Statement', description: 'Account balance and transaction history per customer.', icon: Users, active: false },
+      { id: 'income', title: 'Income Report', description: 'Detailed breakdown of all income sources.', icon: DollarSign, active: true },
+      { id: 'customer-statement', title: 'Customer Statement', description: 'Account balance and transaction history per customer.', icon: Users, active: true },
     ]
   },
   {
@@ -42,16 +42,16 @@ const reportCategories = [
     description: 'Track where your money is going and who you owe.',
     reports: [
       { id: 'expenses', title: 'Expense Report', description: 'Breakdown of your spending by category.', icon: PieChart, active: true },
-      { id: 'purchases', title: 'Purchase Report', description: 'Total purchases made from suppliers.', icon: ShoppingCart, active: false },
-      { id: 'supplier-statement', title: 'Supplier Statement', description: 'Account balance and transaction history per supplier.', icon: FileText, active: false },
+      { id: 'purchases', title: 'Purchase Report', description: 'Total purchases made from suppliers.', icon: ShoppingCart, active: true },
+      { id: 'supplier-statement', title: 'Supplier Statement', description: 'Account balance and transaction history per supplier.', icon: FileText, active: true },
     ]
   },
   {
     title: 'Inventory & Tax',
     description: 'Manage your stock valuation and tax liabilities.',
     reports: [
-      { id: 'inventory', title: 'Inventory Valuation', description: 'Total value of items currently in stock.', icon: Box, active: false },
-      { id: 'tax', title: 'Tax Report', description: 'Sales tax collected vs purchase tax paid.', icon: Receipt, active: false },
+      { id: 'inventory', title: 'Inventory Valuation', description: 'Total value of items currently in stock.', icon: Box, active: true },
+      { id: 'tax', title: 'Tax Report', description: 'Sales tax collected vs purchase tax paid.', icon: Receipt, active: true },
     ]
   }
 ];

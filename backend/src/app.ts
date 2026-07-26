@@ -17,8 +17,10 @@ import productsRoutes from './modules/products/products.routes';
 import inventoryRoutes from './modules/inventory/inventory.routes';
 import paymentsRoutes from './modules/payments/payments.routes';
 import notificationRoutes from './modules/notification/notification.routes';
-// Import notification service to register event listeners globally
+import auditRoutes from './modules/audit/audit.routes';
+// Import services to register event listeners globally
 import './modules/notification/notification.service';
+import './modules/audit/audit.service';
 import logger from './utils/logger';
 
 const app = express();
@@ -57,6 +59,17 @@ app.use('/api/v1/products', productsRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/payments', paymentsRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/audit-logs', auditRoutes);
+
+// Contact / Newsletter endpoint (public)
+app.post('/api/v1/contact', (req: Request, res: Response) => {
+  const { email, name, message } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
+  logger.info(`[Contact] Inquiry from ${email}${name ? ` (${name})` : ''}${message ? `: ${message}` : ''}`);
+  res.status(200).json({ success: true, message: 'Thank you for reaching out. We will contact you soon.' });
+});
 
 // Centralized Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

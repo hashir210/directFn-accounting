@@ -262,6 +262,16 @@ export class AuthService {
       browser: browser || 'Unknown'
     });
 
+    eventEmitter.emit(EventTypes.AUDIT_LOG, {
+      organizationId: user.organizationId,
+      userId: user.id,
+      action: 'LOGIN',
+      entity: 'USER',
+      entityId: user.id,
+      details: JSON.stringify({ ip, browser }),
+      ipAddress: ip || 'Unknown',
+    });
+
     return {
       twoFactorRequired: false as const,
       ...tokens,

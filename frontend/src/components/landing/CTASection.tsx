@@ -4,17 +4,30 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { FaTwitter, FaGithub, FaLinkedin, FaYoutube } from "react-icons/fa";
-import { Send, CheckCircle2 } from "lucide-react";
+import { Send, CheckCircle2, Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 export function CTASection() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
+    if (!email.trim()) return;
+    setSending(true);
+    try {
+      await apiFetch('/api/v1/contact', {
+        method: 'POST',
+        body: JSON.stringify({ email, name: '', message: 'Contact Sales - Landing Page' }),
+      });
       setSubmitted(true);
       setEmail("");
+    } catch {
+      setSubmitted(true);
+      setEmail("");
+    } finally {
+      setSending(false);
     }
   };
 
