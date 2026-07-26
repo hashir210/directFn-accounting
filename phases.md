@@ -163,6 +163,18 @@ This document tracks all implemented phases, module scopes, and feature checklis
 
 ---
 
+## Phase 14 — Payments
+
+**Scope:**
+- [x] Dedicated `Payment` model for cash, bank, card, and online transactions
+- [x] Link payments to `BankAccount` for automatic balance adjustment
+- [x] Link payments to `Invoice` / `PurchaseBill` for reference
+- [x] Tenant-focused feature with screen blocking (`payments` screen key)
+- [x] Payments API (CRUD, status management)
+- [x] Payments Dashboard (`/dashboard/payments`)
+
+---
+
 ## Prisma Schema — All Models
 
 | Model | Purpose |
@@ -189,3 +201,4 @@ This document tracks all implemented phases, module scopes, and feature checklis
 | `Notification` | User notifications |
 | `SubscriptionPlan` | Plan definitions |
 | `PlanFeature` | Per-plan feature keys |
+| `Payment` | Cash, Bank, Card, Online payments linked to references |

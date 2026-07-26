@@ -203,13 +203,20 @@ export default function DashboardLayout({
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, key: 'dashboard' },
   ].filter(i => isScreenAllowed(i.key));
 
-  const financeItems = [
-    { href: "/dashboard/invoices", label: "Invoices", icon: Receipt, badge: 3, key: 'invoices' },
-    { href: "/dashboard/expenses", label: "Expenses", icon: CreditCard, key: 'expenses' },
-    { href: "/dashboard/payments", label: "Payments", icon: TrendingUp, badge: 7, key: 'payments' },
-  ].filter(i => isScreenAllowed(i.key));
+  const tenantOnlyKeys = ['customers', 'suppliers', 'products', 'inventory', 'payments'];
 
-  const tenantOnlyKeys = ['customers', 'suppliers', 'products', 'inventory'];
+  const financeItems = [
+    { href: "/dashboard/invoices", label: "Invoices", icon: Receipt, badge: 3, key: 'invoices', permission: 'invoices.view' },
+    { href: "/dashboard/expenses", label: "Expenses", icon: CreditCard, key: 'expenses', permission: 'expenses.view' },
+    { href: "/dashboard/payments", label: "Payments", icon: TrendingUp, badge: 7, key: 'payments', permission: 'payments.view' },
+  ].filter(i => {
+    if (!isScreenAllowed(i.key)) return false;
+    if (!i.permission || hasPermission(i.permission)) {
+      if (user?.isPlatformOrg && tenantOnlyKeys.includes(i.key)) return false;
+      return true;
+    }
+    return false;
+  });
 
   const managementItems = [
     { href: "/dashboard/company", label: "Company", icon: Building2, key: 'company', permission: 'settings.view' },

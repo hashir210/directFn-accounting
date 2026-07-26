@@ -15,6 +15,7 @@ import customersRoutes from './modules/customers/customers.routes';
 import suppliersRoutes from './modules/suppliers/suppliers.routes';
 import productsRoutes from './modules/products/products.routes';
 import inventoryRoutes from './modules/inventory/inventory.routes';
+import paymentsRoutes from './modules/payments/payments.routes';
 import logger from './utils/logger';
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/api/v1/customers', customersRoutes);
 app.use('/api/v1/suppliers', suppliersRoutes);
 app.use('/api/v1/products', productsRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
+app.use('/api/v1/payments', paymentsRoutes);
 
 // Centralized Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

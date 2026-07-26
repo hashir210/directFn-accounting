@@ -25,7 +25,7 @@ async function main() {
   await prisma.$executeRawUnsafe(`SET FOREIGN_KEY_CHECKS=1;`);
 
   console.log('[seed]: seeding granular permissions...');
-  const modules = ['customers', 'invoices', 'expenses', 'products', 'suppliers', 'inventory', 'reports', 'settings'];
+  const modules = ['customers', 'invoices', 'expenses', 'products', 'suppliers', 'inventory', 'reports', 'settings', 'payments'];
   const actions = ['view', 'create', 'update', 'delete', 'export', 'approve'];
 
   const permissionKeys: string[] = [
@@ -170,8 +170,8 @@ async function main() {
   const dfnStoreRole = await prisma.role.findFirst({ where: { organizationId: dfnOrgId, name: 'Store Manager' } });
 
   // Assign permissions to DirectFN roles
-  const accountantPermKeys = ['dashboard.view', 'reports.view', 'notifications.view', 'invoices.view', 'invoices.create', 'invoices.update', 'invoices.export', 'expenses.view', 'expenses.create', 'expenses.export', 'customers.view', 'suppliers.view', 'products.view'];
-  const cashierPermKeys = ['dashboard.view', 'notifications.view', 'invoices.view', 'invoices.create', 'customers.view', 'products.view'];
+  const accountantPermKeys = ['dashboard.view', 'reports.view', 'notifications.view', 'invoices.view', 'invoices.create', 'invoices.update', 'invoices.export', 'expenses.view', 'expenses.create', 'expenses.export', 'customers.view', 'suppliers.view', 'products.view', 'payments.view', 'payments.create', 'payments.export'];
+  const cashierPermKeys = ['dashboard.view', 'notifications.view', 'invoices.view', 'invoices.create', 'customers.view', 'products.view', 'payments.view', 'payments.create'];
   const salesPermKeys = ['dashboard.view', 'notifications.view', 'invoices.view', 'invoices.create', 'customers.view', 'customers.create', 'products.view'];
   const storePermKeys = ['dashboard.view', 'notifications.view', 'products.view', 'products.create', 'products.update', 'inventory.view', 'inventory.create', 'suppliers.view', 'suppliers.create'];
 
