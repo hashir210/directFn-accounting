@@ -63,7 +63,7 @@ export function InvoiceViewerDialog({ invoiceId, open, onOpenChange }: InvoiceVi
       filename: `${invoice.invoiceNo}.pdf`,
       image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
     };
     html2pdf().set(opt).from(invoiceRef.current).save();
   };
