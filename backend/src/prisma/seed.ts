@@ -1,13 +1,40 @@
 import prisma from '../config/db';
 import * as bcrypt from 'bcrypt';
 import { OrganizationService } from '../modules/organization/organization.service';
+import { AccountsService } from '../modules/accounts/accounts.service';
+import { JournalEntriesService } from '../modules/journal-entries/journal-entries.service';
+import { Decimal } from '@prisma/client/runtime/library';
 
 async function main() {
   console.log('[seed]: clearing existing demo data...');
   await prisma.$executeRawUnsafe(`SET FOREIGN_KEY_CHECKS=0;`);
   await prisma.notification.deleteMany({});
+  await prisma.journalLine.deleteMany({});
+  await prisma.journalEntry.deleteMany({});
+  await prisma.account.deleteMany({});
+  await prisma.income.deleteMany({});
   await prisma.invoice.deleteMany({});
   await prisma.expense.deleteMany({});
+  
+  // New Sales tables
+  await prisma.salesReturnItem.deleteMany({});
+  await prisma.salesReturn.deleteMany({});
+  await prisma.salesInvoiceItem.deleteMany({});
+  await prisma.salesInvoice.deleteMany({});
+  await prisma.salesOrderItem.deleteMany({});
+  await prisma.salesOrder.deleteMany({});
+  await prisma.couponUsage.deleteMany({});
+  await prisma.coupon.deleteMany({});
+  await prisma.discount.deleteMany({});
+
+  // New Purchase tables
+  await prisma.supplierReturnItem.deleteMany({});
+  await prisma.supplierReturn.deleteMany({});
+  await prisma.goodsReceivedItem.deleteMany({});
+  await prisma.goodsReceived.deleteMany({});
+  await prisma.purchaseOrderItem.deleteMany({});
+  await prisma.purchaseOrder.deleteMany({});
+
   await prisma.product.deleteMany({});
   await prisma.stockMovement.deleteMany({});
   await prisma.warehouse.deleteMany({});
@@ -25,7 +52,7 @@ async function main() {
   await prisma.$executeRawUnsafe(`SET FOREIGN_KEY_CHECKS=1;`);
 
   console.log('[seed]: seeding granular permissions...');
-  const modules = ['customers', 'invoices', 'expenses', 'products', 'suppliers', 'inventory', 'reports', 'settings'];
+  const modules = ['customers', 'invoices', 'expenses', 'income', 'accounting', 'products', 'suppliers', 'inventory', 'reports', 'settings', 'sales', 'purchases'];
   const actions = ['view', 'create', 'update', 'delete', 'export', 'approve'];
 
   const permissionKeys: string[] = [
@@ -132,10 +159,35 @@ async function main() {
 
   await prisma.expense.createMany({
     data: [
-      { organizationId: orgId, category: 'Hosting', description: 'Direct Hosting AWS', amount: 4800, date: new Date(y, 0, 4) },
-      { organizationId: orgId, category: 'Software', description: 'Vercel Enterprise Billing', amount: 1200, date: new Date(y, 1, 10) },
+      { organizationId: orgId, category: 'Internet', description: 'Direct Hosting AWS', amount: 4800, date: new Date(y, 0, 4) },
+      { organizationId: orgId, category: 'Office', description: 'Vercel Enterprise Billing', amount: 1200, date: new Date(y, 1, 10) },
     ],
   });
+
+  await prisma.income.createMany({
+    data: [
+      { organizationId: orgId, category: 'Services', description: 'Consulting retainer - Apex Global', amount: 15000, date: new Date(y, 0, 10), referenceNo: 'INC-001' },
+      { organizationId: orgId, category: 'Sales', description: 'Product license sales', amount: 8500, date: new Date(y, 1, 5), referenceNo: 'INC-002' },
+    ],
+  });
+
+  console.log('[seed]: seeding FinFlow HQ chart of accounts...');
+  await AccountsService.seedDefaultChart(orgId);
+  const ffCash = await AccountsService.getByCode(orgId, '1010');
+  const ffSales = await AccountsService.getByCode(orgId, '4010');
+  const ffOffice = await AccountsService.getByCode(orgId, '5010');
+  if (ffCash && ffSales && ffOffice) {
+    await JournalEntriesService.create(orgId, {
+      date: new Date(y, 0, 15).toISOString().split('T')[0],
+      description: 'Opening balance',
+      status: 'posted',
+      lines: [
+        { accountId: ffCash.id, debit: 185000, credit: 0 },
+        { accountId: ffSales.id, debit: 0, credit: 100000 },
+        { accountId: ffOffice.id, debit: 0, credit: 85000 },
+      ],
+    });
+  }
 
   await prisma.product.createMany({
     data: [
@@ -170,10 +222,26 @@ async function main() {
   const dfnStoreRole = await prisma.role.findFirst({ where: { organizationId: dfnOrgId, name: 'Store Manager' } });
 
   // Assign permissions to DirectFN roles
-  const accountantPermKeys = ['dashboard.view', 'reports.view', 'notifications.view', 'invoices.view', 'invoices.create', 'invoices.update', 'invoices.export', 'expenses.view', 'expenses.create', 'expenses.export', 'customers.view', 'suppliers.view', 'products.view'];
-  const cashierPermKeys = ['dashboard.view', 'notifications.view', 'invoices.view', 'invoices.create', 'customers.view', 'products.view'];
-  const salesPermKeys = ['dashboard.view', 'notifications.view', 'invoices.view', 'invoices.create', 'customers.view', 'customers.create', 'products.view'];
-  const storePermKeys = ['dashboard.view', 'notifications.view', 'products.view', 'products.create', 'products.update', 'inventory.view', 'inventory.create', 'suppliers.view', 'suppliers.create'];
+  const accountantPermKeys = [
+    'dashboard.view', 'reports.view', 'notifications.view', 'invoices.view', 'invoices.create', 'invoices.update', 'invoices.export',
+    'expenses.view', 'expenses.create', 'expenses.export', 'income.view', 'income.create', 'income.export',
+    'accounting.view', 'accounting.create', 'accounting.update', 'accounting.export', 'accounting.approve',
+    'customers.view', 'suppliers.view', 'products.view',
+    'sales.view', 'sales.create', 'sales.update', 'sales.delete', 'sales.export', 'sales.approve',
+    'purchases.view', 'purchases.create', 'purchases.update', 'purchases.delete', 'purchases.export', 'purchases.approve'
+  ];
+  const cashierPermKeys = [
+    'dashboard.view', 'notifications.view', 'invoices.view', 'invoices.create', 'customers.view', 'products.view',
+    'sales.view', 'sales.create'
+  ];
+  const salesPermKeys = [
+    'dashboard.view', 'notifications.view', 'invoices.view', 'invoices.create', 'customers.view', 'customers.create', 'products.view',
+    'sales.view', 'sales.create', 'sales.update'
+  ];
+  const storePermKeys = [
+    'dashboard.view', 'notifications.view', 'products.view', 'products.create', 'products.update', 'inventory.view', 'inventory.create', 'suppliers.view', 'suppliers.create',
+    'purchases.view', 'purchases.create', 'purchases.update'
+  ];
 
   if (dfnAccountantRole) { for (const k of accountantPermKeys) { const p = permMap.get(k); if (p) await prisma.rolePermission.create({ data: { roleId: dfnAccountantRole.id, permissionId: p.id } }); } }
   if (dfnCashierRole) { for (const k of cashierPermKeys) { const p = permMap.get(k); if (p) await prisma.rolePermission.create({ data: { roleId: dfnCashierRole.id, permissionId: p.id } }); } }
@@ -271,12 +339,40 @@ async function main() {
   console.log('[seed]: seeding DirectFN Expenses...');
   await prisma.expense.createMany({
     data: [
-      { organizationId: dfnOrgId, category: 'Hosting', description: 'AWS Financial Cloud High-Availability Cluster', amount: 12500, date: new Date(y, 0, 5) },
-      { organizationId: dfnOrgId, category: 'Rent', description: 'Dubai Silicon Oasis Commercial HQ Rent', amount: 8400, date: new Date(y, 0, 15) },
-      { organizationId: dfnOrgId, category: 'Salaries', description: 'Sales & Financial Engineering Payroll', amount: 42000, date: new Date(y, 1, 1) },
-      { organizationId: dfnOrgId, category: 'Software', description: 'Bloomberg Financial Data Feed Subscription', amount: 6200, date: new Date(y, 1, 12) },
+      { organizationId: dfnOrgId, category: 'Internet', description: 'AWS Financial Cloud High-Availability Cluster', amount: 12500, date: new Date(y, 0, 5) },
+      { organizationId: dfnOrgId, category: 'Office', description: 'Dubai Silicon Oasis Commercial HQ Rent', amount: 8400, date: new Date(y, 0, 15) },
+      { organizationId: dfnOrgId, category: 'Salary', description: 'Sales & Financial Engineering Payroll', amount: 42000, date: new Date(y, 1, 1) },
+      { organizationId: dfnOrgId, category: 'Utilities', description: 'Bloomberg Financial Data Feed Subscription', amount: 6200, date: new Date(y, 1, 12) },
     ],
   });
+
+  await prisma.income.createMany({
+    data: [
+      { organizationId: dfnOrgId, category: 'Sales', description: 'Terminal license sales - Tadawul', amount: 48500, date: new Date(y, 0, 20), referenceNo: 'DFN-INC-001' },
+      { organizationId: dfnOrgId, category: 'Services', description: 'Implementation services - ADX', amount: 22000, date: new Date(y, 1, 8), referenceNo: 'DFN-INC-002' },
+      { organizationId: dfnOrgId, category: 'Investment', description: 'Treasury investment yield', amount: 3500, date: new Date(y, 1, 28), referenceNo: 'DFN-INC-003' },
+    ],
+  });
+
+  console.log('[seed]: seeding DirectFN chart of accounts...');
+  await AccountsService.seedDefaultChart(dfnOrgId);
+  const dfnCash = await AccountsService.getByCode(dfnOrgId, '1010');
+  const dfnSales = await AccountsService.getByCode(dfnOrgId, '4010');
+  const dfnServices = await AccountsService.getByCode(dfnOrgId, '4020');
+  const dfnSalary = await AccountsService.getByCode(dfnOrgId, '5020');
+  if (dfnCash && dfnSales && dfnServices && dfnSalary) {
+    await JournalEntriesService.create(dfnOrgId, {
+      date: new Date(y, 0, 1).toISOString().split('T')[0],
+      description: 'Opening balances',
+      status: 'posted',
+      lines: [
+        { accountId: dfnCash.id, debit: 450000, credit: 0 },
+        { accountId: dfnSales.id, debit: 0, credit: 300000 },
+        { accountId: dfnServices.id, debit: 0, credit: 100000 },
+        { accountId: dfnSalary.id, debit: 50000, credit: 0 },
+      ],
+    });
+  }
 
   // Seed DirectFN Bank Accounts
   console.log('[seed]: seeding DirectFN Bank Accounts...');
@@ -287,14 +383,108 @@ async function main() {
     ],
   });
 
-  // Seed DirectFN Notifications
-  console.log('[seed]: seeding DirectFN Notifications...');
-  await prisma.notification.createMany({
-    data: [
-      { organizationId: dfnOrgId, userId: dfnOwner.id, title: 'Invoice Overdue Alert', message: 'Abu Dhabi Securities Exchange (ADX) invoice DFN-INV-2026-003 ($14,800) is overdue.', type: 'warning' },
-      { organizationId: dfnOrgId, userId: dfnOwner.id, title: 'Payment Received', message: 'Saudi Tadawul Group completed payment of $48,500.00 for DFN-INV-2026-001.', type: 'success' },
-      { organizationId: dfnOrgId, userId: dfnOwner.id, title: 'Low Stock Alert', message: 'DirectFN Mobile Trading Dongle is out of stock.', type: 'warning' },
-    ],
+  // Seed DirectFN Discounts & Coupons
+  console.log('[seed]: seeding DirectFN Discounts & Coupons...');
+  const discount1 = await prisma.discount.create({
+    data: {
+      organizationId: dfnOrgId,
+      name: 'Summer Sale 10%',
+      type: 'percentage',
+      value: new Decimal(10),
+      minOrderAmount: new Decimal(100),
+      isActive: true,
+    }
+  });
+
+  const coupon1 = await prisma.coupon.create({
+    data: {
+      organizationId: dfnOrgId,
+      code: 'WELCOME50',
+      discountType: 'fixed',
+      discountValue: new Decimal(50),
+      minOrderAmount: new Decimal(200),
+      startDate: new Date(y, 0, 1),
+      endDate: new Date(y, 11, 31),
+      isActive: true,
+      usageLimit: 100,
+    }
+  });
+
+  // Seed DirectFN Sales Orders
+  console.log('[seed]: seeding DirectFN Sales Orders...');
+  const so1 = await prisma.salesOrder.create({
+    data: {
+      organizationId: dfnOrgId,
+      orderNo: 'SO-2026-0001',
+      customerId: tadawul.id,
+      subtotal: new Decimal(1998.00),
+      discountAmount: new Decimal(199.80),
+      taxAmount: new Decimal(0.00),
+      totalAmount: new Decimal(1798.20),
+      status: 'Confirmed',
+      discountId: discount1.id,
+      notes: 'Please expedite delivery.',
+      items: {
+        create: [
+          { productId: p1.id, quantity: 2, unitPrice: new Decimal(999.00), discount: new Decimal(0.00), taxRate: new Decimal(0.00), lineTotal: new Decimal(1998.00) }
+        ]
+      }
+    }
+  });
+
+  const so2 = await prisma.salesOrder.create({
+    data: {
+      organizationId: dfnOrgId,
+      orderNo: 'SO-2026-0002',
+      customerId: dfm.id,
+      subtotal: new Decimal(650.00),
+      discountAmount: new Decimal(50.00),
+      taxAmount: new Decimal(0.00),
+      totalAmount: new Decimal(600.00),
+      status: 'Draft',
+      couponId: coupon1.id,
+      items: {
+        create: [
+          { productId: p2.id, quantity: 1, unitPrice: new Decimal(650.00), discount: new Decimal(0.00), taxRate: new Decimal(0.00), lineTotal: new Decimal(650.00) }
+        ]
+      }
+    }
+  });
+
+  // Seed DirectFN Purchase Orders
+  console.log('[seed]: seeding DirectFN Purchase Orders...');
+  await prisma.purchaseOrder.create({
+    data: {
+      organizationId: dfnOrgId,
+      orderNo: 'PO-2026-0001',
+      supplierId: oracle.id,
+      subtotal: new Decimal(900.00),
+      taxAmount: new Decimal(0.00),
+      totalAmount: new Decimal(900.00),
+      status: 'Sent',
+      items: {
+        create: [
+          { productId: p1.id, quantity: 2, unitPrice: new Decimal(450.00), lineTotal: new Decimal(900.00) }
+        ]
+      }
+    }
+  });
+
+  await prisma.purchaseOrder.create({
+    data: {
+      organizationId: dfnOrgId,
+      orderNo: 'PO-2026-0002',
+      supplierId: cisco.id,
+      subtotal: new Decimal(320.00),
+      taxAmount: new Decimal(0.00),
+      totalAmount: new Decimal(320.00),
+      status: 'Draft',
+      items: {
+        create: [
+          { productId: p2.id, quantity: 1, unitPrice: new Decimal(320.00), lineTotal: new Decimal(320.00) }
+        ]
+      }
+    }
   });
 
   console.log('[seed]: completed successfully. Full fake data seeded for DirectFN Trading workspace.');

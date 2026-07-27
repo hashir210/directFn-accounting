@@ -15,6 +15,16 @@ import customersRoutes from './modules/customers/customers.routes';
 import suppliersRoutes from './modules/suppliers/suppliers.routes';
 import productsRoutes from './modules/products/products.routes';
 import inventoryRoutes from './modules/inventory/inventory.routes';
+import salesOrdersRoutes from './modules/sales-orders/sales-orders.routes';
+import salesReturnsRoutes from './modules/sales-returns/sales-returns.routes';
+import discountsRoutes from './modules/discounts/discounts.routes';
+import couponsRoutes from './modules/coupons/coupons.routes';
+import purchaseOrdersRoutes from './modules/purchase-orders/purchase-orders.routes';
+import supplierReturnsRoutes from './modules/supplier-returns/supplier-returns.routes';
+import accountsRoutes from './modules/accounts/accounts.routes';
+import journalEntriesRoutes from './modules/journal-entries/journal-entries.routes';
+import accountingRoutes from './modules/accounting/accounting.routes';
+import incomeRoutes from './modules/income/income.routes';
 import logger from './utils/logger';
 
 const app = express();
@@ -51,6 +61,22 @@ app.use('/api/v1/customers', customersRoutes);
 app.use('/api/v1/suppliers', suppliersRoutes);
 app.use('/api/v1/products', productsRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
+
+// Sales Module
+app.use('/api/v1/sales-orders', salesOrdersRoutes);
+app.use('/api/v1/sales-returns', salesReturnsRoutes);
+app.use('/api/v1/discounts', discountsRoutes);
+app.use('/api/v1/coupons', couponsRoutes);
+
+// Purchase Module
+app.use('/api/v1/purchase-orders', purchaseOrdersRoutes);
+app.use('/api/v1/supplier-returns', supplierReturnsRoutes);
+
+// Accounting Module
+app.use('/api/v1/accounts', accountsRoutes);
+app.use('/api/v1/journal-entries', journalEntriesRoutes);
+app.use('/api/v1/accounting', accountingRoutes);
+app.use('/api/v1/income', incomeRoutes);
 
 // Centralized Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

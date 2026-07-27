@@ -30,6 +30,14 @@ import {
   Shield,
   Lock,
   Monitor,
+  ShoppingCart,
+  RotateCcw,
+  Percent,
+  Ticket,
+  ClipboardList,
+  PackageCheck,
+  FileText,
+  Landmark,
 } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
@@ -162,12 +170,16 @@ export default function DashboardLayout({
     if (normalized === '' || normalized === '/') return 'dashboard';
     if (normalized.startsWith('/invoices')) return 'invoices';
     if (normalized.startsWith('/expenses')) return 'expenses';
+    if (normalized.startsWith('/income')) return 'income';
+    if (normalized.startsWith('/accounting')) return 'accounting';
     if (normalized.startsWith('/payments')) return 'payments';
     if (normalized.startsWith('/company')) return 'company';
     if (normalized.startsWith('/customers')) return 'customers';
     if (normalized.startsWith('/suppliers')) return 'suppliers';
     if (normalized.startsWith('/products')) return 'products';
     if (normalized.startsWith('/inventory')) return 'inventory';
+    if (normalized.startsWith('/sales')) return 'sales';
+    if (normalized.startsWith('/purchases')) return 'purchases';
     if (normalized.startsWith('/notifications')) return 'notifications';
     if (normalized.startsWith('/integrations')) return 'integrations';
     if (normalized.startsWith('/inbox')) return 'inbox';
@@ -205,11 +217,38 @@ export default function DashboardLayout({
 
   const financeItems = [
     { href: "/dashboard/invoices", label: "Invoices", icon: Receipt, badge: 3, key: 'invoices' },
+    { href: "/dashboard/income", label: "Income", icon: TrendingUp, key: 'income' },
     { href: "/dashboard/expenses", label: "Expenses", icon: CreditCard, key: 'expenses' },
+    { href: "/dashboard/accounting", label: "Accounting", icon: Landmark, key: 'accounting' },
     { href: "/dashboard/payments", label: "Payments", icon: TrendingUp, badge: 7, key: 'payments' },
   ].filter(i => isScreenAllowed(i.key));
 
-  const tenantOnlyKeys = ['customers', 'suppliers', 'products', 'inventory'];
+  const tenantOnlyKeys = ['customers', 'suppliers', 'products', 'inventory', 'sales', 'purchases'];
+
+  const salesItems = [
+    { href: "/dashboard/sales/pos", label: "POS", icon: Monitor, key: 'sales', permission: 'sales.view' },
+    { href: "/dashboard/sales", label: "Sales Orders", icon: ShoppingCart, key: 'sales', permission: 'sales.view' },
+    { href: "/dashboard/sales/returns", label: "Returns", icon: RotateCcw, key: 'sales', permission: 'sales.view' },
+    { href: "/dashboard/sales/discounts", label: "Discounts", icon: Percent, key: 'sales', permission: 'sales.view' },
+    { href: "/dashboard/sales/coupons", label: "Coupons", icon: Ticket, key: 'sales', permission: 'sales.view' },
+  ].filter(i => {
+    if (!isScreenAllowed(i.key)) return false;
+    if (user?.isPlatformOrg) return false;
+    if (!i.permission || hasPermission(i.permission)) return true;
+    return false;
+  });
+
+  const purchaseItems = [
+    { href: "/dashboard/purchases", label: "Purchase Orders", icon: ClipboardList, key: 'purchases', permission: 'purchases.view' },
+    { href: "/dashboard/purchases/goods-received", label: "Goods Received", icon: PackageCheck, key: 'purchases', permission: 'purchases.view' },
+    { href: "/dashboard/purchases/invoices", label: "Purchase Invoice", icon: FileText, key: 'purchases', permission: 'purchases.view' },
+    { href: "/dashboard/purchases/returns", label: "Supplier Returns", icon: RotateCcw, key: 'purchases', permission: 'purchases.view' },
+  ].filter(i => {
+    if (!isScreenAllowed(i.key)) return false;
+    if (user?.isPlatformOrg) return false;
+    if (!i.permission || hasPermission(i.permission)) return true;
+    return false;
+  });
 
   const managementItems = [
     { href: "/dashboard/company", label: "Company", icon: Building2, key: 'company', permission: 'settings.view' },
@@ -326,6 +365,50 @@ export default function DashboardLayout({
               <SidebarGroupContent>
                 <SidebarMenu>
                   {managementItems.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton render={<Link href={item.href} />} isActive={isActive} tooltip={item.label}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
+          {/* Sales Section */}
+          {salesItems.length > 0 && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Sales Module</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {salesItems.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton render={<Link href={item.href} />} isActive={isActive} tooltip={item.label}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
+          {/* Purchases Section */}
+          {purchaseItems.length > 0 && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Purchase Module</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {purchaseItems.map((item) => {
                     const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                     return (
                       <SidebarMenuItem key={item.href}>
