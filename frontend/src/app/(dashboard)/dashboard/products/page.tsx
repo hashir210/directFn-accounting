@@ -58,21 +58,8 @@ export default function ProductManagementPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [openAdd, setOpenAdd] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  const [newProd, setNewProd] = useState({
-    name: '',
-    sku: '',
-    barcode: '',
-    category: 'Hardware',
-    unit: 'Unit',
-    purchasePrice: '0',
-    sellingPrice: '0',
-    imageUrl: '',
-    stockQuantity: '10',
-  });
 
   // Edit state
   const [editProd, setEditProd] = useState<{
@@ -100,36 +87,10 @@ export default function ProductManagementPage() {
 
   useEffect(() => {
     fetchProducts();
+    window.addEventListener('refresh-products', fetchProducts);
+    return () => window.removeEventListener('refresh-products', fetchProducts);
   }, [fetchProducts]);
 
-  const handleCreateProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
-    try {
-      await apiFetch('/api/v1/products', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: newProd.name,
-          sku: newProd.sku || `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
-          barcode: newProd.barcode || undefined,
-          category: newProd.category || undefined,
-          unit: newProd.unit,
-          purchasePrice: parseFloat(newProd.purchasePrice) || 0,
-          sellingPrice: parseFloat(newProd.sellingPrice) || 0,
-          imageUrl: newProd.imageUrl || undefined,
-          stockQuantity: parseInt(newProd.stockQuantity) || 0,
-        }),
-      });
-      setOpenAdd(false);
-      setNewProd({ name: '', sku: '', barcode: '', category: 'Hardware', unit: 'Unit', purchasePrice: '0', sellingPrice: '0', imageUrl: '', stockQuantity: '10' });
-      fetchProducts();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create product');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const openEditDialog = (p: Product) => {
     setEditProd({
@@ -239,97 +200,9 @@ export default function ProductManagementPage() {
             Export Catalog
           </Button>
           {canEdit && (
-          <Dialog open={openAdd} onOpenChange={setOpenAdd}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="cursor-pointer">
-                <Plus className="h-4 w-4 mr-2" /> Add Product
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <form onSubmit={handleCreateProduct}>
-                <DialogHeader>
-                  <DialogTitle>Add Product to Catalog</DialogTitle>
-                  <DialogDescription>Configure pricing, SKU, barcode, image URL, and stock levels.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Product Name</Label>
-                    <Input
-                      required
-                      placeholder="e.g. POS Smart Terminal V2"
-                      value={newProd.name}
-                      onChange={(e) => setNewProd({ ...newProd, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>SKU</Label>
-                      <Input
-                        placeholder="FF-POS-V2"
-                        value={newProd.sku}
-                        onChange={(e) => setNewProd({ ...newProd, sku: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Barcode</Label>
-                      <Input
-                        placeholder="890123456789"
-                        value={newProd.barcode}
-                        onChange={(e) => setNewProd({ ...newProd, barcode: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Purchase Cost ($)</Label>
-                      <Input
-                        type="number"
-                        placeholder="220.00"
-                        value={newProd.purchasePrice}
-                        onChange={(e) => setNewProd({ ...newProd, purchasePrice: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Selling Price ($)</Label>
-                      <Input
-                        type="number"
-                        required
-                        placeholder="349.00"
-                        value={newProd.sellingPrice}
-                        onChange={(e) => setNewProd({ ...newProd, sellingPrice: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Product Image URL</Label>
-                    <Input
-                      placeholder="https://images.unsplash.com/photo-1556742049-0a6792357321"
-                      value={newProd.imageUrl}
-                      onChange={(e) => setNewProd({ ...newProd, imageUrl: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Initial Stock Quantity</Label>
-                    <Input
-                      type="number"
-                      placeholder="10"
-                      value={newProd.stockQuantity}
-                      onChange={(e) => setNewProd({ ...newProd, stockQuantity: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                    Save Product
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+            <Button size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-product-modal'))}>
+              <Plus className="h-4 w-4 mr-2" /> Add Product
+            </Button>
           )}
         </div>
       </div>

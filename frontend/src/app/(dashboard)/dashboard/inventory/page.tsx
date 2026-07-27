@@ -69,17 +69,8 @@ export default function InventoryManagementPage() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [openAdd, setOpenAdd] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  const [newMov, setNewMov] = useState({
-    type: 'Stock In' as StockMovement['type'],
-    sku: '',
-    itemName: '',
-    quantity: 1,
-    warehouse: 'Main HQ Warehouse',
-  });
 
   // Edit state
   const [editMov, setEditMov] = useState<{
@@ -110,32 +101,10 @@ export default function InventoryManagementPage() {
 
   useEffect(() => {
     fetchData();
+    window.addEventListener('refresh-inventory', fetchData);
+    return () => window.removeEventListener('refresh-inventory', fetchData);
   }, [fetchData]);
 
-  const handleRecordMovement = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
-    try {
-      await apiFetch('/api/v1/inventory', {
-        method: 'POST',
-        body: JSON.stringify({
-          type: newMov.type,
-          sku: newMov.sku || 'SKU-GENERIC',
-          itemName: newMov.itemName || 'Stock Item',
-          quantity: Number(newMov.quantity),
-          warehouse: newMov.warehouse,
-        }),
-      });
-      setOpenAdd(false);
-      setNewMov({ type: 'Stock In', sku: '', itemName: '', quantity: 1, warehouse: warehouses[0]?.name || 'Main HQ Warehouse' });
-      fetchData();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to record stock movement');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const openEditDialog = (m: StockMovement) => {
     setEditMov({
@@ -236,104 +205,9 @@ export default function InventoryManagementPage() {
             Stock Audit Log
           </Button>
           {canEdit && (
-          <Dialog open={openAdd} onOpenChange={setOpenAdd}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="cursor-pointer">
-                <Plus className="h-4 w-4 mr-2" /> Record Movement
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <form onSubmit={handleRecordMovement}>
-                <DialogHeader>
-                  <DialogTitle>Record Stock Movement</DialogTitle>
-                  <DialogDescription>Add stock in, stock out, transfers, or damaged stock write-offs.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Movement Type</Label>
-                    <Select
-                      value={newMov.type}
-                      onValueChange={(val) => setNewMov({ ...newMov, type: val as StockMovement['type'] })}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Stock In">Stock In (Purchase/Return)</SelectItem>
-                        <SelectItem value="Stock Out">Stock Out (Sale/Dispatch)</SelectItem>
-                        <SelectItem value="Transfer">Inter-Warehouse Transfer</SelectItem>
-                        <SelectItem value="Damaged">Damaged / Write-Off</SelectItem>
-                        <SelectItem value="Adjustment">Stock Adjustment</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Item Name</Label>
-                    <Input
-                      required
-                      placeholder="e.g. Thermal Receipt Paper"
-                      value={newMov.itemName}
-                      onChange={(e) => setNewMov({ ...newMov, itemName: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>SKU</Label>
-                      <Input
-                        required
-                        placeholder="FF-TRP-80"
-                        value={newMov.sku}
-                        onChange={(e) => setNewMov({ ...newMov, sku: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Quantity</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={newMov.quantity}
-                        onChange={(e) => setNewMov({ ...newMov, quantity: Number(e.target.value) })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Target Warehouse</Label>
-                    {warehouses.length > 0 ? (
-                      <Select
-                        value={newMov.warehouse}
-                        onValueChange={(val) => setNewMov({ ...newMov, warehouse: val })}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Warehouse" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {warehouses.map((wh) => (
-                            <SelectItem key={wh.id} value={wh.name}>
-                              {wh.name} {wh.code ? `(${wh.code})` : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        value={newMov.warehouse}
-                        onChange={(e) => setNewMov({ ...newMov, warehouse: e.target.value })}
-                      />
-                    )}
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                    Submit Record
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+            <Button size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-inventory-modal'))}>
+              <Plus className="h-4 w-4 mr-2" /> Record Movement
+            </Button>
           )}
         </div>
       </div>

@@ -301,16 +301,7 @@ function TenantDashboard() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [dateFilter, setDateFilter] = useState("30");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showWidgetPanel, setShowWidgetPanel] = useState(false);
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
-
-  const [customerName, setCustomerName] = useState("");
-  const [txType, setTxType] = useState<"Invoice" | "Expense">("Invoice");
-  const [txAmount, setTxAmount] = useState("");
-  const [txStatus, setTxStatus] = useState<"Paid" | "Pending">("Pending");
-  const [txDueDate, setTxDueDate] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const { user, hasPermission } = useAuth();
 
@@ -329,9 +320,9 @@ function TenantDashboard() {
 
   useEffect(() => {
     setMounted(true);
-    const handleOpen = () => openModal();
-    window.addEventListener('open-transaction-modal', handleOpen);
-    return () => window.removeEventListener('open-transaction-modal', handleOpen);
+    const handleRefresh = () => setRefreshKey(k => k + 1);
+    window.addEventListener('refresh-transactions', handleRefresh);
+    return () => window.removeEventListener('refresh-transactions', handleRefresh);
   }, []);
 
   useEffect(() => {
@@ -435,88 +426,11 @@ function TenantDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
-
-  const openModal = () => {
-    setIsModalOpen(true);
-    setTxDueDate(new Date().toISOString().split("T")[0]);
-  };
+  }, [user, refreshKey]);
 
   const pendingRevenue = transactions.filter(t => t.type === "Invoice" && t.status !== "Paid").reduce((s, t) => s + t.amount, 0);
   const netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
   const bankBalance = totalBalance;
-
-  const handleCreateTransaction = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerName || !txAmount) return;
-    const amountNum = parseFloat(txAmount);
-    if (isNaN(amountNum) || amountNum <= 0) return;
-
-    try {
-      setIsSubmitting(true);
-      const today = new Date().toISOString().split("T")[0];
-      const payloadDate = txDueDate || today;
-      
-      const response = await apiFetch<DashboardTransactionResponse>('/api/v1/dashboard/transactions', {
-        method: 'POST',
-        body: JSON.stringify({
-          type: txType,
-          customerName,
-          amount: amountNum,
-          dueDate: payloadDate,
-          status: txStatus
-        })
-      });
-
-      const returnedId = response.data.id;
-      const returnedInvoiceNo = response.type === 'Invoice' ? response.data.invoiceNo : `EXP-${returnedId.slice(0,6)}`;
-
-      const newTx: Transaction = {
-        id: returnedId,
-        invoiceNo: returnedInvoiceNo,
-        customer: customerName,
-        type: txType,
-        date: today,
-        dueDate: payloadDate,
-        status: txStatus,
-        amount: amountNum,
-      };
-
-      setTransactions([newTx, ...transactions]);
-
-      if (txType === "Invoice") {
-        setTotalRevenue(prev => prev + amountNum);
-        setNetProfit(prev => prev + amountNum);
-        const existing = topCustomers.find(c => c.name.toLowerCase() === customerName.toLowerCase());
-        if (existing) {
-          setTopCustomers(topCustomers.map(c => c.id === existing.id ? { ...c, billing: c.billing + amountNum, salesCount: c.salesCount + 1 } : c));
-        } else {
-          const colors = ["bg-purple-500", "bg-emerald-500", "bg-blue-500", "bg-amber-500", "bg-rose-500"];
-          setTopCustomers([...topCustomers, {
-            id: `c-${Date.now()}`,
-            name: customerName,
-            email: `${customerName.toLowerCase().replace(/\s+/g, "")}@example.com`,
-            billing: amountNum,
-            salesCount: 1,
-            avatarColor: colors[Math.floor(Math.random() * colors.length)],
-          }]);
-        }
-      } else if (txType === "Expense") {
-        setTotalExpenses(prev => prev + amountNum);
-        setNetProfit(prev => prev - amountNum);
-      }
-
-      setCustomerName("");
-      setTxAmount("");
-      setTxStatus("Pending");
-      setIsModalOpen(false);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to save transaction to ledger');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const ActionIcons = ({ onEdit, onMaximize, onMore }: { onEdit?: () => void; onMaximize?: () => void; onMore?: () => void }) => (
     <CardAction>
@@ -994,105 +908,6 @@ function TenantDashboard() {
         </TabsContent>
       </Tabs>
 
-      {/* Transaction Modal - using shadcn Dialog */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Record Transaction</DialogTitle>
-            <DialogDescription>
-              Create a new invoice or expense entry in the ledger.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleCreateTransaction} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Entry Type</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={txType === "Invoice" ? "default" : "outline"}
-                  onClick={() => setTxType("Invoice")}
-                  className="cursor-pointer"
-                >
-                  Invoice (Receivable)
-                </Button>
-                <Button
-                  type="button"
-                  variant={txType === "Expense" ? "default" : "outline"}
-                  onClick={() => setTxType("Expense")}
-                  className="cursor-pointer"
-                >
-                  Expense (Payable)
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{txType === "Invoice" ? "Client Name" : "Vendor Name"}</Label>
-              <Input
-                required
-                placeholder="e.g. Stark Industries"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="h-10"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Amount (PKR)</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="number"
-                  required
-                  min="1"
-                  placeholder="5000"
-                  value={txAmount}
-                  onChange={(e) => setTxAmount(e.target.value)}
-                  className="pl-9 h-10"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Due Date</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="date"
-                  required
-                  value={txDueDate}
-                  onChange={(e) => setTxDueDate(e.target.value)}
-                  className="pl-9 h-10"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer text-sm">
-                  <input type="radio" name="status" checked={txStatus === "Paid"} onChange={() => setTxStatus("Paid")} className="accent-primary cursor-pointer h-4 w-4" />
-                  Paid
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer text-sm">
-                  <input type="radio" name="status" checked={txStatus === "Pending"} onChange={() => setTxStatus("Pending")} className="accent-primary cursor-pointer h-4 w-4" />
-                  Pending
-                </label>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" type="button" className="cursor-pointer" disabled={isSubmitting}>Cancel</Button>
-              </DialogClose>
-              <Button type="submit" className="cursor-pointer" disabled={isSubmitting}>
-                {isSubmitting ? 'Posting...' : 'Post Entry to Ledger'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

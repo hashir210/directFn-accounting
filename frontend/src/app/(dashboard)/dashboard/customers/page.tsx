@@ -71,11 +71,9 @@ export default function CustomerManagementPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [openAdd, setOpenAdd] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const [newCust, setNewCust] = useState({ name: '', email: '', phone: '', address: '', creditLimit: '10000' });
   const [selectedStatement, setSelectedStatement] = useState<CustomerStatement | null>(null);
   const [openStatement, setOpenStatement] = useState(false);
 
@@ -102,32 +100,11 @@ export default function CustomerManagementPage() {
 
   useEffect(() => {
     fetchCustomers();
+    window.addEventListener('refresh-customers', fetchCustomers);
+    return () => window.removeEventListener('refresh-customers', fetchCustomers);
   }, [fetchCustomers]);
 
-  const handleCreateCustomer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
-    try {
-      await apiFetch('/api/v1/customers', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: newCust.name,
-          email: newCust.email || undefined,
-          phone: newCust.phone || undefined,
-          address: newCust.address || undefined,
-          creditLimit: parseFloat(newCust.creditLimit) || 0,
-        }),
-      });
-      setOpenAdd(false);
-      setNewCust({ name: '', email: '', phone: '', address: '', creditLimit: '10000' });
-      fetchCustomers();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create customer');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
   const handleViewStatement = async (id: string) => {
     try {
@@ -212,71 +189,9 @@ export default function CustomerManagementPage() {
         </div>
         <div className="flex items-center gap-2">
           {canEdit && (
-          <Dialog open={openAdd} onOpenChange={setOpenAdd}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="cursor-pointer">
-                <Plus className="h-4 w-4 mr-2" /> Add Customer
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <form onSubmit={handleCreateCustomer}>
-                <DialogHeader>
-                  <DialogTitle>Add New Customer Profile</DialogTitle>
-                  <DialogDescription>
-                    Create a customer profile to track credit limits and invoices.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Customer / Company Name</Label>
-                    <Input
-                      required
-                      placeholder="e.g. Apex Global"
-                      value={newCust.name}
-                      onChange={(e) => setNewCust({ ...newCust, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Billing Email</Label>
-                      <Input
-                        type="email"
-                        placeholder="billing@apex.com"
-                        value={newCust.email}
-                        onChange={(e) => setNewCust({ ...newCust, email: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Phone Number</Label>
-                      <Input
-                        placeholder="+1 (555) 000-0000"
-                        value={newCust.phone}
-                        onChange={(e) => setNewCust({ ...newCust, phone: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Approved Credit Limit ($)</Label>
-                    <Input
-                      type="number"
-                      placeholder="10000"
-                      value={newCust.creditLimit}
-                      onChange={(e) => setNewCust({ ...newCust, creditLimit: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                    Save Customer
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+            <Button size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-customer-modal'))}>
+              <Plus className="h-4 w-4 mr-2" /> Add Customer
+            </Button>
           )}
         </div>
       </div>

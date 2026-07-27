@@ -54,14 +54,11 @@ export default function SupplierManagementPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [openAdd, setOpenAdd] = useState(false);
   const [openBillModal, setOpenBillModal] = useState(false);
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
   const [billData, setBillData] = useState({ billNo: '', amount: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  const [newSup, setNewSup] = useState({ name: '', category: '', email: '', phone: '', terms: 'Net 30' });
 
   // Edit state
   const [editSup, setEditSup] = useState<{ id: string; name: string; category: string; email: string; phone: string; terms: string } | null>(null);
@@ -86,32 +83,11 @@ export default function SupplierManagementPage() {
 
   useEffect(() => {
     fetchSuppliers();
+    window.addEventListener('refresh-suppliers', fetchSuppliers);
+    return () => window.removeEventListener('refresh-suppliers', fetchSuppliers);
   }, [fetchSuppliers]);
 
-  const handleCreateSupplier = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
-    try {
-      await apiFetch('/api/v1/suppliers', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: newSup.name,
-          category: newSup.category || undefined,
-          contactEmail: newSup.email || undefined,
-          phone: newSup.phone || undefined,
-          paymentTerms: newSup.terms,
-        }),
-      });
-      setOpenAdd(false);
-      setNewSup({ name: '', category: '', email: '', phone: '', terms: 'Net 30' });
-      fetchSuppliers();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create supplier');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
   const handleCreateBill = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -301,70 +277,9 @@ export default function SupplierManagementPage() {
           )}
 
           {canEdit && (
-          <Dialog open={openAdd} onOpenChange={setOpenAdd}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="cursor-pointer">
-                <Plus className="h-4 w-4 mr-2" /> Add Supplier
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <form onSubmit={handleCreateSupplier}>
-                <DialogHeader>
-                  <DialogTitle>Add New Supplier / Vendor</DialogTitle>
-                  <DialogDescription>
-                    Register a vendor to manage purchase bills and payable amounts.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Supplier Name</Label>
-                    <Input
-                      required
-                      placeholder="e.g. AWS Cloud"
-                      value={newSup.name}
-                      onChange={(e) => setNewSup({ ...newSup, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Category</Label>
-                      <Input
-                        placeholder="e.g. Infrastructure"
-                        value={newSup.category}
-                        onChange={(e) => setNewSup({ ...newSup, category: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Billing Email</Label>
-                      <Input
-                        type="email"
-                        placeholder="billing@vendor.com"
-                        value={newSup.email}
-                        onChange={(e) => setNewSup({ ...newSup, email: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Payment Terms</Label>
-                    <Input
-                      placeholder="Net 30"
-                      value={newSup.terms}
-                      onChange={(e) => setNewSup({ ...newSup, terms: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                    Save Vendor
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+            <Button size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-supplier-modal'))}>
+              <Plus className="h-4 w-4 mr-2" /> Add Supplier
+            </Button>
           )}
         </div>
       </div>

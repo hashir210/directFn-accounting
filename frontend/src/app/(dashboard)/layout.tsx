@@ -71,6 +71,7 @@ import { useAuth } from "@/features/auth/useAuth";
 import { apiFetch } from "@/lib/api";
 
 import { useNotifications } from "@/hooks/useNotifications";
+import { GlobalCreateModals } from "@/components/shared/GlobalCreateModals";
 
 export default function DashboardLayout({
   children,
@@ -559,13 +560,49 @@ export default function DashboardLayout({
               )}
             </div>
 
-            {/* Primary CTA — hidden if user is blocked from invoices */}
-            {isScreenAllowed('invoices') && (
-              <Button size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-transaction-modal'))}>
-                <Plus className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">New Transaction</span>
-              </Button>
-            )}
+            {/* Primary CTA — Quick Actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="cursor-pointer">
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  <span className="hidden sm:inline">Create New</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {isScreenAllowed('invoices') && (
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-transaction-modal'))}>
+                    <Receipt className="mr-2 h-4 w-4" />
+                    New Transaction
+                  </DropdownMenuItem>
+                )}
+                {isScreenAllowed('customers') && (
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-customer-modal'))}>
+                    <ContactRound className="mr-2 h-4 w-4" />
+                    Customer
+                  </DropdownMenuItem>
+                )}
+                {isScreenAllowed('suppliers') && (
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-supplier-modal'))}>
+                    <Truck className="mr-2 h-4 w-4" />
+                    Supplier
+                  </DropdownMenuItem>
+                )}
+                {isScreenAllowed('products') && (
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-product-modal'))}>
+                    <Package className="mr-2 h-4 w-4" />
+                    Product
+                  </DropdownMenuItem>
+                )}
+                {isScreenAllowed('inventory') && (
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-inventory-modal'))}>
+                    <Warehouse className="mr-2 h-4 w-4" />
+                    Inventory
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
@@ -593,6 +630,7 @@ export default function DashboardLayout({
           </div>
         </main>
       </SidebarInset>
+      <GlobalCreateModals />
     </SidebarProvider>
   );
 }
