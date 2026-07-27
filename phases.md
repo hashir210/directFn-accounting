@@ -137,7 +137,43 @@ Low Stock Alerts
 
 Warehouse Support
 
-
+9. Sales Module
+POS
+Sales Orders
+Invoice
+Returns
+Discounts
+Coupons
+10. Purchase Module
+Purchase Orders
+Goods Received
+Purchase Invoice
+Supplier Returns
+11. Accounting
+Chart of Accounts
+Assets
+Liabilities
+Equity
+Income
+Expenses
+Journal Entries
+General Ledger
+Trial Balance
+Balance Sheet
+Profit & Loss
+Cash Flow
+12. Expense Module
+Office
+Salary
+Utilities
+Fuel
+Internet
+Miscellaneous
+13. Income Module
+Sales
+Services
+Investment
+Other Income
 
 
 
