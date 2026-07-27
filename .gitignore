@@ -40,3 +40,7 @@ backend/.env
 # Prisma
 /backend/src/prisma/dev.db
 /backend/src/prisma/dev.db-journal
+
+# Screenshots
+image.png
+image copy.png
