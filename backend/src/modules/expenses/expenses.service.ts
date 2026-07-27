@@ -1,12 +1,42 @@
 import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../../config/db';
 import { NotFoundError } from '../../utils/errors';
-
-function toNumber(d: Decimal | null | undefined): number {
-  return d ? Number(d.toString()) : 0;
-}
+import { toNumber, EXPENSE_CATEGORY_ACCOUNT_CODE } from '../../utils/accounting';
+import { AccountsService } from '../accounts/accounts.service';
+import { JournalEntriesService } from '../journal-entries/journal-entries.service';
 
 export class ExpensesService {
+  static async postExpenseJournal(organizationId: string, expense: {
+    id: string;
+    category: string;
+    amount: number;
+    date: Date;
+    description: string | null;
+  }) {
+    const accountCode = EXPENSE_CATEGORY_ACCOUNT_CODE[expense.category] || '5060';
+    let expenseAccount = await AccountsService.getByCode(organizationId, accountCode);
+    let cashAccount = await AccountsService.getByCode(organizationId, '1010');
+
+    if (!expenseAccount || !cashAccount) {
+      await AccountsService.seedDefaultChart(organizationId);
+      expenseAccount = await AccountsService.getByCode(organizationId, accountCode);
+      cashAccount = await AccountsService.getByCode(organizationId, '1010');
+    }
+    if (!expenseAccount || !cashAccount) return;
+
+    await JournalEntriesService.create(organizationId, {
+      date: expense.date.toISOString().split('T')[0],
+      description: expense.description || `${expense.category} expense`,
+      status: 'posted',
+      referenceType: 'expense',
+      referenceId: expense.id,
+      lines: [
+        { accountId: expenseAccount.id, debit: expense.amount, credit: 0 },
+        { accountId: cashAccount.id, debit: 0, credit: expense.amount },
+      ],
+    });
+  }
+
   static async list(organizationId: string, options: {
     page?: number;
     limit?: number;
@@ -96,6 +126,14 @@ export class ExpensesService {
       },
     });
 
+    await ExpensesService.postExpenseJournal(organizationId, {
+      id: expense.id,
+      category: expense.category,
+      amount: data.amount,
+      date: expense.date,
+      description: expense.description,
+    });
+
     return {
       id: expense.id,
       vendor: data.vendor,
@@ -136,6 +174,20 @@ export class ExpensesService {
       data: updateData,
     });
 
+    // Expenses are represented by posted, system-generated journal entries.
+    // Replace that entry when the source record changes so reports never retain
+    // a stale amount, date, or category.
+    await prisma.journalEntry.deleteMany({
+      where: { organizationId, referenceType: 'expense', referenceId: id },
+    });
+    await ExpensesService.postExpenseJournal(organizationId, {
+      id: expense.id,
+      category: expense.category,
+      amount: toNumber(expense.amount),
+      date: expense.date,
+      description: expense.description,
+    });
+
     return {
       id: expense.id,
       vendor: data.vendor || (expense.description?.split(' - ')[0] || 'Unknown'),
@@ -153,7 +205,12 @@ export class ExpensesService {
     });
     if (!existing) throw new NotFoundError('Expense not found');
 
-    await prisma.expense.delete({ where: { id } });
+    await prisma.$transaction([
+      prisma.journalEntry.deleteMany({
+        where: { organizationId, referenceType: 'expense', referenceId: id },
+      }),
+      prisma.expense.delete({ where: { id } }),
+    ]);
     return { message: 'Expense deleted successfully' };
   }
 }

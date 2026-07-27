@@ -4,6 +4,9 @@ dotenv.config();
 import prisma from '../config/db';
 import * as bcrypt from 'bcrypt';
 import { OrganizationService } from '../modules/organization/organization.service';
+import { AccountsService } from '../modules/accounts/accounts.service';
+import { JournalEntriesService } from '../modules/journal-entries/journal-entries.service';
+import { Decimal } from '@prisma/client/runtime/library';
 
 async function main() {
   console.log('[seed]: clearing existing demo data...');

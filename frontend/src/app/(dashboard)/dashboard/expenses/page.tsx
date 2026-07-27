@@ -41,7 +41,7 @@ interface ExpenseItem {
   status: string;
 }
 
-const CATEGORIES = ['all', 'salaries', 'rent', 'software', 'utilities', 'supplies'] as const;
+const CATEGORIES = ['all', 'Office', 'Salary', 'Utilities', 'Fuel', 'Internet', 'Miscellaneous'] as const;
 
 export default function ExpensesPage() {
   const { hasPermission } = useAuth();
@@ -53,7 +53,7 @@ export default function ExpensesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const [vendor, setVendor] = useState('');
-  const [category, setCategory] = useState('Software');
+  const [category, setCategory] = useState('Office');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState('');
@@ -177,11 +177,12 @@ export default function ExpensesPage() {
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
                     >
-                      <option value="Software">Software & IT</option>
-                      <option value="Salaries">Payroll & Salaries</option>
-                      <option value="Rent">Office Rent</option>
-                      <option value="Utilities">Utilities & HVAC</option>
-                      <option value="Supplies">Office Supplies</option>
+                      <option value="Office">Office</option>
+                      <option value="Salary">Salary</option>
+                      <option value="Utilities">Utilities</option>
+                      <option value="Fuel">Fuel</option>
+                      <option value="Internet">Internet</option>
+                      <option value="Miscellaneous">Miscellaneous</option>
                     </select>
                   </div>
                   <div className="space-y-2">
