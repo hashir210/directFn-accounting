@@ -71,6 +71,22 @@ app.post('/api/v1/contact', (req: Request, res: Response) => {
   res.status(200).json({ success: true, message: 'Thank you for reaching out. We will contact you soon.' });
 });
 
+// Sales Module
+app.use('/api/v1/sales-orders', salesOrdersRoutes);
+app.use('/api/v1/sales-returns', salesReturnsRoutes);
+app.use('/api/v1/discounts', discountsRoutes);
+app.use('/api/v1/coupons', couponsRoutes);
+
+// Purchase Module
+app.use('/api/v1/purchase-orders', purchaseOrdersRoutes);
+app.use('/api/v1/supplier-returns', supplierReturnsRoutes);
+
+// Accounting Module
+app.use('/api/v1/accounts', accountsRoutes);
+app.use('/api/v1/journal-entries', journalEntriesRoutes);
+app.use('/api/v1/accounting', accountingRoutes);
+app.use('/api/v1/income', incomeRoutes);
+
 // Centralized Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   const status = err.statusCode || err.status || 500;
