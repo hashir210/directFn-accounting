@@ -124,6 +124,68 @@ This document tracks all implemented phases, module scopes, and feature checklis
 
 ---
 
+## Phase 9 — Sales Module
+
+**Scope:**
+- [ ] POS
+- [ ] Sales Orders
+- [ ] Invoice
+- [ ] Returns
+- [ ] Discounts
+- [ ] Coupons
+
+---
+
+## Phase 10 — Purchase Module
+
+**Scope:**
+- [ ] Purchase Orders
+- [ ] Goods Received
+- [ ] Purchase Invoice
+- [ ] Supplier Returns
+
+---
+
+## Phase 11 — Accounting
+
+**Scope:**
+- [ ] Chart of Accounts
+- [ ] Assets
+- [ ] Liabilities
+- [ ] Equity
+- [ ] Income
+- [ ] Expenses
+- [ ] Journal Entries
+- [ ] General Ledger
+- [ ] Trial Balance
+- [ ] Balance Sheet
+- [ ] Profit & Loss
+- [ ] Cash Flow
+
+---
+
+## Phase 12 — Expense Module
+
+**Scope:**
+- [ ] Office
+- [ ] Salary
+- [ ] Utilities
+- [ ] Fuel
+- [ ] Internet
+- [ ] Miscellaneous
+
+---
+
+## Phase 13 — Income Module
+
+**Scope:**
+- [ ] Sales
+- [ ] Services
+- [ ] Investment
+- [ ] Other Income
+
+---
+
 ## Phase 14 — Payments
 
 **Scope:**
