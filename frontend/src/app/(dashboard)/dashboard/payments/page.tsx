@@ -348,7 +348,7 @@ export default function PaymentsPage() {
               <div className="space-y-2">
                 <Label htmlFor="type">Type</Label>
                 <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val })}>
-                  <SelectTrigger id="type"><SelectValue placeholder="Select type" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Inbound">Inbound (Receive)</SelectItem>
                     <SelectItem value="Outbound">Outbound (Send)</SelectItem>
@@ -358,7 +358,7 @@ export default function PaymentsPage() {
               <div className="space-y-2">
                 <Label htmlFor="method">Method</Label>
                 <Select value={formData.method} onValueChange={(val) => setFormData({ ...formData, method: val })}>
-                  <SelectTrigger id="method"><SelectValue placeholder="Select method" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Bank">Bank Transfer</SelectItem>
                     <SelectItem value="Cash">Cash</SelectItem>
@@ -385,7 +385,7 @@ export default function PaymentsPage() {
             <div className="space-y-2">
               <Label htmlFor="bankAccount">Bank Account (Optional)</Label>
               <Select value={formData.bankAccountId} onValueChange={(val) => setFormData({ ...formData, bankAccountId: val })}>
-                <SelectTrigger id="bankAccount"><SelectValue placeholder="Select bank account" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">-- Do not link --</SelectItem>
                   {bankAccounts.map(b => (

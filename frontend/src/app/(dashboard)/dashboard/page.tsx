@@ -302,6 +302,8 @@ function TenantDashboard() {
   const [mounted, setMounted] = useState(false);
   const [dateFilter, setDateFilter] = useState("30");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [showWidgetPanel, setShowWidgetPanel] = useState(false);
 
   const { user, hasPermission } = useAuth();
 
@@ -314,6 +316,9 @@ function TenantDashboard() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [netProfit, setNetProfit] = useState(0);
   const [totalBalance, setTotalBalance] = useState(0);
+  const [revenueTarget, setRevenueTarget] = useState(0);
+  const [expenseBudget, setExpenseBudget] = useState(0);
+  const [profitGoal, setProfitGoal] = useState(0);
   const [bankAccounts, setBankAccounts] = useState<{ id: string; name: string; bankName: string; balance: number; currency: string }[]>([]);
   const [cashFlowData, setCashFlowData] = useState<{ name: string; Inflow: number; Outflow: number }[]>([]);
   const [salesExpensesData, setSalesExpensesData] = useState<{ name: string; Sales: number; Expenses: number }[]>([]);
@@ -337,6 +342,7 @@ function TenantDashboard() {
           totalExpenses: number;
           netProfit: number;
           cashFlow: { month: number; revenue: number; expenses: number; net: number }[];
+          targets?: { revenueTarget: number; expenseBudget: number; profitGoal: number; };
         }>(`/api/v1/dashboard/summary?year=${year}`);
         const bank = await apiFetch<{ totalBalance: number; accounts: { id: string; name: string; bankName: string; balance: number; currency: string }[] }>(`/api/v1/dashboard/bank-balance`);
         const pending = await apiFetch<{ data: PendingInvoice[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(`/api/v1/dashboard/pending-payments?page=1&limit=10`);
@@ -352,6 +358,11 @@ function TenantDashboard() {
         setTotalRevenue(summary.totalRevenue);
         setTotalExpenses(summary.totalExpenses);
         setNetProfit(summary.netProfit);
+        if (summary.targets) {
+          setRevenueTarget(summary.targets.revenueTarget || 0);
+          setExpenseBudget(summary.targets.expenseBudget || 0);
+          setProfitGoal(summary.targets.profitGoal || 0);
+        }
         setTotalBalance(bank.totalBalance);
         setBankAccounts(bank.accounts);
         setCashFlowData(
@@ -442,6 +453,24 @@ function TenantDashboard() {
     </CardAction>
   );
 
+  const handleUpdateTarget = async (field: string, promptText: string, currentValue: number) => {
+    const val = prompt(promptText, currentValue.toString());
+    if (!val) return;
+    const num = parseFloat(val);
+    if (isNaN(num)) return;
+    try {
+      await apiFetch('/api/v1/organizations/current', {
+        method: 'PATCH',
+        body: JSON.stringify({ [field]: num }),
+      });
+      if (field === 'revenueTarget') setRevenueTarget(num);
+      if (field === 'expenseBudget') setExpenseBudget(num);
+      if (field === 'profitGoal') setProfitGoal(num);
+    } catch (err) {
+      console.error('Failed to update target', err);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-10">
       {/* Title Header */}
@@ -497,9 +526,9 @@ function TenantDashboard() {
           <CardHeader>
             <CardDescription>Corporate Revenue</CardDescription>
             <ActionIcons
-              onEdit={() => { const t = prompt('Set monthly revenue target:'); if (t) console.log('Revenue target:', t); }}
+              onEdit={() => handleUpdateTarget('revenueTarget', 'Set annual revenue target:', revenueTarget)}
               onMaximize={() => setShowFilterPanel(!showFilterPanel)}
-              onMore={() => console.log('Revenue details')}
+              onMore={() => router.push('/dashboard/reports/revenue')}
             />
           </CardHeader>
           <CardContent>
@@ -508,11 +537,10 @@ function TenantDashboard() {
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
               <Badge variant="secondary" className="gap-1 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400">
-                <ArrowUpRight className="h-3 w-3" /> 12.4%
+                <ArrowUpRight className="h-3 w-3" /> Target: PKR {revenueTarget.toLocaleString()}
               </Badge>
-              <span className="text-muted-foreground">vs last {dateFilter}d</span>
             </div>
-            <Progress value={75} className="mt-3 h-1" />
+            <Progress value={revenueTarget > 0 ? (totalRevenue / revenueTarget) * 100 : 0} className="mt-3 h-1" />
           </CardContent>
         </Card>
 
@@ -521,7 +549,7 @@ function TenantDashboard() {
           <CardHeader>
             <CardDescription>Business Expenses</CardDescription>
             <ActionIcons
-              onEdit={() => { const t = prompt('Set monthly expense budget:'); if (t) console.log('Expense budget:', t); }}
+              onEdit={() => handleUpdateTarget('expenseBudget', 'Set annual expense budget:', expenseBudget)}
               onMaximize={() => setShowFilterPanel(!showFilterPanel)}
               onMore={() => router.push('/dashboard/expenses')}
             />
@@ -532,20 +560,19 @@ function TenantDashboard() {
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
               <Badge variant="secondary" className="gap-1 text-rose-600 bg-rose-50 dark:bg-rose-950/20 dark:text-rose-400">
-                <ArrowDownRight className="h-3 w-3" /> 3.2%
+                Budget: PKR {expenseBudget.toLocaleString()}
               </Badge>
-              <span className="text-muted-foreground">vs last {dateFilter}d</span>
             </div>
-            <Progress value={35} className="mt-3 h-1" />
+            <Progress value={expenseBudget > 0 ? (totalExpenses / expenseBudget) * 100 : 0} className="mt-3 h-1" />
           </CardContent>
         </Card>
 
         {/* Net Profit */}
         <Card>
           <CardHeader>
-            <CardDescription>Net Profit / Margin</CardDescription>
+            <CardDescription>Net Profit</CardDescription>
             <ActionIcons
-              onEdit={() => { const t = prompt('Set net profit goal:'); if (t) console.log('Profit goal:', t); }}
+              onEdit={() => handleUpdateTarget('profitGoal', 'Set annual net profit goal:', profitGoal)}
               onMaximize={() => setShowFilterPanel(!showFilterPanel)}
               onMore={() => router.push('/dashboard/reports/profit-loss')}
             />
@@ -555,8 +582,8 @@ function TenantDashboard() {
               PKR {netProfit.toLocaleString("en-US")}
             </div>
             <div className="flex items-center gap-2 mt-1 text-xs">
-              <Progress value={Math.max(0, Math.min(100, netProfitMargin))} className="h-1.5 flex-1" />
-              <span className="font-semibold text-primary">{netProfitMargin.toFixed(0)}%</span>
+              <Progress value={profitGoal > 0 ? (netProfit / profitGoal) * 100 : 0} className="h-1.5 flex-1" />
+              <span className="font-semibold text-primary">{profitGoal > 0 ? ((netProfit / profitGoal) * 100).toFixed(0) : 0}%</span>
             </div>
           </CardContent>
         </Card>
@@ -682,7 +709,7 @@ function TenantDashboard() {
             <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => setShowFilterPanel(!showFilterPanel)}>
               <SlidersHorizontal className="h-3.5 w-3.5 mr-1" /> Filter
             </Button>
-            <Button size="sm" className="cursor-pointer" onClick={openModal}>
+            <Button size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-transaction-modal'))}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add Entry
             </Button>
           </div>
@@ -772,7 +799,7 @@ function TenantDashboard() {
                   <p className="text-xs text-muted-foreground leading-relaxed mt-1">
                     Simulate ledger changes. Click Add Entry to create mock invoices or expenses and watch stats recalculate.
                   </p>
-                  <Button className="w-full mt-4 cursor-pointer" size="sm" onClick={openModal}>
+                  <Button className="w-full mt-4 cursor-pointer" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('open-transaction-modal'))}>
                     <Plus className="h-3.5 w-3.5 mr-1" /> Simulate Activity
                   </Button>
                 </CardContent>

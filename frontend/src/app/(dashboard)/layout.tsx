@@ -28,9 +28,7 @@ import {
   Shield,
   Lock,
   Monitor,
-<<<<<<< HEAD
   ActivitySquare,
-=======
   ShoppingCart,
   RotateCcw,
   Percent,
@@ -39,7 +37,6 @@ import {
   PackageCheck,
   FileText,
   Landmark,
->>>>>>> feature/login-register
 } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
@@ -168,12 +165,13 @@ export default function DashboardLayout({
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, key: 'dashboard' },
   ].filter(i => isScreenAllowed(i.key));
 
-<<<<<<< HEAD
-  const tenantOnlyKeys = ['customers', 'suppliers', 'products', 'inventory', 'payments'];
+  const tenantOnlyKeys = ['customers', 'suppliers', 'products', 'inventory', 'sales', 'purchases', 'payments', 'invoices', 'expenses', 'income', 'accounting'];
 
   const financeItems = [
     { href: "/dashboard/invoices", label: "Invoices", icon: Receipt, badge: 3, key: 'invoices', permission: 'invoices.view' },
+    { href: "/dashboard/income", label: "Income", icon: TrendingUp, key: 'income', permission: 'income.view' },
     { href: "/dashboard/expenses", label: "Expenses", icon: CreditCard, key: 'expenses', permission: 'expenses.view' },
+    { href: "/dashboard/accounting", label: "Accounting", icon: Landmark, key: 'accounting', permission: 'accounting.view' },
     { href: "/dashboard/payments", label: "Payments", icon: TrendingUp, badge: 7, key: 'payments', permission: 'payments.view' },
   ].filter(i => {
     if (!isScreenAllowed(i.key)) return false;
@@ -181,16 +179,8 @@ export default function DashboardLayout({
       if (user?.isPlatformOrg && tenantOnlyKeys.includes(i.key)) return false;
       return true;
     }
-=======
-  const financeItems = [
-    { href: "/dashboard/invoices", label: "Invoices", icon: Receipt, badge: 3, key: 'invoices' },
-    { href: "/dashboard/income", label: "Income", icon: TrendingUp, key: 'income' },
-    { href: "/dashboard/expenses", label: "Expenses", icon: CreditCard, key: 'expenses' },
-    { href: "/dashboard/accounting", label: "Accounting", icon: Landmark, key: 'accounting' },
-    { href: "/dashboard/payments", label: "Payments", icon: TrendingUp, badge: 7, key: 'payments' },
-  ].filter(i => isScreenAllowed(i.key));
-
-  const tenantOnlyKeys = ['customers', 'suppliers', 'products', 'inventory', 'sales', 'purchases'];
+    return false;
+  });
 
   const salesItems = [
     { href: "/dashboard/sales/pos", label: "POS", icon: Monitor, key: 'sales', permission: 'sales.view' },
@@ -214,7 +204,6 @@ export default function DashboardLayout({
     if (!isScreenAllowed(i.key)) return false;
     if (user?.isPlatformOrg) return false;
     if (!i.permission || hasPermission(i.permission)) return true;
->>>>>>> feature/login-register
     return false;
   });
 

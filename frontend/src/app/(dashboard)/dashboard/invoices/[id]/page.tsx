@@ -32,7 +32,7 @@ export default function InvoiceViewerPage() {
     const fetchInvoice = async () => {
       try {
         const res = await apiFetch(`/api/v1/invoices/${id}`);
-        setInvoice(res.data);
+        setInvoice(res);
       } catch (err) {
         console.error('Failed to load invoice', err);
       } finally {
@@ -52,9 +52,9 @@ export default function InvoiceViewerPage() {
     if (!html2pdf) return;
 
     const opt = {
-      margin: [15, 15, 15, 15],
+      margin: [15, 15, 15, 15] as [number, number, number, number],
       filename: `${invoice.invoiceNo}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
+      image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
@@ -65,7 +65,7 @@ export default function InvoiceViewerPage() {
     setEmailing(true);
     try {
       const res = await apiFetch(`/api/v1/invoices/${id}/email`, { method: 'POST', body: JSON.stringify({}) });
-      if (res.success) alert('Invoice emailed successfully!');
+      if (res) alert('Invoice emailed successfully!');
     } catch (err: any) {
       alert(err.message || 'Failed to email invoice');
     } finally {

@@ -148,6 +148,9 @@ export class OrganizationService {
     currency?: string;
     timeZone?: string;
     logoUrl?: string;
+    revenueTarget?: number;
+    expenseBudget?: number;
+    profitGoal?: number;
   }) {
     const updateData: any = {};
     if (data.name !== undefined) updateData.name = data.name;
@@ -158,6 +161,9 @@ export class OrganizationService {
     if (data.currency !== undefined) updateData.currency = data.currency;
     if (data.timeZone !== undefined) updateData.timeZone = data.timeZone;
     if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl;
+    if (data.revenueTarget !== undefined) updateData.revenueTarget = data.revenueTarget;
+    if (data.expenseBudget !== undefined) updateData.expenseBudget = data.expenseBudget;
+    if (data.profitGoal !== undefined) updateData.profitGoal = data.profitGoal;
 
     if (Object.keys(updateData).length === 0) {
       return this.getCurrentOrg(orgId);
@@ -176,6 +182,9 @@ export class OrganizationService {
         currency: true,
         timeZone: true,
         logoUrl: true,
+        revenueTarget: true,
+        expenseBudget: true,
+        profitGoal: true,
       },
     });
   }

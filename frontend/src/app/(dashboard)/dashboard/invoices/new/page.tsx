@@ -127,8 +127,8 @@ export default function NewInvoicePage() {
         body: JSON.stringify(payload),
       });
 
-      if (res.success) {
-        router.push(`/dashboard/invoices/${res.data.id}`);
+      if (res) {
+        router.push(`/dashboard/invoices/${res.id}`);
       }
     } catch (err: unknown) {
       alert((err as Error).message || 'Failed to create invoice');

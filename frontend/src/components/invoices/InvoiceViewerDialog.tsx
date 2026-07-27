@@ -36,7 +36,7 @@ export function InvoiceViewerDialog({ invoiceId, open, onOpenChange }: InvoiceVi
       const fetchInvoice = async () => {
         try {
           const res = await apiFetch(`/api/v1/invoices/${invoiceId}`);
-          setInvoice(res.data);
+          setInvoice(res);
         } catch (err) {
           console.error('Failed to load invoice', err);
         } finally {
@@ -59,9 +59,9 @@ export function InvoiceViewerDialog({ invoiceId, open, onOpenChange }: InvoiceVi
     if (!html2pdf) return;
 
     const opt = {
-      margin: [15, 15, 15, 15],
+      margin: [15, 15, 15, 15] as [number, number, number, number],
       filename: `${invoice.invoiceNo}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
+      image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };

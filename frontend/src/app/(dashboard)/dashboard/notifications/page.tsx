@@ -29,6 +29,7 @@ export default function NotificationsPage() {
   const [notifs, setNotifs] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [error, setError] = useState<string | null>(null);
 
   const fetchNotifs = useCallback(async () => {
     setLoading(true);
@@ -53,16 +54,24 @@ export default function NotificationsPage() {
 
   const handleMarkAllRead = async () => {
     try {
+      setError(null);
       await apiFetch('/api/v1/notifications/read-all', { method: 'PUT' });
-    } catch {}
-    fetchNotifs();
+      fetchNotifs();
+    } catch (err) {
+      console.error(err);
+      setError('Failed to mark notifications as read.');
+    }
   };
 
   const handleToggleRead = async (id: string) => {
     try {
+      setError(null);
       await apiFetch(`/api/v1/notifications/${id}/read`, { method: 'PUT' });
       fetchNotifs();
-    } catch {}
+    } catch (err) {
+      console.error(err);
+      setError('Failed to update notification status.');
+    }
   };
 
   const getIcon = (type: string) => {
@@ -98,6 +107,11 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-md">
+          {error}
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Notification Center</h1>

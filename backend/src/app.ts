@@ -10,7 +10,6 @@ import rolesRoutes from './modules/roles/roles.routes';
 import platformRoutes from './modules/platform/platform.routes';
 import invoicesRoutes from './modules/invoices/invoices.routes';
 import expensesRoutes from './modules/expenses/expenses.routes';
-import reportsRoutes from './modules/reports/reports.routes';
 import customersRoutes from './modules/customers/customers.routes';
 import suppliersRoutes from './modules/suppliers/suppliers.routes';
 import productsRoutes from './modules/products/products.routes';
@@ -18,6 +17,8 @@ import inventoryRoutes from './modules/inventory/inventory.routes';
 import paymentsRoutes from './modules/payments/payments.routes';
 import notificationRoutes from './modules/notification/notification.routes';
 import auditRoutes from './modules/audit/audit.routes';
+import archiveRoutes from './modules/archive/archive.routes';
+import reportsRoutes from './modules/reports/reports.routes';
 // Import services to register event listeners globally
 import './modules/notification/notification.service';
 import './modules/audit/audit.service';
@@ -60,6 +61,8 @@ app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/payments', paymentsRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
+app.use('/api/v1/archives', archiveRoutes);
+app.use('/api/v1/reports', reportsRoutes);
 
 // Contact / Newsletter endpoint (public)
 app.post('/api/v1/contact', (req: Request, res: Response) => {
@@ -72,20 +75,20 @@ app.post('/api/v1/contact', (req: Request, res: Response) => {
 });
 
 // Sales Module
-app.use('/api/v1/sales-orders', salesOrdersRoutes);
-app.use('/api/v1/sales-returns', salesReturnsRoutes);
-app.use('/api/v1/discounts', discountsRoutes);
-app.use('/api/v1/coupons', couponsRoutes);
+// app.use('/api/v1/sales-orders', salesOrdersRoutes);
+// app.use('/api/v1/sales-returns', salesReturnsRoutes);
+// app.use('/api/v1/discounts', discountsRoutes);
+// app.use('/api/v1/coupons', couponsRoutes);
 
 // Purchase Module
-app.use('/api/v1/purchase-orders', purchaseOrdersRoutes);
-app.use('/api/v1/supplier-returns', supplierReturnsRoutes);
+// app.use('/api/v1/purchase-orders', purchaseOrdersRoutes);
+// app.use('/api/v1/supplier-returns', supplierReturnsRoutes);
 
 // Accounting Module
-app.use('/api/v1/accounts', accountsRoutes);
-app.use('/api/v1/journal-entries', journalEntriesRoutes);
-app.use('/api/v1/accounting', accountingRoutes);
-app.use('/api/v1/income', incomeRoutes);
+// app.use('/api/v1/accounts', accountsRoutes);
+// app.use('/api/v1/journal-entries', journalEntriesRoutes);
+// app.use('/api/v1/accounting', accountingRoutes);
+// app.use('/api/v1/income', incomeRoutes);
 
 // Centralized Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

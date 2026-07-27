@@ -73,7 +73,7 @@ export default function SalesReturnsPage() {
   useEffect(() => {
     fetchReturns();
     // Fetch invoices for selection
-    apiFetch('/api/v1/invoices?limit=100').then((res) => setInvoices(res.data || []));
+    apiFetch('/api/v1/invoices?limit=100').then((res: any) => setInvoices(res || []));
   }, [fetchReturns]);
 
   const handleInvoiceChange = async (invoiceId: string) => {

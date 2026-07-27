@@ -110,9 +110,9 @@ beforeAll(async () => {
 
   // ── Seed Customers ──────────────────────────────────────────────────────
   const [alice, bob, carol] = await Promise.all([
-    prisma.customer.create({ data: { name: 'Alice Corp', email: 'alice@test.com', phone: '111-0000', organizationId: orgId } }),
-    prisma.customer.create({ data: { name: 'Bob Ltd', email: 'bob@test.com', organizationId: orgId } }),
-    prisma.customer.create({ data: { name: 'Carol Inc', email: 'carol@test.com', organizationId: orgId } }),
+    prisma.customer.create({ data: { name: 'Alice Corp', email: 'alice@test.com', phone: '111-0000', organizationId: orgId, creditLimit: 0 } }),
+    prisma.customer.create({ data: { name: 'Bob Ltd', email: 'bob@test.com', organizationId: orgId, creditLimit: 0 } }),
+    prisma.customer.create({ data: { name: 'Carol Inc', email: 'carol@test.com', organizationId: orgId, creditLimit: 0 } }),
   ]);
   customerId = alice.id;
 

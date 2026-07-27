@@ -128,6 +128,7 @@ export class InvoicesService {
             organizationId,
             name: data.customerName,
             email: data.customerEmail || `${data.customerName.toLowerCase().replace(/\s+/g, '')}@example.com`,
+            creditLimit: 0,
           },
         });
       }

@@ -27,7 +27,10 @@ export class DashboardService {
    */
   static async getSummary(organizationId: string, year?: number) {
     const targetYear = year ?? new Date().getFullYear();
-    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
+    const org = await prisma.organization.findUnique({ 
+      where: { id: organizationId }, 
+      select: { isPlatform: true, revenueTarget: true, expenseBudget: true, profitGoal: true } 
+    });
     const orgWhere: any = org?.isPlatform ? {} : { organizationId };
 
     // Fetch all paid invoices and expenses for the organization (or connected system for platform admin)
@@ -85,6 +88,11 @@ export class DashboardService {
       totalExpenses,
       netProfit,
       cashFlow,
+      targets: {
+        revenueTarget: toNumber(org?.revenueTarget),
+        expenseBudget: toNumber(org?.expenseBudget),
+        profitGoal: toNumber(org?.profitGoal),
+      }
     };
   }
 
@@ -347,6 +355,7 @@ export class DashboardService {
             organizationId,
             name: data.customerName,
             email,
+            creditLimit: 0,
           }
         });
       }

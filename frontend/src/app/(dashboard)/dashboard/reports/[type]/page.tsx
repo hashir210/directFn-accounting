@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, TrendingUp, Calendar as CalendarIcon, FileText } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area
@@ -50,7 +50,7 @@ export default function ReportViewerPage() {
         if (endDate) query.set('endDate', endDate);
         
         const res = await apiFetch(`/api/v1/reports/${type}?${query.toString()}`);
-        setData(res.data);
+        setData(res);
       } catch (err) {
         console.error('Failed to load report', err);
       } finally {
@@ -151,7 +151,6 @@ export default function ReportViewerPage() {
       {data && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Profit & Loss */}
             {type === 'profit-loss' && (
               <>
                 <CardSummary label="Total Revenue" value={`$${data.summary.totalRevenue.toLocaleString()}`} />
@@ -159,7 +158,6 @@ export default function ReportViewerPage() {
                 <CardSummary label="Net Profit" value={`$${data.summary.netProfit.toLocaleString()}`} color={data.summary.netProfit >= 0 ? 'text-emerald-500' : 'text-destructive'} />
               </>
             )}
-            {/* Sales */}
             {type === 'sales' && (
               <>
                 <CardSummary label="Total Sales" value={`$${data.summary.totalSales.toLocaleString()}`} />
@@ -167,7 +165,6 @@ export default function ReportViewerPage() {
                 <CardSummary label="Invoices Generated" value={data.summary.totalInvoices.toString()} />
               </>
             )}
-            {/* Expenses */}
             {type === 'expenses' && (
               <>
                 <CardSummary label="Total Expenses" value={`$${data.summary.totalExpenses.toLocaleString()}`} />
@@ -175,7 +172,6 @@ export default function ReportViewerPage() {
                 <CardSummary label="Transactions" value={data.summary.totalTransactions.toString()} />
               </>
             )}
-            {/* Balance Sheet */}
             {type === 'balance-sheet' && (
               <>
                 <CardSummary label="Total Assets" value={`$${data.summary.totalAssets.toLocaleString()}`} />
@@ -183,7 +179,6 @@ export default function ReportViewerPage() {
                 <CardSummary label="Equity" value={`$${data.summary.equity.toLocaleString()}`} color="text-emerald-500" />
               </>
             )}
-            {/* Cash Flow */}
             {type === 'cash-flow' && (
               <>
                 <CardSummary label="Total Inflow" value={`$${data.summary.totalInflow.toLocaleString()}`} color="text-emerald-500" />
@@ -191,7 +186,6 @@ export default function ReportViewerPage() {
                 <CardSummary label="Net Cash Flow" value={`$${data.summary.netCashFlow.toLocaleString()}`} color={data.summary.netCashFlow >= 0 ? 'text-emerald-500' : 'text-destructive'} />
               </>
             )}
-            {/* Income Report */}
             {type === 'income' && (
               <>
                 <CardSummary label="Total Income" value={`$${data.summary.totalIncome.toLocaleString()}`} />
@@ -199,7 +193,6 @@ export default function ReportViewerPage() {
                 <CardSummary label="Avg per Invoice" value={`$${data.summary.averagePerInvoice.toFixed(2)}`} />
               </>
             )}
-            {/* Purchase Report */}
             {type === 'purchases' && (
               <>
                 <CardSummary label="Total Purchases" value={`$${data.summary.totalPurchases.toLocaleString()}`} />
@@ -207,7 +200,6 @@ export default function ReportViewerPage() {
                 <CardSummary label="Outstanding" value={`$${data.summary.outstandingBalance.toLocaleString()}`} color="text-destructive" />
               </>
             )}
-            {/* Customer Statement */}
             {type === 'customer-statement' && (
               <>
                 <CardSummary label="Total Billed" value={`$${data.summary.totalBilled.toLocaleString()}`} />
@@ -215,7 +207,6 @@ export default function ReportViewerPage() {
                 <CardSummary label="Outstanding" value={`$${data.summary.totalBalance.toLocaleString()}`} color={data.summary.totalBalance > 0 ? 'text-destructive' : ''} />
               </>
             )}
-            {/* Supplier Statement */}
             {type === 'supplier-statement' && (
               <>
                 <CardSummary label="Total Billed" value={`$${data.summary.totalBilled.toLocaleString()}`} />
@@ -223,7 +214,6 @@ export default function ReportViewerPage() {
                 <CardSummary label="Outstanding" value={`$${data.summary.totalBalance.toLocaleString()}`} color={data.summary.totalBalance > 0 ? 'text-destructive' : ''} />
               </>
             )}
-            {/* Inventory */}
             {type === 'inventory' && (
               <>
                 <CardSummary label="Total Value" value={`$${data.summary.totalValue.toLocaleString()}`} />
@@ -231,7 +221,6 @@ export default function ReportViewerPage() {
                 <CardSummary label="Low Stock Items" value={data.summary.lowStockCount.toString()} color={data.summary.lowStockCount > 0 ? 'text-destructive' : 'text-emerald-500'} />
               </>
             )}
-            {/* Tax Report */}
             {type === 'tax' && (
               <>
                 <CardSummary label="Tax Collected" value={`$${data.summary.totalTaxCollected.toLocaleString()}`} />
@@ -252,8 +241,8 @@ export default function ReportViewerPage() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="month" stroke="#6b7280" fontSize={12} tickLine={false} />
                         <YAxis stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <Tooltip />
-                        <Legend />
+                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                        <Legend iconType="circle" />
                         <Bar dataKey="revenue" name="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
                         <Bar dataKey="expenses" name="Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                       </BarChart>
@@ -263,9 +252,9 @@ export default function ReportViewerPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.chartData} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis type="number" stroke="#6b7280" fontSize={12} tickFormatter={(val) => `$${val}`} />
-                        <YAxis dataKey="name" type="category" stroke="#6b7280" fontSize={12} width={100} />
-                        <Tooltip />
+                        <XAxis type="number" stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
+                        <YAxis dataKey="name" type="category" stroke="#6b7280" fontSize={12} tickLine={false} width={100} />
+                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                         <Bar dataKey="sales" name="Sales Volume" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -275,11 +264,11 @@ export default function ReportViewerPage() {
                       <PieChart>
                         <Pie data={data.chartData} cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={5} dataKey="value">
                           {data.chartData.map((_: any, index: number) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#06b6d4'][index % 6]} />
                           ))}
                         </Pie>
-                        <Tooltip />
-                        <Legend layout="vertical" verticalAlign="middle" align="right" />
+                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                        <Legend layout="vertical" verticalAlign="middle" align="right" iconType="circle" />
                       </PieChart>
                     </ResponsiveContainer>
                   )}
@@ -289,9 +278,9 @@ export default function ReportViewerPage() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} />
                         <YAxis stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="balance" name="Balance" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                        <Legend iconType="circle" />
+                        <Bar dataKey="balance" name="Balance" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
@@ -301,10 +290,10 @@ export default function ReportViewerPage() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="month" stroke="#6b7280" fontSize={12} tickLine={false} />
                         <YAxis stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <Tooltip />
-                        <Legend />
-                        <Area type="monotone" dataKey="inflow" name="Inflow" stroke="#10b981" fill="#10b981" fillOpacity={0.1} />
-                        <Area type="monotone" dataKey="outflow" name="Outflow" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.1} />
+                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                        <Legend iconType="circle" />
+                        <Area type="monotone" dataKey="inflow" name="Inflow" fill="#10b981" stroke="#10b981" fillOpacity={0.2} strokeWidth={2} />
+                        <Area type="monotone" dataKey="outflow" name="Outflow" fill="#f43f5e" stroke="#f43f5e" fillOpacity={0.2} strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
                   )}
@@ -314,7 +303,7 @@ export default function ReportViewerPage() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="month" stroke="#6b7280" fontSize={12} tickLine={false} />
                         <YAxis stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <Tooltip />
+                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                         <Bar dataKey="total" name="Income" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -323,9 +312,9 @@ export default function ReportViewerPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.chartData} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis type="number" stroke="#6b7280" fontSize={12} tickFormatter={(val) => `$${val}`} />
-                        <YAxis dataKey="supplier" type="category" stroke="#6b7280" fontSize={12} width={100} />
-                        <Tooltip />
+                        <XAxis type="number" stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
+                        <YAxis dataKey="supplier" type="category" stroke="#6b7280" fontSize={12} tickLine={false} width={100} />
+                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                         <Bar dataKey="totalAmount" name="Purchases" fill="#f59e0b" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -336,7 +325,7 @@ export default function ReportViewerPage() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} />
                         <YAxis stroke="#6b7280" fontSize={12} tickLine={false} />
-                        <Tooltip />
+                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
                         <Bar dataKey="stock" name="Current Stock" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -347,10 +336,10 @@ export default function ReportViewerPage() {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="productName" stroke="#6b7280" fontSize={12} tickLine={false} />
                         <YAxis stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="taxableAmount" name="Taxable" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="taxAmount" name="Tax" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                        <Legend iconType="circle" />
+                        <Bar dataKey="taxableAmount" name="Taxable Amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="taxAmount" name="Tax Amount" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
