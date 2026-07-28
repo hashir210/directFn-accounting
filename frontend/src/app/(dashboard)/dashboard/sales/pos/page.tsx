@@ -141,7 +141,7 @@ export default function POSPage() {
       <div className="lg:col-span-2 flex flex-col space-y-4 h-full overflow-hidden">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-display font-semibold tracking-tight">
               POS Terminal
             </h1>
             <p className="text-muted-foreground text-xs">Point of sale interface for quick sales checkout.</p>
@@ -161,7 +161,7 @@ export default function POSPage() {
           {filteredProducts.map((p) => (
             <Card
               key={p.id}
-              className="cursor-pointer hover:border-primary/60 hover:shadow transition bg-card/60 backdrop-blur-md flex flex-col justify-between"
+              className="cursor-pointer hover:border-brand-primary hover:shadow-md transition bg-card flex flex-col justify-between"
               onClick={() => addToCart(p)}
             >
               <CardHeader className="p-3 pb-1">
@@ -178,7 +178,7 @@ export default function POSPage() {
       </div>
 
       {/* Cart (1 col) */}
-      <Card className="h-full flex flex-col justify-between border-l bg-card/40 backdrop-blur-md">
+      <Card className="h-full flex flex-col justify-between border-l border-border bg-card shadow-soft-raised">
         <CardHeader className="p-4 border-b">
           <CardTitle className="text-base flex items-center gap-2">
             <ShoppingCart className="h-5 w-5 text-primary" /> Current Cart

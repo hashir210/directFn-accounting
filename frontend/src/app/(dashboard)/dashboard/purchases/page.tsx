@@ -206,7 +206,7 @@ export default function PurchaseOrdersPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">
             Purchase Orders
           </h1>
           <p className="text-muted-foreground text-sm mt-1">Draft and coordinate stock acquisition from suppliers.</p>
@@ -218,7 +218,7 @@ export default function PurchaseOrdersPage() {
         )}
       </div>
 
-      <Card className="border border-muted/40 shadow-sm bg-card/60 backdrop-blur-md">
+      <Card className="shadow-none border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Acquisitions</CardTitle>
           <CardDescription>View status of outstanding and completed purchase orders.</CardDescription>
@@ -229,7 +229,7 @@ export default function PurchaseOrdersPage() {
                 placeholder="Search by PO number or supplier..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-background/50"
+                className="pl-9 bg-background"
               />
             </div>
             <div className="flex gap-2">

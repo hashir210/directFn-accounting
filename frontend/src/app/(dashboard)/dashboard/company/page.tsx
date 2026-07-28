@@ -176,7 +176,7 @@ export default function CompanyManagementPage() {
             <Building2 className="h-4 w-4" />
             <span>Organization Profile</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">{tenantCompany.name || 'My Company'}</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">{tenantCompany.name || 'My Company'}</h1>
           <p className="text-sm text-muted-foreground">Your company details as registered on FinFlow. Contact your platform administrator to make changes.</p>
         </div>
 
@@ -268,7 +268,7 @@ export default function CompanyManagementPage() {
           <Building2 className="h-4 w-4" />
           <span>Organization Management</span>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">All Companies</h1>
+        <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">All Companies</h1>
         <p className="text-sm text-muted-foreground">View and manage all registered companies on FinFlow.</p>
       </div>
 

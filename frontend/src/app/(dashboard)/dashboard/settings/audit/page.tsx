@@ -78,7 +78,7 @@ export default function AuditLogsPage() {
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Audit Logs</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Audit Logs</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Real-time tracking of all critical system actions.
           </p>

@@ -68,7 +68,7 @@ export default function ReportsHubPage() {
   return (
     <div className="space-y-8 pb-8 animate-in fade-in zoom-in duration-300">
       <div>
-        <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">Reports Center</h1>
+        <h1 className="text-3xl font-display font-semibold tracking-tight text-foreground">Reports Center</h1>
         <p className="text-muted-foreground mt-2">
           Comprehensive financial and operational insights for your organization.
         </p>

@@ -207,7 +207,7 @@ function ScreenAccessContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Screen Access Control</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Screen Access Control</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Restrict or allow specific pages and screens manually.
           </p>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit, Roboto } from "next/font/google";
+import { Outfit, Inter } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/features/auth/useAuth";
 import { SocketProvider } from "@/context/SocketContext";
@@ -10,9 +10,8 @@ const outfit = Outfit({
   subsets: ["latin"],
 });
 
-const roboto = Roboto({
-  variable: "--font-roboto",
-  weight: ["300", "400", "500", "700"],
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -29,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${outfit.variable} ${roboto.variable} antialiased`}
+        className={`${outfit.variable} ${inter.variable} antialiased`}
       >
         <TooltipProvider>
           <AuthProvider>

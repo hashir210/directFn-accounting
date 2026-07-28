@@ -195,7 +195,7 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Team Members</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Team Members</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage team members, roles, edit names, and assign page access restrictions.
           </p>
@@ -307,7 +307,7 @@ export default function UsersPage() {
       )}
 
       {/* Main Card */}
-      <Card className="shadow-sm">
+      <Card className="shadow-none border-border">
         <CardHeader className="p-4 border-b">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">

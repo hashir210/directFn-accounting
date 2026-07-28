@@ -194,7 +194,7 @@ export default function SupplierManagementPage() {
             <Truck className="h-4 w-4" />
             <span>Accounts Payable</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Supplier Management</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Supplier Management</h1>
           <p className="text-sm text-muted-foreground">
             Manage vendor profiles, purchase order histories, payment terms, and pending accounts payable.
           </p>
@@ -307,7 +307,7 @@ export default function SupplierManagementPage() {
       </div>
 
       {/* Supplier Table */}
-      <Card>
+      <Card className="shadow-none border-border">
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -318,7 +318,7 @@ export default function SupplierManagementPage() {
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search vendor or category..."
-                className="pl-8 h-9"
+                className="pl-9 bg-background"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />

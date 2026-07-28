@@ -176,19 +176,19 @@ export default function AdminPage() {
         {/* Stats — two compact cards */}
         {stats && (
           <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-            <Card className="p-3 flex items-center gap-3">
+            <Card className="p-3 flex items-center gap-3 shadow-none border-border">
               <Building2 className="h-5 w-5 text-primary shrink-0" />
               <div><div className="text-lg font-bold">{stats.totalOrganizations}</div><div className="text-xs text-muted-foreground">Companies</div></div>
             </Card>
-            <Card className="p-3 flex items-center gap-3">
+            <Card className="p-3 flex items-center gap-3 shadow-none border-border">
               <Users className="h-5 w-5 text-muted-foreground shrink-0" />
               <div><div className="text-lg font-bold">{stats.totalUsers}</div><div className="text-xs text-muted-foreground">Users</div></div>
             </Card>
-            <Card className="p-3 flex items-center gap-3">
+            <Card className="p-3 flex items-center gap-3 shadow-none border-border">
               <DollarSign className="h-5 w-5 text-muted-foreground shrink-0" />
               <div><div className="text-lg font-bold">PKR {stats.totalInvoiced.toLocaleString()}</div><div className="text-xs text-muted-foreground">Invoiced</div></div>
             </Card>
-            <Card className="p-3 flex items-center gap-3">
+            <Card className="p-3 flex items-center gap-3 shadow-none border-border">
               <DollarSign className="h-5 w-5 text-emerald-500 shrink-0" />
               <div><div className="text-lg font-bold text-emerald-600">PKR {stats.totalPaid.toLocaleString()}</div><div className="text-xs text-muted-foreground">Collected</div></div>
             </Card>
@@ -204,7 +204,7 @@ export default function AdminPage() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {orgs.map((org) => (
-              <Card key={org.id} className="relative hover:shadow-md transition-shadow cursor-pointer border-border/60" onClick={() => openEdit(org)}>
+              <Card key={org.id} className="relative shadow-none transition-colors hover:border-brand-primary cursor-pointer border-border" onClick={() => openEdit(org)}>
                 <CardHeader className="pb-2 pt-3 px-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2 min-w-0">

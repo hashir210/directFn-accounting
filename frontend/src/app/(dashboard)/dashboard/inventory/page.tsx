@@ -195,7 +195,7 @@ export default function InventoryManagementPage() {
             <WarehouseIcon className="h-4 w-4" />
             <span>Stock Operations</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Inventory Management</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Inventory Management</h1>
           <p className="text-sm text-muted-foreground">
             Track stock in/out, inter-warehouse transfers, damaged inventory, stock adjustments, and low stock alerts.
           </p>
@@ -258,7 +258,7 @@ export default function InventoryManagementPage() {
       </div>
 
       {/* Movements Table */}
-      <Card>
+      <Card className="shadow-none border-border">
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -269,7 +269,7 @@ export default function InventoryManagementPage() {
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Filter by type, item, or SKU..."
-                className="pl-8 h-9"
+                className="pl-9 bg-background"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />

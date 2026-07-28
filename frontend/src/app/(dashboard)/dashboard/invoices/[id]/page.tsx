@@ -59,7 +59,7 @@ export default function InvoiceViewerPage() {
       const opt = {
         margin: [15, 15, 15, 15] as [number, number, number, number],
         filename: `${invoice.invoiceNo}.pdf`,
-        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
       };
@@ -178,7 +178,7 @@ export default function InvoiceViewerPage() {
               </div>
               <div className="col-span-2 mt-4">
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Status</h3>
-                <Badge variant={invoice.status === 'paid' ? 'default' : invoice.status === 'overdue' ? 'destructive' : 'secondary'} className="text-sm px-3 py-1">
+                <Badge variant={invoice.status === 'paid' ? 'success' : invoice.status === 'overdue' ? 'danger' : 'warning'} className="text-sm px-3 py-1">
                   {invoice.status.toUpperCase()}
                 </Badge>
               </div>

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/features/auth/useAuth';
 import { ApiError } from '@/lib/api';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Activity } from 'lucide-react';
 
 function LoginPageInner() {
   const router = useRouter();
@@ -57,14 +57,20 @@ function LoginPageInner() {
   };
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
-      <div className="flex w-full max-w-sm flex-col gap-6">
+    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,72,56,0.08),transparent_50%)]" />
+      <div className="flex w-full max-w-sm flex-col gap-6 relative z-10">
         <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-xl">Welcome back</CardTitle>
-            <CardDescription>
-              {twoFactor ? 'Enter the 6-digit code from your authenticator app' : 'Sign in to your account'}
-            </CardDescription>
+          <CardHeader className="text-center items-center space-y-3 pb-2">
+            <div className="h-11 w-11 rounded-lg bg-brand-primary flex items-center justify-center">
+              <Activity className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-display">Welcome back</CardTitle>
+              <CardDescription className="mt-1">
+                {twoFactor ? 'Enter the 6-digit code from your authenticator app' : 'Sign in to your FinFlow account'}
+              </CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
             {twoFactor ? (

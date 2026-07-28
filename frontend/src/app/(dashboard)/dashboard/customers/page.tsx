@@ -187,7 +187,7 @@ export default function CustomerManagementPage() {
             <ContactRound className="h-4 w-4" />
             <span>Accounts Receivable</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Customer Management</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Customer Management</h1>
           <p className="text-sm text-muted-foreground">
             Manage customer profiles, set credit limits, track outstanding balances, and generate statements.
           </p>
@@ -235,7 +235,7 @@ export default function CustomerManagementPage() {
       </div>
 
       {/* Customer Table */}
-      <Card>
+      <Card className="shadow-none border-border">
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -246,7 +246,7 @@ export default function CustomerManagementPage() {
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search customers or email..."
-                className="pl-8 h-9"
+                className="pl-9 bg-background"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />

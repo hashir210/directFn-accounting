@@ -12,7 +12,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings & Administration</h1>
+        <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Settings & Administration</h1>
         <p className="text-muted-foreground">Manage team members, roles, and your subscription.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

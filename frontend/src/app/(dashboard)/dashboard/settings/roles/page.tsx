@@ -124,7 +124,7 @@ export default function RolesSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Roles & Permissions</h1>
+        <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Roles & Permissions</h1>
         <p className="text-muted-foreground">Configure roles and what they can access across all modules</p>
       </div>
 

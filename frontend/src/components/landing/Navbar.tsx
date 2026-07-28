@@ -19,7 +19,7 @@ export function Navbar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full pt-4 px-4 sm:px-6 md:px-8">
       {/* Container holding the glass navbar */}
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-16 bg-background border border-border/50 rounded-full px-4 sm:px-6 md:px-8 shadow-sm transition-all duration-300">
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-16 bg-white/70 dark:bg-black/60 backdrop-blur-md border border-border/50 rounded-full px-4 sm:px-6 md:px-8 shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-all duration-300">
         
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2 group">

@@ -75,7 +75,7 @@ export default function SubscriptionPlanPage() {
             <CreditCard className="h-4 w-4" />
             <span>Subscription</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Your Subscription Plan</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Your Subscription Plan</h1>
         </div>
         <Button variant="outline" onClick={() => router.push('/dashboard/settings')}>
           <ArrowLeft className="h-4 w-4 mr-2" />

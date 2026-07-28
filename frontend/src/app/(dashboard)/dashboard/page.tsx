@@ -172,7 +172,7 @@ function PlatformDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="shadow-none border-border">
           <CardHeader className="pb-2">
             <CardDescription>Total Companies</CardDescription>
           </CardHeader>
@@ -184,7 +184,7 @@ function PlatformDashboard() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none border-border">
           <CardHeader className="pb-2">
             <CardDescription>Total Users</CardDescription>
           </CardHeader>
@@ -193,7 +193,7 @@ function PlatformDashboard() {
             <div className="text-xs text-muted-foreground mt-1">Across all companies</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none border-border">
           <CardHeader className="pb-2">
             <CardDescription>Total Invoiced</CardDescription>
           </CardHeader>
@@ -202,7 +202,7 @@ function PlatformDashboard() {
             <div className="text-xs text-muted-foreground mt-1">Platform-wide revenue</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none border-border">
           <CardHeader className="pb-2">
             <CardDescription>Total Collected</CardDescription>
           </CardHeader>
@@ -214,7 +214,7 @@ function PlatformDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 shadow-none border-border">
           <CardHeader>
             <CardTitle>Registered Companies</CardTitle>
             <CardDescription>{orgs.length} total companies on FinFlow</CardDescription>
@@ -242,7 +242,7 @@ function PlatformDashboard() {
                       <TableCell>{org.plan?.name || 'Free'}</TableCell>
                       <TableCell>{org._count.users}/{org.maxUsers || 5}</TableCell>
                       <TableCell>
-                        <Badge variant={org.status === 'active' ? 'secondary' : 'destructive'} className={org.status === 'active' ? 'bg-emerald-50 text-emerald-600' : ''}>
+                        <Badge variant={org.status === 'active' ? 'success' : 'danger'}>
                           {org.status === 'active' ? <CheckCircle2 className="h-3 w-3 mr-1 inline" /> : <XCircle className="h-3 w-3 mr-1 inline" />}
                           {org.status}
                         </Badge>
@@ -257,7 +257,7 @@ function PlatformDashboard() {
         </Card>
 
         <div className="space-y-4">
-          <Card>
+          <Card className="shadow-none border-border">
             <CardHeader>
               <CardTitle className="text-sm">Recently Registered</CardTitle>
             </CardHeader>
@@ -266,7 +266,7 @@ function PlatformDashboard() {
                 <p className="text-xs text-muted-foreground">No companies yet.</p>
               ) : (
                 recentOrgs.map(org => (
-                  <div key={org.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/30">
+                  <div key={org.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-muted">
                     <div>
                       <p className="text-xs font-semibold">{org.name}</p>
                       <span className="text-[10px] text-muted-foreground">{org.plan?.name || 'Free'} &middot; {org._count.users} users</span>
@@ -279,9 +279,9 @@ function PlatformDashboard() {
               )}
             </CardContent>
           </Card>
-          <Card>
+          <Card className="shadow-none border-border">
             <CardContent className="pt-5">
-              <Badge variant="secondary" className="text-[10px]">
+              <Badge variant="neutral" className="text-[10px]">
                 <Sparkles className="h-3 w-3 mr-1" /> Quick Action
               </Badge>
               <h4 className="text-sm font-semibold mt-3">Register New Company</h4>
@@ -539,7 +539,7 @@ function TenantDashboard() {
               PKR {totalRevenue.toLocaleString("en-US")}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
-              <Badge variant="secondary" className="gap-1 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400">
+              <Badge variant="success" className="gap-1">
                 <ArrowUpRight className="h-3 w-3" /> Target: PKR {revenueTarget.toLocaleString()}
               </Badge>
             </div>
@@ -562,7 +562,7 @@ function TenantDashboard() {
               PKR {totalExpenses.toLocaleString("en-US")}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
-              <Badge variant="secondary" className="gap-1 text-rose-600 bg-rose-50 dark:bg-rose-950/20 dark:text-rose-400">
+              <Badge variant="danger" className="gap-1">
                 Budget: PKR {expenseBudget.toLocaleString()}
               </Badge>
             </div>
@@ -765,11 +765,8 @@ function TenantDashboard() {
                         <TableCell className="text-muted-foreground">{tx.date}</TableCell>
                         <TableCell>
                           <Badge variant={
-                            tx.status === "Paid" ? "secondary" :
-                            tx.status === "Pending" ? "outline" : "destructive"
-                          } className={
-                            tx.status === "Paid" ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20" :
-                            tx.status === "Pending" ? "text-amber-600" : ""
+                            tx.status === "Paid" ? "success" :
+                            tx.status === "Pending" ? "warning" : "danger"
                           }>
                             {tx.status}
                           </Badge>
@@ -791,7 +788,7 @@ function TenantDashboard() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {stockItems.slice(0, 3).map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/30">
+                    <div key={item.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-muted">
                       <div>
                         <p className="text-xs font-semibold">{item.name}</p>
                         <span className="text-[10px] text-muted-foreground">SKU: {item.sku}</span>

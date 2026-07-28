@@ -155,7 +155,7 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Payments & Settlements</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Payments & Settlements</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Monitor incoming and outgoing payments, bank settlements, and transaction history.
           </p>
@@ -169,7 +169,7 @@ export default function PaymentsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Inbound Volume</CardTitle>
             <TrendingUp className="h-4 w-4 text-emerald-600" />
@@ -180,7 +180,7 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Outbound Volume</CardTitle>
             <CreditCard className="h-4 w-4 text-rose-600" />
@@ -191,7 +191,7 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Net Settlement</CardTitle>
             <DollarSign className="h-4 w-4 text-primary" />
@@ -202,7 +202,7 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total Transactions</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
@@ -214,7 +214,7 @@ export default function PaymentsPage() {
         </Card>
       </div>
 
-      <Card className="shadow-sm">
+      <Card className="shadow-none border-border">
         <CardHeader className="p-4 border-b">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="relative w-full sm:w-72">

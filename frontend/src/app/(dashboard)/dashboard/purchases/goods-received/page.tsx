@@ -156,7 +156,7 @@ export default function GoodsReceivedPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">
             Goods Received Notes (GRN)
           </h1>
           <p className="text-muted-foreground text-sm mt-1">Receive inventory shipments and record stock updates.</p>
@@ -168,7 +168,7 @@ export default function GoodsReceivedPage() {
         )}
       </div>
 
-      <Card className="border border-muted/40 shadow-sm bg-card/60 backdrop-blur-md">
+      <Card className="shadow-none border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">GRN History</CardTitle>
           <CardDescription>View all historical Goods Received Notes.</CardDescription>

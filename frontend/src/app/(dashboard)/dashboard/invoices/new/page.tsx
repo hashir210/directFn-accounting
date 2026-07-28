@@ -139,7 +139,7 @@ export default function NewInvoicePage() {
           </Button>
           <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">Create Invoice</h1>
         </div>
-        <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting} className="bg-primary hover:bg-primary-tint text-primary-foreground shadow-lg hover:shadow-primary/25 transition-all">
+        <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Save & Preview
         </Button>
@@ -147,7 +147,7 @@ export default function NewInvoicePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-border/50 shadow-sm">
+          <Card>
             <CardHeader>
               <CardTitle>Invoice Details</CardTitle>
             </CardHeader>
@@ -174,7 +174,7 @@ export default function NewInvoicePage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/50 shadow-sm">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Line Items</CardTitle>
               <Button size="sm" variant="outline" onClick={() => append({ productId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 0 })}>

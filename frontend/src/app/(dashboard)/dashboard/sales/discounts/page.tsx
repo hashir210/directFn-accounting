@@ -116,19 +116,19 @@ export default function DiscountsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-display font-semibold tracking-tight">
             Discounts
           </h1>
           <p className="text-muted-foreground text-sm mt-1">Configure and manage reusable organization discount rules.</p>
         </div>
         {canEdit && (
-          <Button onClick={() => setOpenAdd(true)} className="bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 text-white shadow-lg">
+          <Button onClick={() => setOpenAdd(true)}>
             <Plus className="h-4 w-4 mr-2" /> Add Discount Rule
           </Button>
         )}
       </div>
 
-      <Card className="border border-muted/40 shadow-sm bg-card/60 backdrop-blur-md">
+      <Card className="shadow-none border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Discount Campaigns</CardTitle>
           <CardDescription>View current promotional discount structures.</CardDescription>
@@ -139,7 +139,7 @@ export default function DiscountsPage() {
                 placeholder="Search discount campaigns..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-background/50"
+                className="pl-9 bg-background"
               />
             </div>
           </div>

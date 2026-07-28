@@ -141,7 +141,7 @@ export default function ExpensesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Expenses</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Expenses</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Record, organize, and monitor operational expenses and vendor payments.
           </p>
@@ -231,7 +231,7 @@ export default function ExpensesPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total Outflow</CardTitle>
             <TrendingDown className="h-4 w-4 text-destructive" />
@@ -242,7 +242,7 @@ export default function ExpensesPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Top Category</CardTitle>
             <PieChart className="h-4 w-4 text-primary" />
@@ -255,7 +255,7 @@ export default function ExpensesPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Approved Outflow</CardTitle>
             <FileCheck className="h-4 w-4 text-emerald-600" />
@@ -266,7 +266,7 @@ export default function ExpensesPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total Records</CardTitle>
             <CreditCard className="h-4 w-4 text-amber-500" />
@@ -278,7 +278,7 @@ export default function ExpensesPage() {
         </Card>
       </div>
 
-      <Card className="shadow-sm">
+      <Card className="shadow-none border-border">
         <CardHeader className="p-4 border-b">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="relative w-full sm:w-72">

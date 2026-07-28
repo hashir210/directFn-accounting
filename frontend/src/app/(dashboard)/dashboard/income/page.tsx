@@ -101,7 +101,7 @@ export default function IncomePage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Income</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Income</h1>
           <p className="mt-1 text-sm text-muted-foreground">Record sales, services, investment, and other income.</p>
         </div>
         <div className="flex gap-2">
@@ -122,7 +122,7 @@ export default function IncomePage() {
         <Metric title="Top source" value={top?.[0] || '\u2014'} icon={DollarSign} />
       </div>
 
-      <Card>
+      <Card className="shadow-none border-border">
         <CardHeader>
           <CardTitle>Income records</CardTitle>
         </CardHeader>

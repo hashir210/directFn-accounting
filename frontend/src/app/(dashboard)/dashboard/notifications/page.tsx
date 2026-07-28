@@ -114,7 +114,7 @@ export default function NotificationsPage() {
       )}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Notification Center</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Notification Center</h1>
           <p className="text-sm text-muted-foreground mt-1">
             System alerts, invoice updates, security notifications, and settlement logs.
           </p>
@@ -127,7 +127,7 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      <Card className="shadow-sm">
+      <Card className="shadow-none border-border">
         <CardHeader className="p-4 border-b">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-1 bg-muted p-1 rounded-lg text-xs font-medium">

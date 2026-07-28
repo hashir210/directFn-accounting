@@ -126,7 +126,7 @@ export default function OrganizationsPage() {
             <span className="text-xs">&gt;</span>
             <span className="font-semibold text-foreground">B2B Clients</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Organizations</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Organizations</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Provision and manage tenant organizations and set limits.
           </p>

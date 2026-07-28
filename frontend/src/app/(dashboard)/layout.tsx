@@ -288,11 +288,11 @@ export default function DashboardLayout({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton size="lg" className="cursor-pointer">
-                    <div className="h-8 w-8 shrink-0 rounded-lg bg-primary flex items-center justify-center">
+                    <div className="h-8 w-8 shrink-0 rounded-lg bg-brand-primary flex items-center justify-center">
                       <Activity className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="flex flex-col gap-0.5 leading-none">
-                      <span className="font-semibold">FinFlow</span>
+                      <span className="font-semibold font-display">FinFlow</span>
                       <span className="text-xs text-muted-foreground">DirectFN Finance</span>
                     </div>
                     <ChevronsUpDown className="ml-auto h-4 w-4" />
@@ -527,7 +527,7 @@ export default function DashboardLayout({
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton size="lg" className="cursor-pointer">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
+                      <AvatarFallback className="bg-brand-primary text-primary-foreground text-xs font-bold">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
@@ -559,7 +559,7 @@ export default function DashboardLayout({
       {/* Main Content Inset */}
       <SidebarInset>
         {/* Top Navbar */}
-        <header className="h-14 sticky top-0 z-30 flex items-center justify-between gap-4 px-6 bg-background border-b border-border/50">
+        <header className="h-14 sticky top-0 z-30 flex items-center justify-between gap-4 px-6 bg-[var(--bg-surface-raised)] border-b border-border">
           {/* Left side */}
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />

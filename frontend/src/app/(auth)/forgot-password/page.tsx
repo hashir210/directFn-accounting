@@ -34,15 +34,15 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-background relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.08),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,72,56,0.08),transparent_50%)]" />
 
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center items-center space-y-3 pb-2">
-            <div className="h-11 w-11 rounded-lg bg-primary flex items-center justify-center">
+            <div className="h-11 w-11 rounded-lg bg-brand-primary flex items-center justify-center">
               <Activity className="h-5 w-5 text-primary-foreground" />
             </div>
           <div>
-            <CardTitle className="text-xl">Recover password</CardTitle>
+            <CardTitle className="text-xl font-display">Recover password</CardTitle>
             <CardDescription className="mt-1">
               Enter your email to receive a recovery link
             </CardDescription>

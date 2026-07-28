@@ -91,7 +91,7 @@ export default function SessionsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Active Sessions</h1>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-foreground">Active Sessions</h1>
           <p className="text-muted-foreground">Review signed-in browser sessions and revoke access when needed.</p>
         </div>
         <div className="flex flex-wrap gap-2">
