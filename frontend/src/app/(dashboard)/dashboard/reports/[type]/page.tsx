@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import apiFetch from '@/lib/api';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-1)'];
 
 const titles: Record<string, string> = {
   'profit-loss': 'Profit & Loss',
@@ -38,6 +38,7 @@ export default function ReportViewerPage() {
   const [data, setData] = useState<any>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [serverPdfLoading, setServerPdfLoading] = useState(false);
 
   const supportsDateFilter = ['profit-loss', 'sales', 'expenses', 'cash-flow', 'income', 'purchases', 'tax'].includes(type);
 
@@ -119,6 +120,33 @@ export default function ReportViewerPage() {
     document.body.removeChild(link);
   };
 
+  const handleDownloadReportPdf = async () => {
+    setServerPdfLoading(true);
+    try {
+      const query = new URLSearchParams();
+      if (startDate) query.set('startDate', startDate);
+      if (endDate) query.set('endDate', endDate);
+      const token = localStorage.getItem('ff_access_token');
+      const res = await fetch(`/api/v1/pdf/report/${type}/pdf?${query.toString()}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to generate PDF');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${type}_report_${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Failed to generate report PDF');
+    } finally {
+      setServerPdfLoading(false);
+    }
+  };
+
   if (loading && !data) return <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
@@ -144,6 +172,10 @@ export default function ReportViewerPage() {
           )}
           <Button variant="outline" onClick={handleExportCSV}>
             <Download className="h-4 w-4 mr-2" /> Export CSV
+          </Button>
+          <Button variant="outline" onClick={handleDownloadReportPdf} disabled={serverPdfLoading}>
+            {serverPdfLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+            {serverPdfLoading ? 'Generating...' : 'Download PDF'}
           </Button>
         </div>
       </div>
@@ -238,24 +270,24 @@ export default function ReportViewerPage() {
                   {type === 'profit-loss' && data.chartData && (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.chartData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="month" stroke="#6b7280" fontSize={12} tickLine={false} />
-                        <YAxis stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(val) => `$${val}`} />
+                        <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} contentStyle={{ backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }} />
                         <Legend iconType="circle" />
-                        <Bar dataKey="revenue" name="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="expenses" name="Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="revenue" name="Revenue" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="expenses" name="Expenses" fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
                   {type === 'sales' && data.chartData && (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.chartData} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis type="number" stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <YAxis dataKey="name" type="category" stroke="#6b7280" fontSize={12} tickLine={false} width={100} />
-                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                        <Bar dataKey="sales" name="Sales Volume" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
+                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(val) => `$${val}`} />
+                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={100} />
+                        <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} contentStyle={{ backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }} />
+                        <Bar dataKey="sales" name="Sales Volume" fill="var(--chart-1)" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
@@ -267,7 +299,7 @@ export default function ReportViewerPage() {
                             <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#06b6d4'][index % 6]} />
                           ))}
                         </Pie>
-                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                        <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} contentStyle={{ backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }} />
                         <Legend layout="vertical" verticalAlign="middle" align="right" iconType="circle" />
                       </PieChart>
                     </ResponsiveContainer>
@@ -275,71 +307,71 @@ export default function ReportViewerPage() {
                   {type === 'balance-sheet' && data.accounts && (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.accounts}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} />
-                        <YAxis stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(val) => `$${val}`} />
+                        <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} contentStyle={{ backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }} />
                         <Legend iconType="circle" />
-                        <Bar dataKey="balance" name="Balance" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="balance" name="Balance" fill="var(--chart-5)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
                   {type === 'cash-flow' && data.chartData && (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={data.chartData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="month" stroke="#6b7280" fontSize={12} tickLine={false} />
-                        <YAxis stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(val) => `$${val}`} />
+                        <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} contentStyle={{ backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }} />
                         <Legend iconType="circle" />
-                        <Area type="monotone" dataKey="inflow" name="Inflow" fill="#10b981" stroke="#10b981" fillOpacity={0.2} strokeWidth={2} />
-                        <Area type="monotone" dataKey="outflow" name="Outflow" fill="#f43f5e" stroke="#f43f5e" fillOpacity={0.2} strokeWidth={2} />
+                        <Area type="monotone" dataKey="inflow" name="Inflow" fill="var(--chart-2)" stroke="var(--chart-2)" fillOpacity={0.2} strokeWidth={2} />
+                        <Area type="monotone" dataKey="outflow" name="Outflow" fill="var(--chart-4)" stroke="var(--chart-4)" fillOpacity={0.2} strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
                   )}
                   {type === 'income' && data.chartData && (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.chartData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="month" stroke="#6b7280" fontSize={12} tickLine={false} />
-                        <YAxis stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                        <Bar dataKey="total" name="Income" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(val) => `$${val}`} />
+                        <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} contentStyle={{ backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }} />
+                        <Bar dataKey="total" name="Income" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
                   {type === 'purchases' && data.chartData && (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.chartData} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis type="number" stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <YAxis dataKey="supplier" type="category" stroke="#6b7280" fontSize={12} tickLine={false} width={100} />
-                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                        <Bar dataKey="totalAmount" name="Purchases" fill="#f59e0b" radius={[0, 4, 4, 0]} />
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
+                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(val) => `$${val}`} />
+                        <YAxis dataKey="supplier" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={100} />
+                        <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} contentStyle={{ backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }} />
+                        <Bar dataKey="totalAmount" name="Purchases" fill="var(--chart-3)" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
                   {type === 'inventory' && data.lowStockItems && data.lowStockItems.length > 0 && (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.lowStockItems}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} />
-                        <YAxis stroke="#6b7280" fontSize={12} tickLine={false} />
-                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                        <Bar dataKey="stock" name="Current Stock" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} contentStyle={{ backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }} />
+                        <Bar dataKey="stock" name="Current Stock" fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
                   {type === 'tax' && data.chartData && data.chartData.length > 0 && (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.chartData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="productName" stroke="#6b7280" fontSize={12} tickLine={false} />
-                        <YAxis stroke="#6b7280" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
-                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="productName" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(val) => `$${val}`} />
+                        <Tooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} contentStyle={{ backgroundColor: "hsl(var(--card))", color: "hsl(var(--foreground))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }} />
                         <Legend iconType="circle" />
-                        <Bar dataKey="taxableAmount" name="Taxable Amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="taxAmount" name="Tax Amount" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="taxableAmount" name="Taxable Amount" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="taxAmount" name="Tax Amount" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}

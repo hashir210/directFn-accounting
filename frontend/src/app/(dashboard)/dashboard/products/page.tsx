@@ -33,6 +33,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { updateProductSchema, type UpdateProductForm } from '@/lib/schemas/product';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
 
@@ -58,15 +61,16 @@ export default function ProductManagementPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   // Edit state
-  const [editProd, setEditProd] = useState<{
-    id: string; name: string; sku: string; barcode: string; category: string;
-    unit: string; purchasePrice: string; sellingPrice: string; imageUrl: string; stockQuantity: string;
-  } | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [openEdit, setOpenEdit] = useState(false);
+  const editForm = useForm<UpdateProductForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(updateProductSchema) as any,
+    defaultValues: { name: '', sku: '', barcode: '', category: 'Hardware', unit: '', purchasePrice: 0, sellingPrice: 0, stockQuantity: 0 },
+  });
   // Delete state
   const [deleteProdId, setDeleteProdId] = useState<string | null>(null);
   const [deleteProdName, setDeleteProdName] = useState('');
@@ -93,48 +97,43 @@ export default function ProductManagementPage() {
 
 
   const openEditDialog = (p: Product) => {
-    setEditProd({
-      id: p.id,
+    setEditId(p.id);
+    editForm.reset({
       name: p.name,
       sku: p.sku,
       barcode: p.barcode || '',
       category: p.category || 'Hardware',
       unit: p.unit,
-      purchasePrice: p.purchasePrice,
-      sellingPrice: p.sellingPrice,
-      imageUrl: p.imageUrl || '',
-      stockQuantity: String(p.stockQuantity),
+      purchasePrice: parseFloat(p.purchasePrice) || 0,
+      sellingPrice: parseFloat(p.sellingPrice) || 0,
+      stockQuantity: p.stockQuantity,
     });
     setOpenEdit(true);
   };
 
-  const handleEditProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editProd) return;
-    setIsSubmitting(true);
+  const onEditSubmit = async (data: UpdateProductForm) => {
+    if (!editId) return;
     setError('');
     try {
-      await apiFetch(`/api/v1/products/${editProd.id}`, {
+      await apiFetch(`/api/v1/products/${editId}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          name: editProd.name,
-          sku: editProd.sku,
-          barcode: editProd.barcode || undefined,
-          category: editProd.category || undefined,
-          unit: editProd.unit,
-          purchasePrice: parseFloat(editProd.purchasePrice) || 0,
-          sellingPrice: parseFloat(editProd.sellingPrice) || 0,
-          imageUrl: editProd.imageUrl || undefined,
-          stockQuantity: parseInt(editProd.stockQuantity) || 0,
+          name: data.name,
+          sku: data.sku,
+          barcode: data.barcode || undefined,
+          category: data.category || undefined,
+          unit: data.unit,
+          purchasePrice: Number(data.purchasePrice) || 0,
+          sellingPrice: Number(data.sellingPrice) || 0,
+          stockQuantity: Number(data.stockQuantity) || 0,
         }),
       });
       setOpenEdit(false);
-      setEditProd(null);
+      setEditId(null);
+      editForm.reset();
       fetchProducts();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to update product');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -357,7 +356,7 @@ export default function ProductManagementPage() {
       {/* Edit Product Dialog */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
         <DialogContent className="max-w-md">
-          <form onSubmit={handleEditProduct}>
+          <form onSubmit={editForm.handleSubmit(onEditSubmit)}>
             <DialogHeader>
               <DialogTitle>Edit Product</DialogTitle>
               <DialogDescription>Update product details and pricing.</DialogDescription>
@@ -365,37 +364,39 @@ export default function ProductManagementPage() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>Product Name</Label>
-                <Input required value={editProd?.name || ''} onChange={(e) => setEditProd(editProd ? { ...editProd, name: e.target.value } : null)} />
+                <Input {...editForm.register('name')} />
+                {editForm.formState.errors.name && <p className="text-xs text-destructive">{editForm.formState.errors.name.message}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>SKU</Label>
-                  <Input value={editProd?.sku || ''} onChange={(e) => setEditProd(editProd ? { ...editProd, sku: e.target.value } : null)} />
+                  <Input {...editForm.register('sku')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Barcode</Label>
-                  <Input value={editProd?.barcode || ''} onChange={(e) => setEditProd(editProd ? { ...editProd, barcode: e.target.value } : null)} />
+                  <Input {...editForm.register('barcode')} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Purchase Cost ($)</Label>
-                  <Input type="number" value={editProd?.purchasePrice || '0'} onChange={(e) => setEditProd(editProd ? { ...editProd, purchasePrice: e.target.value } : null)} />
+                  <Input type="number" {...editForm.register('purchasePrice')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Selling Price ($)</Label>
-                  <Input type="number" required value={editProd?.sellingPrice || '0'} onChange={(e) => setEditProd(editProd ? { ...editProd, sellingPrice: e.target.value } : null)} />
+                  <Input type="number" {...editForm.register('sellingPrice')} />
+                  {editForm.formState.errors.sellingPrice && <p className="text-xs text-destructive">{editForm.formState.errors.sellingPrice.message}</p>}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Stock Quantity</Label>
-                <Input type="number" value={editProd?.stockQuantity || '0'} onChange={(e) => setEditProd(editProd ? { ...editProd, stockQuantity: e.target.value } : null)} />
+                <Input type="number" {...editForm.register('stockQuantity')} />
               </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Save Changes
+              <Button type="submit" disabled={editForm.formState.isSubmitting}>
+                {editForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Save Changes
               </Button>
             </DialogFooter>
           </form>
@@ -422,5 +423,3 @@ export default function ProductManagementPage() {
     </div>
   );
 }
-
-

@@ -10,12 +10,11 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 
 let transporter: nodemailer.Transporter | null = null;
 
-// Initialize transporter only if credentials are provided
 if (SMTP_USER && SMTP_PASS) {
   transporter = nodemailer.createTransport({
     host: SMTP_HOST,
     port: SMTP_PORT,
-    secure: SMTP_PORT === 465, // true for 465, false for other ports
+    secure: SMTP_PORT === 465,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
@@ -25,9 +24,72 @@ if (SMTP_USER && SMTP_PASS) {
   logger.info('[mailer]: SMTP credentials missing, falling back to logging emails to console');
 }
 
-/**
- * Sends a registration email verification link
- */
+export interface SendEmailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  attachments?: Array<{ filename: string; content: Buffer }>;
+}
+
+export async function sendEmail(options: SendEmailOptions): Promise<void> {
+  const { to, subject, html, attachments } = options;
+
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from: SMTP_FROM,
+        to,
+        subject,
+        html,
+        attachments,
+      });
+      logger.info(`[mailer]: Email successfully sent to ${to} — subject: "${subject}"`);
+      return;
+    } catch (error) {
+      logger.error(`[mailer]: Failed to send email to ${to}`, error);
+    }
+  }
+
+  logger.info(`[mailer-fallback]: Email to ${to} — subject: "${subject}"`);
+  if (attachments && attachments.length > 0) {
+    logger.info(`[mailer-fallback]: Attachments: ${attachments.map(a => a.filename).join(', ')}`);
+  }
+}
+
+export async function sendInvoiceEmail(options: {
+  to: string;
+  invoiceNo: string;
+  orgName: string;
+  amount: number;
+  dueAt: string;
+  pdfBuffer: Buffer;
+}): Promise<void> {
+  const { to, invoiceNo, orgName, amount, dueAt, pdfBuffer } = options;
+  const subject = `Invoice ${invoiceNo} from ${orgName}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+      <h2 style="color: #2b6cb0; text-align: center;">${orgName}</h2>
+      <p style="font-size: 16px;">Dear Customer,</p>
+      <p>Please find your invoice <strong>${invoiceNo}</strong> attached.</p>
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr><td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: #718096;">Invoice Number</td><td style="padding: 8px; border-bottom: 1px solid #e0e0e0; font-weight: bold; text-align: right;">${invoiceNo}</td></tr>
+        <tr><td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: #718096;">Amount Due</td><td style="padding: 8px; border-bottom: 1px solid #e0e0e0; font-weight: bold; text-align: right; font-size: 18px;">$${amount.toFixed(2)}</td></tr>
+        <tr><td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: #718096;">Due Date</td><td style="padding: 8px; border-bottom: 1px solid #e0e0e0; font-weight: bold; text-align: right;">${dueAt}</td></tr>
+      </table>
+      <p>You can view your invoice online at <a href="${CLIENT_URL}/dashboard/invoices">your FinFlow dashboard</a>.</p>
+      <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+      <p style="color: #a0aec0; font-size: 12px; text-align: center;">This is an automated email from FinFlow, please do not reply.</p>
+    </div>
+  `;
+
+  await sendEmail({
+    to,
+    subject,
+    html,
+    attachments: [{ filename: `${invoiceNo}.pdf`, content: pdfBuffer }],
+  });
+}
+
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {
   const verificationUrl = `${CLIENT_URL}/verify-email?token=${token}`;
   const subject = 'Verify Your Email - FinFlow';
@@ -45,23 +107,7 @@ export async function sendVerificationEmail(email: string, token: string): Promi
     </div>
   `;
 
-  if (transporter) {
-    try {
-      await transporter.sendMail({
-        from: SMTP_FROM,
-        to: email,
-        subject,
-        html,
-      });
-      logger.info(`[mailer]: Verification email successfully sent to ${email}`);
-    } catch (error) {
-      logger.error(`[mailer]: Failed to send verification email to ${email}`, error);
-      // Fallback log
-      logger.info(`[mailer-fallback]: Click here to verify email for ${email}: ${verificationUrl}`);
-    }
-  } else {
-    logger.info(`[mailer-fallback]: Click here to verify email for ${email}: ${verificationUrl}`);
-  }
+  await sendEmail({ to: email, subject, html });
 }
 
 /**

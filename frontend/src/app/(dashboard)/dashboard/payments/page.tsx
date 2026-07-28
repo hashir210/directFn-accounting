@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,13 +58,15 @@ export default function PaymentsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const [formData, setFormData] = useState({
-    amount: '',
-    method: 'Bank',
-    type: 'Inbound',
-    status: 'Completed',
-    bankAccountId: 'none',
-    notes: '',
+  const paymentForm = useForm({
+    defaultValues: {
+      amount: '',
+      method: 'Bank',
+      type: 'Inbound',
+      status: 'Completed',
+      bankAccountId: 'none',
+      notes: '',
+    },
   });
 
   const fetchPayments = async () => {
@@ -85,8 +88,7 @@ export default function PaymentsPage() {
     fetchPayments();
   }, []);
 
-  const handleAddPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddPayment = async (data: Record<string, string>) => {
     setSubmitting(true);
     setError('');
 
@@ -94,16 +96,16 @@ export default function PaymentsPage() {
       await apiFetch('/api/v1/payments', {
         method: 'POST',
         body: JSON.stringify({
-          amount: parseFloat(formData.amount),
-          method: formData.method,
-          type: formData.type,
-          status: formData.status,
-          bankAccountId: formData.bankAccountId === 'none' ? undefined : formData.bankAccountId,
-          notes: formData.notes,
+          amount: parseFloat(data.amount),
+          method: data.method,
+          type: data.type,
+          status: data.status,
+          bankAccountId: data.bankAccountId === 'none' ? undefined : data.bankAccountId,
+          notes: data.notes,
         }),
       });
       setIsAddModalOpen(false);
-      setFormData({ amount: '', method: 'Bank', type: 'Inbound', status: 'Completed', bankAccountId: 'none', notes: '' });
+      paymentForm.reset();
       fetchPayments();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to create payment');
@@ -336,7 +338,7 @@ export default function PaymentsPage() {
           <DialogHeader>
             <DialogTitle>Record Manual Payment</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleAddPayment} className="space-y-4 py-4">
+          <form onSubmit={paymentForm.handleSubmit(handleAddPayment)} className="space-y-4 py-4">
             {error && (
               <div className="p-3 bg-rose-50 text-rose-600 rounded-md text-sm flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 mt-0.5" />
@@ -347,25 +349,37 @@ export default function PaymentsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="type">Type</Label>
-                <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val })}>
-                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Inbound">Inbound (Receive)</SelectItem>
-                    <SelectItem value="Outbound">Outbound (Send)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={paymentForm.control}
+                  name="type"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Inbound">Inbound (Receive)</SelectItem>
+                        <SelectItem value="Outbound">Outbound (Send)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="method">Method</Label>
-                <Select value={formData.method} onValueChange={(val) => setFormData({ ...formData, method: val })}>
-                  <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Bank">Bank Transfer</SelectItem>
-                    <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="Card">Credit Card</SelectItem>
-                    <SelectItem value="Online">Online / Gateway</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  control={paymentForm.control}
+                  name="method"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Bank">Bank Transfer</SelectItem>
+                        <SelectItem value="Cash">Cash</SelectItem>
+                        <SelectItem value="Card">Credit Card</SelectItem>
+                        <SelectItem value="Online">Online / Gateway</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
 
@@ -376,23 +390,28 @@ export default function PaymentsPage() {
                 type="number"
                 step="0.01"
                 required
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                {...paymentForm.register('amount')}
                 placeholder="0.00"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="bankAccount">Bank Account (Optional)</Label>
-              <Select value={formData.bankAccountId} onValueChange={(val) => setFormData({ ...formData, bankAccountId: val })}>
-                <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">-- Do not link --</SelectItem>
-                  {bankAccounts.map(b => (
-                    <SelectItem key={b.id} value={b.id}>{b.name} ({b.bankName})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={paymentForm.control}
+                name="bankAccountId"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">-- Do not link --</SelectItem>
+                      {bankAccounts.map(b => (
+                        <SelectItem key={b.id} value={b.id}>{b.name} ({b.bankName})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               <p className="text-[10px] text-muted-foreground mt-1">If linked, the bank balance will be updated automatically.</p>
             </div>
 
@@ -400,8 +419,7 @@ export default function PaymentsPage() {
               <Label htmlFor="notes">Notes / Reference</Label>
               <Input
                 id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                {...paymentForm.register('notes')}
                 placeholder="Optional description"
               />
             </div>

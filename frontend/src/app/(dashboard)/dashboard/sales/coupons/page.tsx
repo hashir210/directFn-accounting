@@ -29,6 +29,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createCouponSchema, type CreateCouponForm } from '@/lib/schemas/coupon';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
 
@@ -54,19 +57,13 @@ export default function CouponsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [openAdd, setOpenAdd] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Form State
-  const [code, setCode] = useState('');
-  const [discountType, setDiscountType] = useState('percentage');
-  const [discountValue, setDiscountValue] = useState(10);
-  const [minOrderAmount, setMinOrderAmount] = useState('');
-  const [maxDiscount, setMaxDiscount] = useState('');
-  const [usageLimit, setUsageLimit] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const form = useForm<CreateCouponForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(createCouponSchema) as any,
+    defaultValues: { code: '', discountType: 'percentage', discountValue: 10, minOrderAmount: undefined, maxDiscount: undefined, usageLimit: undefined, isActive: true, startDate: '', endDate: '' },
+  });
 
   const fetchCoupons = useCallback(async () => {
     try {
@@ -84,45 +81,28 @@ export default function CouponsPage() {
     fetchCoupons();
   }, [fetchCoupons]);
 
-  const handleCreateCoupon = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!code || discountValue <= 0 || !startDate || !endDate) {
-      setError('Please fill in all required fields');
-      return;
-    }
-
+  const handleCreateCoupon = async (data: CreateCouponForm) => {
     try {
-      setIsSubmitting(true);
       setError('');
       await apiFetch('/api/v1/coupons', {
         method: 'POST',
         body: JSON.stringify({
-          code,
-          discountType,
-          discountValue,
-          minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : undefined,
-          maxDiscount: maxDiscount ? parseFloat(maxDiscount) : undefined,
-          usageLimit: usageLimit ? parseInt(usageLimit) : undefined,
-          isActive,
-          startDate,
-          endDate,
+          code: data.code,
+          discountType: data.discountType,
+          discountValue: data.discountValue,
+          minOrderAmount: data.minOrderAmount || undefined,
+          maxDiscount: data.maxDiscount || undefined,
+          usageLimit: data.usageLimit || undefined,
+          isActive: data.isActive ?? true,
+          startDate: data.startDate,
+          endDate: data.endDate,
         }),
       });
       setOpenAdd(false);
-      setCode('');
-      setDiscountType('percentage');
-      setDiscountValue(10);
-      setMinOrderAmount('');
-      setMaxDiscount('');
-      setUsageLimit('');
-      setIsActive(true);
-      setStartDate('');
-      setEndDate('');
+      form.reset();
       fetchCoupons();
     } catch (err: any) {
       setError(err.message || 'Failed to create coupon');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -221,7 +201,7 @@ export default function CouponsPage() {
             <DialogTitle>Create Coupon Code</DialogTitle>
             <DialogDescription>Add a custom validation-based promotional code.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateCoupon} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleCreateCoupon)} className="space-y-4">
             {error && <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">{error}</div>}
 
             <div className="space-y-1">
@@ -229,9 +209,13 @@ export default function CouponsPage() {
               <Input
                 id="coup-code"
                 placeholder="e.g. WELCOME50"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                {...form.register('code')}
+                onChange={(e) => {
+                  const upper = e.target.value.toUpperCase();
+                  form.setValue('code', upper, { shouldValidate: true });
+                }}
               />
+              {form.formState.errors.code && <p className="text-xs text-destructive">{form.formState.errors.code.message}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -239,8 +223,7 @@ export default function CouponsPage() {
                 <Label htmlFor="coup-type">Discount Type *</Label>
                 <select
                   id="coup-type"
-                  value={discountType}
-                  onChange={(e) => setDiscountType(e.target.value)}
+                  {...form.register('discountType')}
                   className="w-full h-10 px-3 bg-background border rounded-md text-sm outline-none"
                 >
                   <option value="percentage">Percentage (%)</option>
@@ -249,54 +232,32 @@ export default function CouponsPage() {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="coup-val">Discount Value *</Label>
-                <Input
-                  id="coup-val"
-                  type="number"
-                  value={discountValue}
-                  onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                />
+                <Input id="coup-val" type="number" {...form.register('discountValue')} />
+                {form.formState.errors.discountValue && <p className="text-xs text-destructive">{form.formState.errors.discountValue.message}</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="coup-min">Min Order ($)</Label>
-                <Input
-                  id="coup-min"
-                  placeholder="Optional"
-                  value={minOrderAmount}
-                  onChange={(e) => setMinOrderAmount(e.target.value)}
-                />
+                <Input id="coup-min" placeholder="Optional" {...form.register('minOrderAmount')} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="coup-limit">Usage Limit (count)</Label>
-                <Input
-                  id="coup-limit"
-                  placeholder="Optional"
-                  value={usageLimit}
-                  onChange={(e) => setUsageLimit(e.target.value)}
-                />
+                <Input id="coup-limit" placeholder="Optional" {...form.register('usageLimit')} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="coup-start">Start Date *</Label>
-                <Input
-                  id="coup-start"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
+                <Input id="coup-start" type="date" {...form.register('startDate')} />
+                {form.formState.errors.startDate && <p className="text-xs text-destructive">{form.formState.errors.startDate.message}</p>}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="coup-end">End Date *</Label>
-                <Input
-                  id="coup-end"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
+                <Input id="coup-end" type="date" {...form.register('endDate')} />
+                {form.formState.errors.endDate && <p className="text-xs text-destructive">{form.formState.errors.endDate.message}</p>}
               </div>
             </div>
 
@@ -304,8 +265,7 @@ export default function CouponsPage() {
               <input
                 id="coup-active"
                 type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
+                {...form.register('isActive')}
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <Label htmlFor="coup-active">Coupon Active status</Label>
@@ -313,8 +273,8 @@ export default function CouponsPage() {
 
             <DialogFooter className="gap-2 pt-3 border-t">
               <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Coupon
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Coupon
               </Button>
             </DialogFooter>
           </form>

@@ -31,6 +31,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createPurchaseOrderSchema, type CreatePurchaseOrderForm } from '@/lib/schemas/purchase-order';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
 
@@ -81,16 +84,16 @@ export default function PurchaseOrdersPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [openAdd, setOpenAdd] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Form State
-  const [selectedSupplierId, setSelectedSupplierId] = useState('');
-  const [orderItems, setOrderItems] = useState<PurchaseOrderItem[]>([]);
-  const [notes, setNotes] = useState('');
-  const [expectedDate, setExpectedDate] = useState('');
+  const form = useForm<CreatePurchaseOrderForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(createPurchaseOrderSchema) as any,
+    defaultValues: { supplierId: '', expectedDate: '', notes: '', items: [] },
+  });
 
-  // Item selector helpers
+  // Line item builder state (not part of the form directly)
+  const [orderItems, setOrderItems] = useState<PurchaseOrderItem[]>([]);
   const [currProductId, setCurrProductId] = useState('');
   const [currQty, setCurrQty] = useState(1);
 
@@ -152,35 +155,29 @@ export default function PurchaseOrdersPage() {
     setOrderItems(orderItems.filter((_, i) => i !== index));
   };
 
-  const handleCreateOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSupplierId || orderItems.length === 0) {
-      setError('Please select a supplier and add at least one item');
+  const handleCreateOrder = async (data: CreatePurchaseOrderForm) => {
+    if (orderItems.length === 0) {
+      setError('Please add at least one item');
       return;
     }
 
     try {
-      setIsSubmitting(true);
       setError('');
       await apiFetch('/api/v1/purchase-orders', {
         method: 'POST',
         body: JSON.stringify({
-          supplierId: selectedSupplierId,
-          items: orderItems,
-          expectedDate: expectedDate || undefined,
-          notes: notes || undefined,
+          supplierId: data.supplierId,
+          items: orderItems.map(i => ({ productId: i.productId, quantity: i.quantity, unitPrice: i.unitPrice, taxRate: i.taxRate })),
+          expectedDate: data.expectedDate || undefined,
+          notes: data.notes || undefined,
         }),
       });
       setOpenAdd(false);
-      setSelectedSupplierId('');
+      form.reset();
       setOrderItems([]);
-      setNotes('');
-      setExpectedDate('');
       fetchOrders();
     } catch (err: any) {
       setError(err.message || 'Failed to create purchase order');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -309,7 +306,7 @@ export default function PurchaseOrdersPage() {
             <DialogTitle>Create Purchase Order</DialogTitle>
             <DialogDescription>Draft a stock order to send to a supplier.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateOrder} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleCreateOrder)} className="space-y-4">
             {error && <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">{error}</div>}
 
             <div className="grid grid-cols-2 gap-4">
@@ -317,22 +314,17 @@ export default function PurchaseOrdersPage() {
                 <Label htmlFor="supplier">Supplier *</Label>
                 <select
                   id="supplier"
-                  value={selectedSupplierId}
-                  onChange={(e) => setSelectedSupplierId(e.target.value)}
+                  {...form.register('supplierId')}
                   className="w-full h-10 px-3 bg-background border rounded-md text-sm outline-none"
                 >
                   <option value="">Select Supplier</option>
                   {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
+                {form.formState.errors.supplierId && <p className="text-xs text-destructive">{form.formState.errors.supplierId.message}</p>}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="exp-date">Expected Delivery Date</Label>
-                <Input
-                  id="exp-date"
-                  type="date"
-                  value={expectedDate}
-                  onChange={(e) => setExpectedDate(e.target.value)}
-                />
+                <Input id="exp-date" type="date" {...form.register('expectedDate')} />
               </div>
             </div>
 
@@ -396,20 +388,15 @@ export default function PurchaseOrdersPage() {
 
             <div className="space-y-1">
               <Label htmlFor="po-notes">Purchase Notes</Label>
-              <Input
-                id="po-notes"
-                placeholder="Instructions or comments for supplier..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
+              <Input id="po-notes" placeholder="Instructions or comments for supplier..." {...form.register('notes')} />
             </div>
 
             <div className="flex justify-between items-center pt-3 border-t">
               <div className="text-sm font-semibold">Total Order Cost: <span className="text-primary">${totalCalc.toFixed(2)}</span></div>
               <DialogFooter className="gap-2">
                 <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>Cancel</Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Draft PO
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Draft PO
                 </Button>
               </DialogFooter>
             </div>

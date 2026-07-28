@@ -107,6 +107,9 @@ async function main() {
 
   await prisma.user.create({ data: { id: ffAdminId, organizationId: ffOrgId, roleId: ffAdminRole.id, email: 'admin@finflow.com', password: hashed, name: 'Platform Admin', emailVerified: true } });
 
+  const hashedEasy = await bcrypt.hash('password', 10);
+  await prisma.user.create({ data: { organizationId: ffOrgId, roleId: ffAdminRole.id, email: 'admin2@finflow.com', password: hashedEasy, name: 'Platform Admin 2', emailVerified: true } });
+
   await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=1;');
 
   for (const perm of permissions) {

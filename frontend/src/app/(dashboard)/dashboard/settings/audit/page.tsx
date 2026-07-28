@@ -31,9 +31,9 @@ export default function AuditLogsPage() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const response = await apiFetch("/api/v1/audit-logs");
-        if (response.success) {
-          setLogs(response.data.logs);
+        const data = await apiFetch<{ logs: AuditLog[]; total: number }>("/api/v1/audit-logs");
+        if (data?.logs) {
+          setLogs(data.logs);
         }
       } catch (error) {
         console.error("Failed to fetch audit logs", error);

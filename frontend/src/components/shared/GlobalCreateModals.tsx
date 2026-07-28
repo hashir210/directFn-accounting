@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Dialog,
   DialogContent,
@@ -22,16 +24,17 @@ import {
 } from '@/components/ui/select';
 import { Loader2, DollarSign, Calendar } from 'lucide-react';
 import { apiFetch, ApiError } from '@/lib/api';
+import { createCustomerSchema, type CreateCustomerForm } from '@/lib/schemas/customer';
+import { createSupplierSchema, type CreateSupplierForm } from '@/lib/schemas/supplier';
+import { createProductSchema, type CreateProductForm } from '@/lib/schemas/product';
 
 export function GlobalCreateModals() {
-  // --- States for Modal Visibility ---
   const [isTxOpen, setIsTxOpen] = useState(false);
   const [isCustOpen, setIsCustOpen] = useState(false);
   const [isSupOpen, setIsSupOpen] = useState(false);
   const [isProdOpen, setIsProdOpen] = useState(false);
   const [isInvOpen, setIsInvOpen] = useState(false);
 
-  // --- Global Event Listeners ---
   useEffect(() => {
     const onTx = () => setIsTxOpen(true);
     const onCust = () => setIsCustOpen(true);
@@ -54,44 +57,25 @@ export function GlobalCreateModals() {
     };
   }, []);
 
-  // --- Shared States ---
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   // 1. Transaction Form
-  const [txType, setTxType] = useState<"Invoice" | "Expense">("Invoice");
-  const [txCustomerName, setTxCustomerName] = useState("");
-  const [txAmount, setTxAmount] = useState("");
-  const [txStatus, setTxStatus] = useState<"Paid" | "Pending">("Pending");
-  const [txDueDate, setTxDueDate] = useState(new Date().toISOString().split("T")[0]);
+  const [txType, setTxType] = useState<'Invoice' | 'Expense'>('Invoice');
+  const txForm = useForm({ defaultValues: { customerName: '', amount: '', dueDate: new Date().toISOString().split('T')[0] } });
 
-  const handleTxSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleTxSubmit = async (data: { customerName: string; amount: string; dueDate: string }) => {
     setIsSubmitting(true);
     setError('');
     try {
       const endpoint = txType === 'Invoice' ? '/api/v1/invoices' : '/api/v1/expenses';
-      const payload = txType === 'Invoice' ? {
-        customerName: txCustomerName,
-        amount: parseFloat(txAmount) || 0,
-        dueAt: new Date(txDueDate).toISOString(),
-        status: txStatus
-      } : {
-        category: 'General',
-        amount: parseFloat(txAmount) || 0,
-        vendor: txCustomerName,
-        date: new Date(txDueDate).toISOString(),
-        status: txStatus
-      };
-      
-      await apiFetch(endpoint, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      const payload = txType === 'Invoice'
+        ? { customerName: data.customerName, amount: parseFloat(data.amount) || 0, dueAt: new Date(data.dueDate).toISOString(), status: 'pending' }
+        : { category: 'General', amount: parseFloat(data.amount) || 0, vendor: data.customerName, date: new Date(data.dueDate).toISOString(), status: 'pending' };
 
+      await apiFetch(endpoint, { method: 'POST', body: JSON.stringify(payload) });
       setIsTxOpen(false);
-      setTxCustomerName("");
-      setTxAmount("");
+      txForm.reset();
       window.dispatchEvent(new CustomEvent('refresh-transactions'));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to create transaction');
@@ -101,24 +85,28 @@ export function GlobalCreateModals() {
   };
 
   // 2. Customer Form
-  const [newCust, setNewCust] = useState({ name: '', email: '', phone: '', address: '', creditLimit: '10000' });
-  const handleCustSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const custForm = useForm<CreateCustomerForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(createCustomerSchema) as any,
+    defaultValues: { name: '', email: '', phone: '', address: '', creditLimit: undefined, status: 'Active' },
+  });
+
+  const handleCustSubmit = async (data: CreateCustomerForm) => {
     setIsSubmitting(true);
     setError('');
     try {
       await apiFetch('/api/v1/customers', {
         method: 'POST',
         body: JSON.stringify({
-          name: newCust.name,
-          email: newCust.email || undefined,
-          phone: newCust.phone || undefined,
-          address: newCust.address || undefined,
-          creditLimit: parseFloat(newCust.creditLimit) || 0,
+          name: data.name,
+          email: data.email || undefined,
+          phone: data.phone || undefined,
+          address: data.address || undefined,
+          creditLimit: data.creditLimit ? Number(data.creditLimit) : undefined,
         }),
       });
       setIsCustOpen(false);
-      setNewCust({ name: '', email: '', phone: '', address: '', creditLimit: '10000' });
+      custForm.reset();
       window.dispatchEvent(new CustomEvent('refresh-customers'));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to create customer');
@@ -128,24 +116,28 @@ export function GlobalCreateModals() {
   };
 
   // 3. Supplier Form
-  const [newSup, setNewSup] = useState({ name: '', category: '', email: '', phone: '', terms: 'Net 30' });
-  const handleSupSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const supForm = useForm<CreateSupplierForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(createSupplierSchema) as any,
+    defaultValues: { name: '', category: '', contactEmail: '', phone: '', paymentTerms: 'Net 30', dueAmount: undefined },
+  });
+
+  const handleSupSubmit = async (data: CreateSupplierForm) => {
     setIsSubmitting(true);
     setError('');
     try {
       await apiFetch('/api/v1/suppliers', {
         method: 'POST',
         body: JSON.stringify({
-          name: newSup.name,
-          category: newSup.category || undefined,
-          contactEmail: newSup.email || undefined,
-          phone: newSup.phone || undefined,
-          paymentTerms: newSup.terms,
+          name: data.name,
+          category: data.category || undefined,
+          contactEmail: data.contactEmail || undefined,
+          phone: data.phone || undefined,
+          paymentTerms: data.paymentTerms,
         }),
       });
       setIsSupOpen(false);
-      setNewSup({ name: '', category: '', email: '', phone: '', terms: 'Net 30' });
+      supForm.reset();
       window.dispatchEvent(new CustomEvent('refresh-suppliers'));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to create supplier');
@@ -155,31 +147,31 @@ export function GlobalCreateModals() {
   };
 
   // 4. Product Form
-  const [newProd, setNewProd] = useState({
-    name: '', sku: '', barcode: '', category: 'Hardware', unit: 'Unit',
-    purchasePrice: '0', sellingPrice: '0', imageUrl: '', stockQuantity: '10'
+  const prodForm = useForm<CreateProductForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(createProductSchema) as any,
+    defaultValues: { name: '', sku: '', barcode: '', category: 'Hardware', unit: 'Unit', purchasePrice: undefined, sellingPrice: undefined, stockQuantity: undefined, lowStockThreshold: undefined, taxRate: undefined },
   });
-  const handleProdSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+
+  const handleProdSubmit = async (data: CreateProductForm) => {
     setIsSubmitting(true);
     setError('');
     try {
       await apiFetch('/api/v1/products', {
         method: 'POST',
         body: JSON.stringify({
-          name: newProd.name,
-          sku: newProd.sku || `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
-          barcode: newProd.barcode || undefined,
-          category: newProd.category || undefined,
-          unit: newProd.unit,
-          purchasePrice: parseFloat(newProd.purchasePrice) || 0,
-          sellingPrice: parseFloat(newProd.sellingPrice) || 0,
-          imageUrl: newProd.imageUrl || undefined,
-          stockQuantity: parseInt(newProd.stockQuantity) || 0,
+          name: data.name,
+          sku: data.sku || `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
+          barcode: data.barcode || undefined,
+          category: data.category || undefined,
+          unit: data.unit,
+          purchasePrice: Number(data.purchasePrice) || 0,
+          sellingPrice: Number(data.sellingPrice) || 0,
+          stockQuantity: Number(data.stockQuantity) || 0,
         }),
       });
       setIsProdOpen(false);
-      setNewProd({ name: '', sku: '', barcode: '', category: 'Hardware', unit: 'Unit', purchasePrice: '0', sellingPrice: '0', imageUrl: '', stockQuantity: '10' });
+      prodForm.reset();
       window.dispatchEvent(new CustomEvent('refresh-products'));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to create product');
@@ -189,39 +181,33 @@ export function GlobalCreateModals() {
   };
 
   // 5. Inventory Form
-  const [warehouses, setWarehouses] = useState<{id: string; name: string; code: string | null}[]>([]);
-  const [newMov, setNewMov] = useState<{
-    type: 'Stock In' | 'Stock Out' | 'Transfer' | 'Damaged' | 'Adjustment';
-    sku: string; itemName: string; quantity: number; warehouse: string;
-  }>({
-    type: 'Stock In', sku: '', itemName: '', quantity: 1, warehouse: 'Main HQ Warehouse'
-  });
+  const [warehouses, setWarehouses] = useState<{ id: string; name: string; code: string | null }[]>([]);
+  const invForm = useForm({ defaultValues: { type: 'Stock In' as const, sku: '', itemName: '', quantity: 1, warehouse: 'Main HQ Warehouse' } });
 
   useEffect(() => {
     if (isInvOpen && warehouses.length === 0) {
-      apiFetch<{id: string; name: string; code: string | null}[]>('/api/v1/inventory/warehouses')
+      apiFetch<{ id: string; name: string; code: string | null }[]>('/api/v1/inventory/warehouses')
         .then(res => setWarehouses(res))
         .catch(err => console.error(err));
     }
   }, [isInvOpen, warehouses.length]);
 
-  const handleInvSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleInvSubmit = async (data: { type: string; sku: string; itemName: string; quantity: number; warehouse: string }) => {
     setIsSubmitting(true);
     setError('');
     try {
       await apiFetch('/api/v1/inventory', {
         method: 'POST',
         body: JSON.stringify({
-          type: newMov.type,
-          sku: newMov.sku || 'SKU-GENERIC',
-          itemName: newMov.itemName || 'Stock Item',
-          quantity: Number(newMov.quantity),
-          warehouse: newMov.warehouse,
+          type: data.type,
+          sku: data.sku || 'SKU-GENERIC',
+          itemName: data.itemName || 'Stock Item',
+          quantity: Number(data.quantity),
+          warehouse: data.warehouse,
         }),
       });
       setIsInvOpen(false);
-      setNewMov({ type: 'Stock In', sku: '', itemName: '', quantity: 1, warehouse: warehouses[0]?.name || 'Main HQ Warehouse' });
+      invForm.reset();
       window.dispatchEvent(new CustomEvent('refresh-inventory'));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to record stock movement');
@@ -230,7 +216,6 @@ export function GlobalCreateModals() {
     }
   };
 
-  // Reset error when any modal closes
   const handleOpenChange = (setOpen: React.Dispatch<React.SetStateAction<boolean>>, val: boolean) => {
     setOpen(val);
     if (!val) setError('');
@@ -245,45 +230,45 @@ export function GlobalCreateModals() {
             <DialogTitle>Record Transaction</DialogTitle>
             <DialogDescription>Create a new invoice or expense entry in the ledger.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleTxSubmit} className="space-y-4">
+          <form onSubmit={txForm.handleSubmit(handleTxSubmit)} className="space-y-4">
             {error && <div className="text-sm text-destructive font-medium">{error}</div>}
             <div className="space-y-2">
               <Label>Entry Type</Label>
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant={txType === "Invoice" ? "default" : "outline"} onClick={() => setTxType("Invoice")} className="cursor-pointer">
+                <Button type="button" variant={txType === 'Invoice' ? 'default' : 'outline'} onClick={() => setTxType('Invoice')} className="cursor-pointer">
                   Invoice (Receivable)
                 </Button>
-                <Button type="button" variant={txType === "Expense" ? "default" : "outline"} onClick={() => setTxType("Expense")} className="cursor-pointer">
+                <Button type="button" variant={txType === 'Expense' ? 'default' : 'outline'} onClick={() => setTxType('Expense')} className="cursor-pointer">
                   Expense (Payable)
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>{txType === "Invoice" ? "Client Name" : "Vendor Name"}</Label>
-              <Input required placeholder="e.g. Stark Industries" value={txCustomerName} onChange={(e) => setTxCustomerName(e.target.value)} className="h-10" />
+              <Label>{txType === 'Invoice' ? 'Client Name' : 'Vendor Name'}</Label>
+              <Input required placeholder="e.g. Stark Industries" {...txForm.register('customerName')} className="h-10" />
             </div>
             <div className="space-y-2">
               <Label>Amount (PKR)</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input type="number" required min="1" placeholder="5000" value={txAmount} onChange={(e) => setTxAmount(e.target.value)} className="pl-9 h-10" />
+                <Input type="number" required min="1" placeholder="5000" {...txForm.register('amount')} className="pl-9 h-10" />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Due Date</Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input type="date" required value={txDueDate} onChange={(e) => setTxDueDate(e.target.value)} className="pl-9 h-10" />
+                <Input type="date" required {...txForm.register('dueDate')} className="pl-9 h-10" />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer text-sm">
-                  <input type="radio" name="status" checked={txStatus === "Paid"} onChange={() => setTxStatus("Paid")} className="accent-primary cursor-pointer h-4 w-4" /> Paid
+                  <input type="radio" name="txStatus" defaultChecked className="accent-primary cursor-pointer h-4 w-4" /> Paid
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer text-sm">
-                  <input type="radio" name="status" checked={txStatus === "Pending"} onChange={() => setTxStatus("Pending")} className="accent-primary cursor-pointer h-4 w-4" /> Pending
+                  <input type="radio" name="txStatus" className="accent-primary cursor-pointer h-4 w-4" /> Pending
                 </label>
               </div>
             </div>
@@ -302,7 +287,7 @@ export function GlobalCreateModals() {
       {/* 2. Customer Modal */}
       <Dialog open={isCustOpen} onOpenChange={(val) => handleOpenChange(setIsCustOpen, val)}>
         <DialogContent>
-          <form onSubmit={handleCustSubmit}>
+          <form onSubmit={custForm.handleSubmit(handleCustSubmit)}>
             <DialogHeader>
               <DialogTitle>Add New Customer Profile</DialogTitle>
               <DialogDescription>Create a customer profile to track credit limits and invoices.</DialogDescription>
@@ -311,21 +296,22 @@ export function GlobalCreateModals() {
               {error && <div className="text-sm text-destructive font-medium">{error}</div>}
               <div className="space-y-2">
                 <Label>Customer / Company Name</Label>
-                <Input required placeholder="e.g. Apex Global" value={newCust.name} onChange={(e) => setNewCust({ ...newCust, name: e.target.value })} />
+                <Input required placeholder="e.g. Apex Global" {...custForm.register('name')} />
+                {custForm.formState.errors.name && <p className="text-xs text-destructive">{custForm.formState.errors.name.message}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Billing Email</Label>
-                  <Input type="email" placeholder="billing@apex.com" value={newCust.email} onChange={(e) => setNewCust({ ...newCust, email: e.target.value })} />
+                  <Input type="email" placeholder="billing@apex.com" {...custForm.register('email')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Phone Number</Label>
-                  <Input placeholder="+1 (555) 000-0000" value={newCust.phone} onChange={(e) => setNewCust({ ...newCust, phone: e.target.value })} />
+                  <Input placeholder="+1 (555) 000-0000" {...custForm.register('phone')} />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Approved Credit Limit ($)</Label>
-                <Input type="number" placeholder="10000" value={newCust.creditLimit} onChange={(e) => setNewCust({ ...newCust, creditLimit: e.target.value })} />
+                <Input type="number" placeholder="10000" {...custForm.register('creditLimit')} />
               </div>
             </div>
             <DialogFooter>
@@ -341,7 +327,7 @@ export function GlobalCreateModals() {
       {/* 3. Supplier Modal */}
       <Dialog open={isSupOpen} onOpenChange={(val) => handleOpenChange(setIsSupOpen, val)}>
         <DialogContent>
-          <form onSubmit={handleSupSubmit}>
+          <form onSubmit={supForm.handleSubmit(handleSupSubmit)}>
             <DialogHeader>
               <DialogTitle>Add New Supplier / Vendor</DialogTitle>
               <DialogDescription>Register a vendor to manage purchase bills and payable amounts.</DialogDescription>
@@ -350,21 +336,22 @@ export function GlobalCreateModals() {
               {error && <div className="text-sm text-destructive font-medium">{error}</div>}
               <div className="space-y-2">
                 <Label>Supplier Name</Label>
-                <Input required placeholder="e.g. AWS Cloud" value={newSup.name} onChange={(e) => setNewSup({ ...newSup, name: e.target.value })} />
+                <Input required placeholder="e.g. AWS Cloud" {...supForm.register('name')} />
+                {supForm.formState.errors.name && <p className="text-xs text-destructive">{supForm.formState.errors.name.message}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Input placeholder="e.g. Infrastructure" value={newSup.category} onChange={(e) => setNewSup({ ...newSup, category: e.target.value })} />
+                  <Input placeholder="e.g. Infrastructure" {...supForm.register('category')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Billing Email</Label>
-                  <Input type="email" placeholder="billing@vendor.com" value={newSup.email} onChange={(e) => setNewSup({ ...newSup, email: e.target.value })} />
+                  <Input type="email" placeholder="billing@vendor.com" {...supForm.register('contactEmail')} />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Payment Terms</Label>
-                <Input placeholder="Net 30" value={newSup.terms} onChange={(e) => setNewSup({ ...newSup, terms: e.target.value })} />
+                <Input placeholder="Net 30" {...supForm.register('paymentTerms')} />
               </div>
             </div>
             <DialogFooter>
@@ -380,7 +367,7 @@ export function GlobalCreateModals() {
       {/* 4. Product Modal */}
       <Dialog open={isProdOpen} onOpenChange={(val) => handleOpenChange(setIsProdOpen, val)}>
         <DialogContent className="max-w-md">
-          <form onSubmit={handleProdSubmit}>
+          <form onSubmit={prodForm.handleSubmit(handleProdSubmit)}>
             <DialogHeader>
               <DialogTitle>Add Product to Catalog</DialogTitle>
               <DialogDescription>Configure pricing, SKU, barcode, image URL, and stock levels.</DialogDescription>
@@ -389,35 +376,33 @@ export function GlobalCreateModals() {
               {error && <div className="text-sm text-destructive font-medium">{error}</div>}
               <div className="space-y-2">
                 <Label>Product Name</Label>
-                <Input required placeholder="e.g. POS Smart Terminal V2" value={newProd.name} onChange={(e) => setNewProd({ ...newProd, name: e.target.value })} />
+                <Input required placeholder="e.g. POS Smart Terminal V2" {...prodForm.register('name')} />
+                {prodForm.formState.errors.name && <p className="text-xs text-destructive">{prodForm.formState.errors.name.message}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>SKU</Label>
-                  <Input placeholder="FF-POS-V2" value={newProd.sku} onChange={(e) => setNewProd({ ...newProd, sku: e.target.value })} />
+                  <Input placeholder="FF-POS-V2" {...prodForm.register('sku')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Barcode</Label>
-                  <Input placeholder="890123456789" value={newProd.barcode} onChange={(e) => setNewProd({ ...newProd, barcode: e.target.value })} />
+                  <Input placeholder="890123456789" {...prodForm.register('barcode')} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Purchase Cost ($)</Label>
-                  <Input type="number" placeholder="220.00" value={newProd.purchasePrice} onChange={(e) => setNewProd({ ...newProd, purchasePrice: e.target.value })} />
+                  <Input type="number" placeholder="220.00" {...prodForm.register('purchasePrice')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Selling Price ($)</Label>
-                  <Input type="number" required placeholder="349.00" value={newProd.sellingPrice} onChange={(e) => setNewProd({ ...newProd, sellingPrice: e.target.value })} />
+                  <Input type="number" required placeholder="349.00" {...prodForm.register('sellingPrice')} />
+                  {prodForm.formState.errors.sellingPrice && <p className="text-xs text-destructive">{prodForm.formState.errors.sellingPrice.message}</p>}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Product Image URL</Label>
-                <Input placeholder="https://images.unsplash.com/photo-1556742049-0a6792357321" value={newProd.imageUrl} onChange={(e) => setNewProd({ ...newProd, imageUrl: e.target.value })} />
-              </div>
-              <div className="space-y-2">
                 <Label>Initial Stock Quantity</Label>
-                <Input type="number" placeholder="10" value={newProd.stockQuantity} onChange={(e) => setNewProd({ ...newProd, stockQuantity: e.target.value })} />
+                <Input type="number" placeholder="10" {...prodForm.register('stockQuantity')} />
               </div>
             </div>
             <DialogFooter>
@@ -433,7 +418,7 @@ export function GlobalCreateModals() {
       {/* 5. Inventory Modal */}
       <Dialog open={isInvOpen} onOpenChange={(val) => handleOpenChange(setIsInvOpen, val)}>
         <DialogContent className="max-w-md">
-          <form onSubmit={handleInvSubmit}>
+          <form onSubmit={invForm.handleSubmit(handleInvSubmit)}>
             <DialogHeader>
               <DialogTitle>Record Stock Movement</DialogTitle>
               <DialogDescription>Add stock in, stock out, transfers, or damaged stock write-offs.</DialogDescription>
@@ -442,7 +427,7 @@ export function GlobalCreateModals() {
               {error && <div className="text-sm text-destructive font-medium">{error}</div>}
               <div className="space-y-2">
                 <Label>Movement Type</Label>
-                <Select value={newMov.type} onValueChange={(val: any) => setNewMov({ ...newMov, type: val })}>
+                <Select value={invForm.watch('type')} onValueChange={(val) => invForm.setValue('type', val as any)}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
@@ -457,22 +442,22 @@ export function GlobalCreateModals() {
               </div>
               <div className="space-y-2">
                 <Label>Item Name</Label>
-                <Input required placeholder="e.g. Thermal Receipt Paper" value={newMov.itemName} onChange={(e) => setNewMov({ ...newMov, itemName: e.target.value })} />
+                <Input required placeholder="e.g. Thermal Receipt Paper" {...invForm.register('itemName')} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>SKU</Label>
-                  <Input required placeholder="FF-TRP-80" value={newMov.sku} onChange={(e) => setNewMov({ ...newMov, sku: e.target.value })} />
+                  <Input required placeholder="FF-TRP-80" {...invForm.register('sku')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Quantity</Label>
-                  <Input type="number" min="1" value={newMov.quantity} onChange={(e) => setNewMov({ ...newMov, quantity: Number(e.target.value) })} />
+                  <Input type="number" min="1" {...invForm.register('quantity')} />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Target Warehouse</Label>
                 {warehouses.length > 0 ? (
-                  <Select value={newMov.warehouse} onValueChange={(val) => setNewMov({ ...newMov, warehouse: val })}>
+                  <Select value={invForm.watch('warehouse')} onValueChange={(val) => invForm.setValue('warehouse', val)}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select Warehouse" />
                     </SelectTrigger>
@@ -485,7 +470,7 @@ export function GlobalCreateModals() {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Input value={newMov.warehouse} onChange={(e) => setNewMov({ ...newMov, warehouse: e.target.value })} />
+                  <Input {...invForm.register('warehouse')} />
                 )}
               </div>
             </div>

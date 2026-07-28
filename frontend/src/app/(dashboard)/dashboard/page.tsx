@@ -21,6 +21,9 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  Truck,
+  Package,
+  Warehouse,
 } from "lucide-react";
 import {
   AreaChart,
@@ -708,6 +711,18 @@ function TenantDashboard() {
             </Button>
             <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => setShowFilterPanel(!showFilterPanel)}>
               <SlidersHorizontal className="h-3.5 w-3.5 mr-1" /> Filter
+            </Button>
+            <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-customer-modal'))}>
+              <Users className="h-3.5 w-3.5 mr-1" /> Customer
+            </Button>
+            <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-supplier-modal'))}>
+              <Truck className="h-3.5 w-3.5 mr-1" /> Supplier
+            </Button>
+            <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-product-modal'))}>
+              <Package className="h-3.5 w-3.5 mr-1" /> Product
+            </Button>
+            <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-inventory-modal'))}>
+              <Warehouse className="h-3.5 w-3.5 mr-1" /> Stock
             </Button>
             <Button size="sm" className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-transaction-modal'))}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add Entry

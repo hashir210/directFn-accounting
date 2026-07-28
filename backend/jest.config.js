@@ -6,4 +6,7 @@ module.exports = {
   forceExit: true,
   clearMocks: true,
   setupFiles: ['dotenv/config'],
+  moduleNameMapper: {
+    '^puppeteer$': '<rootDir>/src/__mocks__/puppeteer.js',
+  },
 };

@@ -35,7 +35,7 @@ export class CouponsService {
   }
 
   static async getById(organizationId: string, id: string) {
-    const coupon = await prisma.coupon.findFirst({ where: { id, organizationId }, include: { couponUsages: { include: { customer: { select: { id: true, name: true } } }, take: 20 } } });
+    const coupon = await prisma.coupon.findFirst({ where: { id, organizationId }, include: { usages: { include: { customer: { select: { id: true, name: true } } }, take: 20 } } });
     if (!coupon) throw new NotFoundError('Coupon not found');
     return { ...coupon, discountValue: toNum(coupon.discountValue), minOrderAmount: coupon.minOrderAmount ? toNum(coupon.minOrderAmount) : null, maxDiscount: coupon.maxDiscount ? toNum(coupon.maxDiscount) : null };
   }
@@ -87,8 +87,8 @@ export class CouponsService {
     if (!coupon) throw new NotFoundError('Coupon not found or inactive');
 
     const now = new Date();
-    if (now < coupon.startDate) throw new BadRequestError('Coupon is not yet active');
-    if (now > coupon.endDate) throw new BadRequestError('Coupon has expired');
+    if (coupon.startDate && now < coupon.startDate) throw new BadRequestError('Coupon is not yet active');
+    if (coupon.endDate && now > coupon.endDate) throw new BadRequestError('Coupon has expired');
     if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) throw new BadRequestError('Coupon usage limit reached');
     if (coupon.minOrderAmount && orderAmount !== undefined && orderAmount < toNum(coupon.minOrderAmount)) {
       throw new BadRequestError(`Minimum order amount is ${toNum(coupon.minOrderAmount)}`);

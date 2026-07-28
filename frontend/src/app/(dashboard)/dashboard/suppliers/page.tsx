@@ -35,6 +35,9 @@ import {
 import { Label } from '@/components/ui/label';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { updateSupplierSchema, type UpdateSupplierForm } from '@/lib/schemas/supplier';
 
 
 interface Supplier {
@@ -55,19 +58,19 @@ export default function SupplierManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [openBillModal, setOpenBillModal] = useState(false);
-  const [selectedSupplierId, setSelectedSupplierId] = useState('');
-  const [billData, setBillData] = useState({ billNo: '', amount: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  // Edit state
-  const [editSup, setEditSup] = useState<{ id: string; name: string; category: string; email: string; phone: string; terms: string } | null>(null);
-  const [openEdit, setOpenEdit] = useState(false);
   // Delete state
   const [deleteSupId, setDeleteSupId] = useState<string | null>(null);
   const [deleteSupName, setDeleteSupName] = useState('');
   const [openDelete, setOpenDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editingSupplierId, setEditingSupplierId] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const editForm = useForm<UpdateSupplierForm>({ resolver: zodResolver(updateSupplierSchema) as any, defaultValues: { name: '', category: '', contactEmail: '', phone: '', paymentTerms: '' } });
+  const billForm = useForm({ defaultValues: { supplierId: '', billNo: '', amount: '' } });
 
   const fetchSuppliers = useCallback(async () => {
     try {
@@ -89,67 +92,58 @@ export default function SupplierManagementPage() {
 
 
 
-  const handleCreateBill = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSupplierId) return;
+  const handleCreateBill = billForm.handleSubmit(async (data) => {
+    if (!data.supplierId) return;
     setIsSubmitting(true);
     setError('');
     try {
       await apiFetch('/api/v1/suppliers/bills', {
         method: 'POST',
         body: JSON.stringify({
-          supplierId: selectedSupplierId,
-          billNo: billData.billNo || `BILL-${Date.now().toString().slice(-4)}`,
-          amount: parseFloat(billData.amount) || 0,
+          supplierId: data.supplierId,
+          billNo: data.billNo || `BILL-${Date.now().toString().slice(-4)}`,
+          amount: parseFloat(data.amount) || 0,
         }),
       });
       setOpenBillModal(false);
-      setBillData({ billNo: '', amount: '' });
+      billForm.reset();
       fetchSuppliers();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to create purchase bill');
     } finally {
       setIsSubmitting(false);
     }
-  };
+  });
 
   const openEditDialog = (s: Supplier) => {
-    setEditSup({
-      id: s.id,
-      name: s.name,
-      category: s.category || '',
-      email: s.contactEmail || '',
-      phone: s.phone || '',
-      terms: s.paymentTerms,
-    });
+    editForm.reset({ name: s.name, category: s.category || '', contactEmail: s.contactEmail || '', phone: s.phone || '', paymentTerms: s.paymentTerms });
+    setEditingSupplierId(s.id);
     setOpenEdit(true);
   };
 
-  const handleEditSupplier = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editSup) return;
+  const handleEditSupplier = editForm.handleSubmit(async (data) => {
     setIsSubmitting(true);
     setError('');
     try {
-      await apiFetch(`/api/v1/suppliers/${editSup.id}`, {
+      await apiFetch(`/api/v1/suppliers/${editingSupplierId}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          name: editSup.name,
-          category: editSup.category || undefined,
-          contactEmail: editSup.email || undefined,
-          phone: editSup.phone || undefined,
-          paymentTerms: editSup.terms,
+          name: data.name,
+          category: data.category || undefined,
+          contactEmail: data.contactEmail || undefined,
+          phone: data.phone || undefined,
+          paymentTerms: data.paymentTerms,
         }),
       });
       setOpenEdit(false);
-      setEditSup(null);
+      editForm.reset();
       fetchSuppliers();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to update supplier');
     } finally {
       setIsSubmitting(false);
     }
-  };
+  });
 
   const handleDeleteSupplier = async () => {
     if (!deleteSupId) return;
@@ -229,8 +223,7 @@ export default function SupplierManagementPage() {
                       <Label>Select Supplier</Label>
                       <select
                         className="w-full h-10 px-3 border rounded-md text-sm bg-background"
-                        value={selectedSupplierId}
-                        onChange={(e) => setSelectedSupplierId(e.target.value)}
+                        {...billForm.register('supplierId')}
                         required
                       >
                         <option value="">-- Choose Supplier --</option>
@@ -246,8 +239,7 @@ export default function SupplierManagementPage() {
                         <Label>Bill Number</Label>
                         <Input
                           placeholder="e.g. BILL-9921"
-                          value={billData.billNo}
-                          onChange={(e) => setBillData({ ...billData, billNo: e.target.value })}
+                          {...billForm.register('billNo')}
                         />
                       </div>
                       <div className="space-y-2">
@@ -256,8 +248,7 @@ export default function SupplierManagementPage() {
                           type="number"
                           required
                           placeholder="1200.00"
-                          value={billData.amount}
-                          onChange={(e) => setBillData({ ...billData, amount: e.target.value })}
+                          {...billForm.register('amount')}
                         />
                       </div>
                     </div>
@@ -411,21 +402,31 @@ export default function SupplierManagementPage() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>Supplier Name</Label>
-                <Input required value={editSup?.name || ''} onChange={(e) => setEditSup(editSup ? { ...editSup, name: e.target.value } : null)} />
+                <Input required {...editForm.register('name')} />
+                {editForm.formState.errors.name && (
+                  <span className="text-xs text-destructive">{editForm.formState.errors.name.message}</span>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Category</Label>
-                  <Input value={editSup?.category || ''} onChange={(e) => setEditSup(editSup ? { ...editSup, category: e.target.value } : null)} />
+                  <Input {...editForm.register('category')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <Input type="email" value={editSup?.email || ''} onChange={(e) => setEditSup(editSup ? { ...editSup, email: e.target.value } : null)} />
+                  <Input type="email" {...editForm.register('contactEmail')} />
+                  {editForm.formState.errors.contactEmail && (
+                    <span className="text-xs text-destructive">{editForm.formState.errors.contactEmail.message}</span>
+                  )}
                 </div>
               </div>
               <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input {...editForm.register('phone')} />
+              </div>
+              <div className="space-y-2">
                 <Label>Payment Terms</Label>
-                <Input value={editSup?.terms || ''} onChange={(e) => setEditSup(editSup ? { ...editSup, terms: e.target.value } : null)} />
+                <Input {...editForm.register('paymentTerms')} />
               </div>
             </div>
             <DialogFooter>
@@ -458,4 +459,3 @@ export default function SupplierManagementPage() {
     </div>
   );
 }
-

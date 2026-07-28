@@ -27,6 +27,7 @@ export default function InvoiceViewerPage() {
   const [invoice, setInvoice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [emailing, setEmailing] = useState(false);
+  const [serverPdfLoading, setServerPdfLoading] = useState(false);
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -48,17 +49,52 @@ export default function InvoiceViewerPage() {
 
   const handleDownloadPdf = async () => {
     if (!invoiceRef.current) return;
-    const html2pdf = await getHtml2Pdf();
-    if (!html2pdf) return;
+    try {
+      const html2pdf = await getHtml2Pdf();
+      if (!html2pdf) {
+        alert('PDF library not available. Try the "Server PDF" button instead.');
+        return;
+      }
 
-    const opt = {
-      margin: [15, 15, 15, 15] as [number, number, number, number],
-      filename: `${invoice.invoiceNo}.pdf`,
-      image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
-    };
-    html2pdf().set(opt).from(invoiceRef.current).save();
+      const opt = {
+        margin: [15, 15, 15, 15] as [number, number, number, number],
+        filename: `${invoice.invoiceNo}.pdf`,
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
+      };
+      await html2pdf().set(opt).from(invoiceRef.current).save();
+    } catch (err: any) {
+      alert(err?.message || 'Failed to generate PDF. Try the "Server PDF" button instead.');
+    }
+  };
+
+  const handleServerPdfDownload = async () => {
+    setServerPdfLoading(true);
+    try {
+      const token = localStorage.getItem('ff_access_token');
+      const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+      const res = await fetch(`${API_URL}/api/v1/pdf/invoice/${id}/pdf`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const errorBody = await res.text().catch(() => '');
+        throw new Error(`Server returned ${res.status}: ${errorBody || 'Failed to generate PDF'}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${invoice.invoiceNo}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Failed to generate server PDF');
+    } finally {
+      setServerPdfLoading(false);
+    }
   };
 
   const handleEmail = async () => {
@@ -91,6 +127,10 @@ export default function InvoiceViewerPage() {
           </Button>
           <Button variant="outline" onClick={handleDownloadPdf}>
             <Download className="h-4 w-4 mr-2" /> Download PDF
+          </Button>
+          <Button variant="outline" onClick={handleServerPdfDownload} disabled={serverPdfLoading}>
+            {serverPdfLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            {serverPdfLoading ? 'Generating...' : 'Server PDF'}
           </Button>
           <Button onClick={handleEmail} disabled={emailing} className="bg-primary hover:bg-primary-tint text-primary-foreground">
             {emailing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}

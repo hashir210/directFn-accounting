@@ -7,7 +7,7 @@ import { JournalEntriesService } from '../journal-entries/journal-entries.servic
 
 function formatIncome(record: {
   id: string;
-  category: string;
+  category: string | null;
   description: string | null;
   amount: Decimal;
   date: Date;
@@ -15,7 +15,7 @@ function formatIncome(record: {
 }) {
   return {
     id: record.id,
-    category: record.category,
+    category: record.category || '',
     description: record.description,
     amount: toNumber(record.amount),
     date: record.date.toISOString().split('T')[0],
@@ -25,13 +25,13 @@ function formatIncome(record: {
 
 async function postIncomeJournal(organizationId: string, income: {
   id: string;
-  category: string;
+  category: string | null;
   amount: number;
   date: Date;
   description: string | null;
   referenceNo: string | null;
 }) {
-  const accountCode = INCOME_CATEGORY_ACCOUNT_CODE[income.category] || '4040';
+  const accountCode = (income.category && INCOME_CATEGORY_ACCOUNT_CODE[income.category]) || '4040';
   let incomeAccount = await AccountsService.getByCode(organizationId, accountCode);
   let cashAccount = await AccountsService.getByCode(organizationId, '1010');
 
@@ -98,7 +98,7 @@ export class IncomeService {
   }
 
   static async create(organizationId: string, data: {
-    category: string;
+    category: string | null;
     description?: string;
     amount: number;
     date?: string;
@@ -117,7 +117,7 @@ export class IncomeService {
 
     await postIncomeJournal(organizationId, {
       id: record.id,
-      category: record.category,
+      category: record.category || '',
       amount: data.amount,
       date: record.date,
       description: record.description,
@@ -153,7 +153,7 @@ export class IncomeService {
     });
     await postIncomeJournal(organizationId, {
       id: record.id,
-      category: record.category,
+      category: record.category || '',
       amount: toNumber(record.amount),
       date: record.date,
       description: record.description,

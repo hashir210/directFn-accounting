@@ -124,7 +124,7 @@ export class SalesOrdersService {
       const coupon = await prisma.coupon.findFirst({ where: { organizationId, code: data.couponCode, isActive: true } });
       if (!coupon) throw new NotFoundError('Coupon not found or inactive');
       const now = new Date();
-      if (now < coupon.startDate || now > coupon.endDate) throw new BadRequestError('Coupon has expired or is not yet active');
+      if ((coupon.startDate && now < coupon.startDate) || (coupon.endDate && now > coupon.endDate)) throw new BadRequestError('Coupon has expired or is not yet active');
       if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) throw new BadRequestError('Coupon usage limit reached');
       if (coupon.minOrderAmount && subtotal < toNum(coupon.minOrderAmount)) throw new BadRequestError(`Minimum order amount for this coupon is ${toNum(coupon.minOrderAmount)}`);
 

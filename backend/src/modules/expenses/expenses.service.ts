@@ -8,12 +8,12 @@ import { JournalEntriesService } from '../journal-entries/journal-entries.servic
 export class ExpensesService {
   static async postExpenseJournal(organizationId: string, expense: {
     id: string;
-    category: string;
+    category: string | null;
     amount: number;
     date: Date;
     description: string | null;
   }) {
-    const accountCode = EXPENSE_CATEGORY_ACCOUNT_CODE[expense.category] || '5060';
+    const accountCode = (expense.category && EXPENSE_CATEGORY_ACCOUNT_CODE[expense.category]) || '5060';
     let expenseAccount = await AccountsService.getByCode(organizationId, accountCode);
     let cashAccount = await AccountsService.getByCode(organizationId, '1010');
 
@@ -107,7 +107,7 @@ export class ExpensesService {
 
   static async create(organizationId: string, data: {
     vendor: string;
-    category: string;
+    category: string | null;
     description?: string;
     amount: number;
     date?: string;

@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createExpenseSchema, type CreateExpenseForm } from '@/lib/schemas/expense';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,13 +54,19 @@ export default function ExpensesPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
-
-  const [vendor, setVendor] = useState('');
-  const [category, setCategory] = useState('Office');
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [date, setDate] = useState('');
   const [creating, setCreating] = useState(false);
+
+  const expenseForm = useForm<CreateExpenseForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(createExpenseSchema) as any,
+    defaultValues: {
+      vendor: '',
+      category: 'Office',
+      description: '',
+      amount: undefined,
+      date: '',
+    },
+  });
 
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
@@ -86,25 +95,20 @@ export default function ExpensesPage() {
   }
   const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
 
-  const handleRecordExpense = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!vendor || !amount) return;
+  const handleRecordExpense = async (data: CreateExpenseForm) => {
     setCreating(true);
     try {
       await apiFetch('/api/v1/expenses', {
         method: 'POST',
         body: JSON.stringify({
-          vendor,
-          category,
-          description: description || undefined,
-          amount: parseFloat(amount),
-          date: date || undefined,
+          vendor: data.vendor,
+          category: data.category,
+          description: data.description || undefined,
+          amount: data.amount,
+          date: data.date || undefined,
         }),
       });
-      setVendor('');
-      setDescription('');
-      setAmount('');
-      setDate('');
+      expenseForm.reset();
       setDialogOpen(false);
       fetchExpenses();
     } finally {
@@ -152,7 +156,7 @@ export default function ExpensesPage() {
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[480px]">
-            <form onSubmit={handleRecordExpense}>
+            <form onSubmit={expenseForm.handleSubmit(handleRecordExpense)}>
               <DialogHeader>
                 <DialogTitle>Record New Expense</DialogTitle>
                 <DialogDescription>Enter vendor billing and categorization information.</DialogDescription>
@@ -164,8 +168,7 @@ export default function ExpensesPage() {
                     id="vendor"
                     required
                     placeholder="AWS / Slack / Landlord"
-                    value={vendor}
-                    onChange={(e) => setVendor(e.target.value)}
+                    {...expenseForm.register('vendor')}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -174,8 +177,7 @@ export default function ExpensesPage() {
                     <select
                       id="category"
                       className="w-full h-9 px-3 py-1 bg-background border rounded-md text-xs font-medium focus:ring-2 focus:ring-primary cursor-pointer"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
+                      {...expenseForm.register('category')}
                     >
                       <option value="Office">Office</option>
                       <option value="Salary">Salary</option>
@@ -193,8 +195,7 @@ export default function ExpensesPage() {
                       step="0.01"
                       required
                       placeholder="1200.00"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
+                      {...expenseForm.register('amount')}
                     />
                   </div>
                 </div>
@@ -203,8 +204,7 @@ export default function ExpensesPage() {
                   <Input
                     id="description"
                     placeholder="Monthly cloud hosting fee"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    {...expenseForm.register('description')}
                   />
                 </div>
                 <div className="space-y-2">
@@ -212,8 +212,7 @@ export default function ExpensesPage() {
                   <Input
                     id="date"
                     type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
+                    {...expenseForm.register('date')}
                   />
                 </div>
               </div>

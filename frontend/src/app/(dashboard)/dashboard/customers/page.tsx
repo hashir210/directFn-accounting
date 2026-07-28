@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ContactRound,
   Plus,
@@ -37,6 +39,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
+import { updateCustomerSchema, type UpdateCustomerForm } from '@/lib/schemas/customer';
 
 
 interface Customer {
@@ -78,8 +81,10 @@ export default function CustomerManagementPage() {
   const [openStatement, setOpenStatement] = useState(false);
 
   // Edit state
-  const [editCust, setEditCust] = useState<{ id: string; name: string; email: string; phone: string; address: string; creditLimit: string } | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [openEdit, setOpenEdit] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const form = useForm<UpdateCustomerForm>({ resolver: zodResolver(updateCustomerSchema as any), defaultValues: { name: '', email: '', phone: '', address: '', creditLimit: undefined } });
   // Delete state
   const [deleteCustId, setDeleteCustId] = useState<string | null>(null);
   const [deleteCustName, setDeleteCustName] = useState('');
@@ -117,35 +122,35 @@ export default function CustomerManagementPage() {
   };
 
   const openEditDialog = (c: Customer) => {
-    setEditCust({
-      id: c.id,
+    setEditId(c.id);
+    form.reset({
       name: c.name,
       email: c.email || '',
       phone: c.phone || '',
       address: c.address || '',
-      creditLimit: String(c.creditLimit || '0'),
+      creditLimit: c.creditLimit ? Number(c.creditLimit) : 0,
     });
     setOpenEdit(true);
   };
 
-  const handleEditCustomer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editCust) return;
+  const handleEditCustomer = async (data: UpdateCustomerForm) => {
+    if (!editId) return;
     setIsSubmitting(true);
     setError('');
     try {
-      await apiFetch(`/api/v1/customers/${editCust.id}`, {
+      await apiFetch(`/api/v1/customers/${editId}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          name: editCust.name,
-          email: editCust.email || undefined,
-          phone: editCust.phone || undefined,
-          address: editCust.address || undefined,
-          creditLimit: parseFloat(editCust.creditLimit) || 0,
+          name: data.name,
+          email: data.email || undefined,
+          phone: data.phone || undefined,
+          address: data.address || undefined,
+          creditLimit: data.creditLimit || 0,
         }),
       });
       setOpenEdit(false);
-      setEditCust(null);
+      setEditId(null);
+      form.reset();
       fetchCustomers();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to update customer');
@@ -276,7 +281,7 @@ export default function CustomerManagementPage() {
                     <TableRow key={c.id}>
                       <TableCell>
                         <div className="font-semibold">{c.name}</div>
-                        <div className="text-xs text-muted-foreground">{c.email || 'No Email'} • {c.phone || 'No Phone'}</div>
+                        <div className="text-xs text-muted-foreground">{c.email || 'No Email'} &bull; {c.phone || 'No Phone'}</div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
@@ -317,7 +322,7 @@ export default function CustomerManagementPage() {
       {/* Edit Customer Dialog */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
         <DialogContent>
-          <form onSubmit={handleEditCustomer}>
+          <form onSubmit={form.handleSubmit(handleEditCustomer)}>
             <DialogHeader>
               <DialogTitle>Edit Customer</DialogTitle>
               <DialogDescription>Update customer profile details.</DialogDescription>
@@ -325,21 +330,24 @@ export default function CustomerManagementPage() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>Customer Name</Label>
-                <Input required value={editCust?.name || ''} onChange={(e) => setEditCust(editCust ? { ...editCust, name: e.target.value } : null)} />
+                <Input {...form.register('name')} />
+                {form.formState.errors.name && <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <Input type="email" value={editCust?.email || ''} onChange={(e) => setEditCust(editCust ? { ...editCust, email: e.target.value } : null)} />
+                  <Input type="email" {...form.register('email')} />
+                  {form.formState.errors.email && <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>Phone</Label>
-                  <Input value={editCust?.phone || ''} onChange={(e) => setEditCust(editCust ? { ...editCust, phone: e.target.value } : null)} />
+                  <Input {...form.register('phone')} />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Credit Limit ($)</Label>
-                <Input type="number" value={editCust?.creditLimit || '0'} onChange={(e) => setEditCust(editCust ? { ...editCust, creditLimit: e.target.value } : null)} />
+                <Input type="number" {...form.register('creditLimit')} />
+                {form.formState.errors.creditLimit && <p className="text-xs text-destructive">{form.formState.errors.creditLimit.message}</p>}
               </div>
             </div>
             <DialogFooter>
@@ -426,5 +434,3 @@ export default function CustomerManagementPage() {
     </div>
   );
 }
-
-

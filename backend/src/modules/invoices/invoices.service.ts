@@ -1,7 +1,8 @@
 import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../../config/db';
 import { BadRequestError, NotFoundError } from '../../utils/errors';
-import nodemailer from 'nodemailer';
+import { sendInvoiceEmail } from '../../utils/mailer';
+import { generateInvoicePDF } from '../../pdf/invoice';
 import eventEmitter, { EventTypes } from '../../utils/events';
 
 function toNumber(d: Decimal | null | undefined): number {
@@ -301,26 +302,61 @@ export class InvoicesService {
   static async emailInvoice(organizationId: string, id: string, email?: string) {
     const invoice = await prisma.invoice.findFirst({
       where: { id, organizationId },
-      include: { customer: true, organization: true },
+      include: {
+        customer: true,
+        organization: true,
+        items: true,
+      },
     });
     if (!invoice) throw new NotFoundError('Invoice not found');
 
     const targetEmail = email || invoice.customer.email;
     if (!targetEmail) throw new BadRequestError('Customer email not found');
 
-    // Simulate sending email (in a real app, use nodemailer with actual SMTP config)
-    console.log(`Simulating sending invoice ${invoice.invoiceNo} to ${targetEmail}`);
-    
-    // We would use nodemailer here:
-    /*
-    const transporter = nodemailer.createTransport({ ... });
-    await transporter.sendMail({
-      from: 'noreply@finflow.com',
+    const invoiceData = {
+      id: invoice.id,
+      invoiceNo: invoice.invoiceNo,
+      amount: Number(invoice.amount.toString()),
+      subTotal: Number((invoice.subTotal || invoice.amount).toString()),
+      taxTotal: Number((invoice.taxTotal || 0).toString()),
+      discountTotal: Number((invoice.discountTotal || 0).toString()),
+      status: invoice.status,
+      issuedAt: invoice.issuedAt.toISOString().split('T')[0],
+      dueAt: invoice.dueAt.toISOString().split('T')[0],
+      paidAt: invoice.paidAt ? invoice.paidAt.toISOString().split('T')[0] : null,
+      organization: {
+        name: invoice.organization?.name || '',
+        address: invoice.organization?.address || '',
+        email: invoice.organization?.contactEmail || '',
+      },
+      customerName: invoice.customer?.name || '',
+      customerEmail: invoice.customer?.email || '',
+      customer: {
+        name: invoice.customer?.name || '',
+        email: invoice.customer?.email || '',
+        address: invoice.customer?.address || '',
+      },
+      items: invoice.items.map((i) => ({
+        description: i.description,
+        quantity: i.quantity,
+        unitPrice: Number(i.unitPrice.toString()),
+        taxRate: Number(i.taxRate.toString()),
+        taxAmount: Number((i.taxAmount || 0).toString()),
+        total: Number(i.total.toString()),
+      })),
+      paymentUrl: `${process.env.CLIENT_URL || 'http://localhost:3000'}/pay/${invoice.id}`,
+    };
+
+    const pdfBuffer = await generateInvoicePDF(invoiceData);
+
+    await sendInvoiceEmail({
       to: targetEmail,
-      subject: `Invoice ${invoice.invoiceNo} from ${invoice.organization.name}`,
-      text: `Please find your invoice attached or visit .../invoices/${invoice.id}`,
+      invoiceNo: invoice.invoiceNo,
+      orgName: invoice.organization?.name || 'FinFlow',
+      amount: Number(invoice.amount.toString()),
+      dueAt: invoice.dueAt.toISOString().split('T')[0],
+      pdfBuffer,
     });
-    */
 
     return { message: 'Invoice emailed successfully', email: targetEmail };
   }

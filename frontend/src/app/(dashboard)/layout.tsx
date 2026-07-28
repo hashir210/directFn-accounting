@@ -91,6 +91,29 @@ export default function DashboardLayout({
   const { user, loading, isAuthenticated, hasPermission, isScreenAllowed, logout } = useAuth();
   const { notifications, unreadCount, markAllAsRead } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [organizations, setOrganizations] = useState<Array<{ id: string; name: string }>>([]);
+  const [activeOrgName, setActiveOrgName] = useState('FinFlow');
+
+  useEffect(() => {
+    if (user?.isPlatformOrg) {
+      apiFetch('/api/v1/platform/organizations?limit=100').then((res: any) => {
+        if (res?.items) setOrganizations(res.items.map((o: any) => ({ id: o.id, name: o.name })));
+      }).catch(() => {});
+    }
+    if (user?.organizationId) {
+      apiFetch(`/api/v1/organizations/current`).then((res: any) => {
+        if (res?.name) setActiveOrgName(res.name);
+      }).catch(() => {});
+    }
+  }, [user]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    router.push(`/dashboard/invoices?search=${encodeURIComponent(q)}`);
+  };
 
   // Auth guard: redirect unauthenticated users to /login
   useEffect(() => {
@@ -252,6 +275,7 @@ export default function DashboardLayout({
   }
   if (user?.isPlatformOrg && !isStaff && isScreenAllowed('platform')) {
     settingsItems.push({ href: "/admin", label: "Platform Admin", icon: Shield });
+    settingsItems.push({ href: "/dashboard/settings/organizations", label: "Organizations", icon: Building2 });
   }
 
   return (
@@ -277,14 +301,17 @@ export default function DashboardLayout({
                 <DropdownMenuContent className="w-56" align="start">
                   <DropdownMenuLabel>Switch Organization</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Activity className="h-4 w-4 mr-2 text-primary" />
-                    DirectFN Finance (HQ)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Activity className="h-4 w-4 mr-2 text-muted-foreground" />
-                    DirectFN Dev Services
-                  </DropdownMenuItem>
+                  {organizations.length > 0 ? organizations.map((org) => (
+                    <DropdownMenuItem key={org.id} className="cursor-pointer" onClick={() => router.push(`/dashboard?orgId=${org.id}`)}>
+                      <Activity className="h-4 w-4 mr-2 text-muted-foreground" />
+                      {org.name}
+                    </DropdownMenuItem>
+                  )) : (
+                    <DropdownMenuItem className="cursor-pointer">
+                      <Activity className="h-4 w-4 mr-2 text-muted-foreground" />
+                      {activeOrgName}
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </SidebarMenuItem>
@@ -553,14 +580,16 @@ export default function DashboardLayout({
           {/* Right side */}
           <div className="flex items-center gap-2">
             {/* Search */}
-            <div className="relative hidden md:block">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <form onSubmit={handleSearch} className="relative hidden md:block">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search invoices..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-48 pl-8 h-8"
               />
-            </div>
+            </form>
 
             {/* Manage */}
             <Tooltip>

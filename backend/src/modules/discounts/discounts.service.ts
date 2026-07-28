@@ -47,8 +47,6 @@ export class DiscountsService {
         minOrderAmount: data.minOrderAmount !== undefined ? new Decimal(data.minOrderAmount) : null,
         maxDiscount: data.maxDiscount !== undefined ? new Decimal(data.maxDiscount) : null,
         isActive: data.isActive ?? true,
-        startDate: data.startDate ? new Date(data.startDate) : null,
-        endDate: data.endDate ? new Date(data.endDate) : null,
       },
     });
   }

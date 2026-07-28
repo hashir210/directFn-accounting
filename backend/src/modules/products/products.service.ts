@@ -1,6 +1,21 @@
 import { Decimal } from '@prisma/client/runtime/library';
+import streamifier from 'streamifier';
 import prisma from '../../config/db';
-import { NotFoundError, ConflictError } from '../../utils/errors';
+import cloudinary from '../../config/cloudinary';
+import { NotFoundError, ConflictError, BadRequestError } from '../../utils/errors';
+
+function streamUpload(buffer: Buffer, folder: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: 'image' },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result!.secure_url);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(uploadStream);
+  });
+}
 
 export class ProductsService {
   static async list(organizationId: string, options: { page?: number; limit?: number; search?: string; category?: string }) {
@@ -145,6 +160,22 @@ export class ProductsService {
   static async delete(organizationId: string, id: string) {
     await this.getById(organizationId, id);
     return prisma.product.delete({ where: { id } });
+  }
+
+  static async uploadImage(organizationId: string, id: string, file: Express.Multer.File) {
+    await this.getById(organizationId, id);
+
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      throw new BadRequestError('Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET env vars.');
+    }
+
+    const imageUrl = await streamUpload(file.buffer, `finflow/products/${organizationId}`);
+
+    return prisma.product.update({
+      where: { id },
+      data: { imageUrl },
+      select: { id: true, name: true, imageUrl: true },
+    });
   }
 }
 

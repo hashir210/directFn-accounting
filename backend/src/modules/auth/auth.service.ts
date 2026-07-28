@@ -477,7 +477,6 @@ export class AuthService {
 
     const tokenRecord = await prisma.refreshToken.findUnique({
       where: { token: hashedToken },
-      include: { user: true },
     });
 
     if (!tokenRecord) {
@@ -500,10 +499,17 @@ export class AuthService {
       throw new UnauthorizedError('Invalid or expired refresh token');
     }
 
+    const user = await prisma.user.findUnique({ where: { id: tokenRecord.userId } });
+    if (!user) {
+      await prisma.refreshToken.deleteMany({ where: { userId: tokenRecord.userId } });
+      logger.warn(`[auth-service]: Refresh token user ${tokenRecord.userId} no longer exists; orphaned tokens cleaned up`);
+      throw new UnauthorizedError('Invalid or expired refresh token');
+    }
+
     // Generate new pair
-    const org = await prisma.organization.findUnique({ where: { id: tokenRecord.user.organizationId }, select: { isPlatform: true } });
+    const org = await prisma.organization.findUnique({ where: { id: user.organizationId }, select: { isPlatform: true } });
     const isPlatformOrg = org?.isPlatform || false;
-    const tokens = await this.createSession(tokenRecord.userId, tokenRecord.user.email, tokenRecord.user.roleId || '', tokenRecord.user.organizationId, isPlatformOrg);
+    const tokens = await this.createSession(user.id, user.email, user.roleId || '', user.organizationId, isPlatformOrg);
 
     // Rotate: revoke the current token (kept for reuse detection instead of deleted)
     await prisma.refreshToken.update({

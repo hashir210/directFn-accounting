@@ -52,4 +52,17 @@ export class ProductsController {
       next(error);
     }
   }
+
+  static async uploadImage(req: Request, res: Response, next: NextFunction) {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ success: false, message: 'No image file provided' });
+      }
+      const result = await ProductsService.uploadImage(req.user!.organizationId, req.params.id, file);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

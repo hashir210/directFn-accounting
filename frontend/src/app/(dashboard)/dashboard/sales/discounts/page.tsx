@@ -29,6 +29,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createDiscountSchema, type CreateDiscountForm } from '@/lib/schemas/discount';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
 
@@ -53,16 +56,13 @@ export default function DiscountsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [openAdd, setOpenAdd] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Form State
-  const [name, setName] = useState('');
-  const [type, setType] = useState('percentage');
-  const [value, setValue] = useState(10);
-  const [minOrderAmount, setMinOrderAmount] = useState('');
-  const [maxDiscount, setMaxDiscount] = useState('');
-  const [isActive, setIsActive] = useState(true);
+  const form = useForm<CreateDiscountForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(createDiscountSchema) as any,
+    defaultValues: { name: '', type: 'percentage', value: 10, minOrderAmount: undefined, maxDiscount: undefined, isActive: true },
+  });
 
   const fetchDiscounts = useCallback(async () => {
     try {
@@ -80,39 +80,25 @@ export default function DiscountsPage() {
     fetchDiscounts();
   }, [fetchDiscounts]);
 
-  const handleCreateDiscount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || value <= 0) {
-      setError('Please fill in all required fields');
-      return;
-    }
-
+  const handleCreateDiscount = async (data: CreateDiscountForm) => {
     try {
-      setIsSubmitting(true);
       setError('');
       await apiFetch('/api/v1/discounts', {
         method: 'POST',
         body: JSON.stringify({
-          name,
-          type,
-          value,
-          minOrderAmount: minOrderAmount ? parseFloat(minOrderAmount) : undefined,
-          maxDiscount: maxDiscount ? parseFloat(maxDiscount) : undefined,
-          isActive,
+          name: data.name,
+          type: data.type,
+          value: data.value,
+          minOrderAmount: data.minOrderAmount || undefined,
+          maxDiscount: data.maxDiscount || undefined,
+          isActive: data.isActive ?? true,
         }),
       });
       setOpenAdd(false);
-      setName('');
-      setType('percentage');
-      setValue(10);
-      setMinOrderAmount('');
-      setMaxDiscount('');
-      setIsActive(true);
+      form.reset();
       fetchDiscounts();
     } catch (err: any) {
       setError(err.message || 'Failed to create discount');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -211,17 +197,13 @@ export default function DiscountsPage() {
             <DialogTitle>Add Discount Rule</DialogTitle>
             <DialogDescription>Create a new org-wide campaign discount.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateDiscount} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleCreateDiscount)} className="space-y-4">
             {error && <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">{error}</div>}
 
             <div className="space-y-1">
               <Label htmlFor="disc-name">Campaign Name *</Label>
-              <Input
-                id="disc-name"
-                placeholder="e.g. Summer Special 10%"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+              <Input id="disc-name" placeholder="e.g. Summer Special 10%" {...form.register('name')} />
+              {form.formState.errors.name && <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -229,8 +211,7 @@ export default function DiscountsPage() {
                 <Label htmlFor="disc-type">Type *</Label>
                 <select
                   id="disc-type"
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
+                  {...form.register('type')}
                   className="w-full h-10 px-3 bg-background border rounded-md text-sm outline-none"
                 >
                   <option value="percentage">Percentage (%)</option>
@@ -239,33 +220,19 @@ export default function DiscountsPage() {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="disc-value">Discount Value *</Label>
-                <Input
-                  id="disc-value"
-                  type="number"
-                  value={value}
-                  onChange={(e) => setValue(parseFloat(e.target.value) || 0)}
-                />
+                <Input id="disc-value" type="number" {...form.register('value')} />
+                {form.formState.errors.value && <p className="text-xs text-destructive">{form.formState.errors.value.message}</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="disc-min">Min Order ($)</Label>
-                <Input
-                  id="disc-min"
-                  placeholder="Optional"
-                  value={minOrderAmount}
-                  onChange={(e) => setMinOrderAmount(e.target.value)}
-                />
+                <Input id="disc-min" placeholder="Optional" {...form.register('minOrderAmount')} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="disc-max">Max Cap Amount ($)</Label>
-                <Input
-                  id="disc-max"
-                  placeholder="Optional"
-                  value={maxDiscount}
-                  onChange={(e) => setMaxDiscount(e.target.value)}
-                />
+                <Input id="disc-max" placeholder="Optional" {...form.register('maxDiscount')} />
               </div>
             </div>
 
@@ -273,8 +240,7 @@ export default function DiscountsPage() {
               <input
                 id="disc-active"
                 type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
+                {...form.register('isActive')}
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <Label htmlFor="disc-active">Campaign Active status</Label>
@@ -282,8 +248,8 @@ export default function DiscountsPage() {
 
             <DialogFooter className="gap-2 pt-3 border-t">
               <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Discount
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Discount
               </Button>
             </DialogFooter>
           </form>

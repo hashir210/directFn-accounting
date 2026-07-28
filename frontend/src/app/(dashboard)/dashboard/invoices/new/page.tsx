@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, Save, ArrowLeft, Loader2 } from 'lucide-react';
 import apiFetch from '@/lib/api';
+import { createInvoiceSchema, type CreateInvoiceForm, type LineItem } from '@/lib/schemas/invoice';
 
 interface Customer {
   id: string;
@@ -30,17 +33,42 @@ export default function NewInvoicePage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
-  // Form State
-  const [customerId, setCustomerId] = useState('');
-  const [dueAt, setDueAt] = useState('');
-  const [notes, setNotes] = useState('');
-  const [terms, setTerms] = useState('Net 30');
-  
-  const [items, setItems] = useState([
-    { id: Date.now().toString(), productId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 0 }
-  ]);
+  const {
+    register,
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<CreateInvoiceForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(createInvoiceSchema) as any,
+    defaultValues: {
+      customerId: '',
+      dueAt: '',
+      notes: '',
+      terms: 'Net 30',
+      items: [{ productId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 0 }] as LineItem[],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({ control, name: 'items' });
+  const items = watch('items');
+
+  const calculateTotals = () => {
+    let subTotal = 0;
+    let taxTotal = 0;
+    items?.forEach(item => {
+      const lineSubTotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+      const lineTax = lineSubTotal * ((Number(item.taxRate) || 0) / 100);
+      subTotal += lineSubTotal;
+      taxTotal += lineTax;
+    });
+    return { subTotal, taxTotal, total: subTotal + taxTotal };
+  };
+
+  const { subTotal, taxTotal, total } = calculateTotals();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,80 +88,43 @@ export default function NewInvoicePage() {
     fetchData();
   }, []);
 
-  const handleAddItem = () => {
-    setItems([...items, { id: Date.now().toString(), productId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 0 }]);
-  };
-
-  const handleRemoveItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
-  };
-
-  const handleItemChange = (id: string, field: string, value: string | number) => {
-    setItems(items.map(item => {
-      if (item.id === id) {
-        const updated = { ...item, [field]: value };
-        // Auto-fill product details if product selected
-        if (field === 'productId' && value) {
-          const prod = products.find(p => p.id === value);
-          if (prod) {
-            updated.description = prod.name;
-            updated.unitPrice = prod.sellingPrice;
-            updated.taxRate = prod.taxRate;
-          }
-        }
-        return updated;
+  const onProductSelect = (index: number, productId: string) => {
+    const prod = products.find(p => p.id === productId);
+    if (prod) {
+      setValue(`items.${index}.description`, prod.name);
+      setValue(`items.${index}.unitPrice`, prod.sellingPrice);
+      setValue(`items.${index}.taxRate`, prod.taxRate);
+      if (!productId) {
+        setValue(`items.${index}.description`, '');
+        setValue(`items.${index}.unitPrice`, 0);
+        setValue(`items.${index}.taxRate`, 0);
       }
-      return item;
-    }));
+    }
   };
 
-  const calculateTotals = () => {
-    let subTotal = 0;
-    let taxTotal = 0;
-    items.forEach(item => {
-      const lineSubTotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
-      const lineTax = lineSubTotal * ((Number(item.taxRate) || 0) / 100);
-      subTotal += lineSubTotal;
-      taxTotal += lineTax;
+  const onSubmit = async (data: CreateInvoiceForm) => {
+    const payload = {
+      customerId: data.customerId,
+      dueAt: data.dueAt || new Date(Date.now() + 14 * 86400000).toISOString(),
+      notes: data.notes,
+      terms: data.terms,
+      status: 'pending',
+      items: data.items.map(i => ({
+        productId: i.productId || undefined,
+        description: i.description,
+        quantity: Number(i.quantity),
+        unitPrice: Number(i.unitPrice),
+        taxRate: Number(i.taxRate),
+      })),
+    };
+
+    const res = await apiFetch('/api/v1/invoices', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
-    return { subTotal, taxTotal, total: subTotal + taxTotal };
-  };
 
-  const { subTotal, taxTotal, total } = calculateTotals();
-
-  const handleSave = async () => {
-    if (!customerId) return alert('Please select a customer');
-    if (items.some(i => !i.description || i.quantity <= 0)) return alert('Please fill out all line items correctly');
-
-    setSaving(true);
-    try {
-      const payload = {
-        customerId,
-        dueAt: dueAt || new Date(Date.now() + 14 * 86400000).toISOString(),
-        notes,
-        terms,
-        status: 'pending',
-        items: items.map(i => ({
-          productId: i.productId || undefined,
-          description: i.description,
-          quantity: Number(i.quantity),
-          unitPrice: Number(i.unitPrice),
-          taxRate: Number(i.taxRate),
-        })),
-      };
-
-      const res = await apiFetch('/api/v1/invoices', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-
-      if (res) {
-        router.push(`/dashboard/invoices/${res.id}`);
-      }
-    } catch (err: unknown) {
-      alert((err as Error).message || 'Failed to create invoice');
-    } finally {
-      setSaving(false);
+    if (res) {
+      router.push(`/dashboard/invoices/${res.id}`);
     }
   };
 
@@ -148,8 +139,8 @@ export default function NewInvoicePage() {
           </Button>
           <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">Create Invoice</h1>
         </div>
-        <Button onClick={handleSave} disabled={saving} className="bg-primary hover:bg-primary-tint text-primary-foreground shadow-lg hover:shadow-primary/25 transition-all">
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+        <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting} className="bg-primary hover:bg-primary-tint text-primary-foreground shadow-lg hover:shadow-primary/25 transition-all">
+          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Save & Preview
         </Button>
       </div>
@@ -166,18 +157,18 @@ export default function NewInvoicePage() {
                   <Label>Customer</Label>
                   <select
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    value={customerId}
-                    onChange={(e) => setCustomerId(e.target.value)}
+                    {...register('customerId')}
                   >
                     <option value="">Select Customer...</option>
                     {customers.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
+                  {errors.customerId && <p className="text-xs text-destructive">{errors.customerId.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>Due Date</Label>
-                  <Input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+                  <Input type="date" {...register('dueAt')} />
                 </div>
               </div>
             </CardContent>
@@ -186,11 +177,12 @@ export default function NewInvoicePage() {
           <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Line Items</CardTitle>
-              <Button size="sm" variant="outline" onClick={handleAddItem}>
+              <Button size="sm" variant="outline" onClick={() => append({ productId: '', description: '', quantity: 1, unitPrice: 0, taxRate: 0 })}>
                 <Plus className="mr-2 h-4 w-4" /> Add Item
               </Button>
             </CardHeader>
             <CardContent>
+              {errors.items && <p className="text-xs text-destructive mb-2">{errors.items.message || errors.items.root?.message}</p>}
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -203,61 +195,78 @@ export default function NewInvoicePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((item, index) => (
-                    <TableRow key={item.id}>
+                  {fields.map((field, index) => (
+                    <TableRow key={field.id}>
                       <TableCell className="align-top">
-                        <select
-                          className="flex mb-2 h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                          value={item.productId}
-                          onChange={(e) => handleItemChange(item.id, 'productId', e.target.value)}
-                        >
-                          <option value="">Custom Item...</option>
-                          {products.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
+                        <Controller
+                          control={control}
+                          name={`items.${index}.productId`}
+                          render={({ field: selectField }) => (
+                            <select
+                              className="flex mb-2 h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                              value={selectField.value || ''}
+                              onChange={(e) => {
+                                selectField.onChange(e);
+                                onProductSelect(index, e.target.value);
+                              }}
+                            >
+                              <option value="">Custom Item...</option>
+                              {products.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </select>
+                          )}
+                        />
                         <Input
                           placeholder="Description"
-                          value={item.description}
-                          onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                          {...register(`items.${index}.description`)}
                           className="h-9"
                         />
+                        {errors.items?.[index]?.description && (
+                          <p className="text-xs text-destructive mt-1">{errors.items[index]?.description?.message}</p>
+                        )}
                       </TableCell>
                       <TableCell className="align-top">
                         <Input
                           type="number"
                           min="1"
-                          value={item.quantity}
-                          onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
+                          {...register(`items.${index}.quantity`)}
                           className="h-9"
                         />
+                        {errors.items?.[index]?.quantity && (
+                          <p className="text-xs text-destructive mt-1">{errors.items[index]?.quantity?.message}</p>
+                        )}
                       </TableCell>
                       <TableCell className="align-top">
                         <Input
                           type="number"
                           min="0"
                           step="0.01"
-                          value={item.unitPrice}
-                          onChange={(e) => handleItemChange(item.id, 'unitPrice', e.target.value)}
+                          {...register(`items.${index}.unitPrice`)}
                           className="h-9"
                         />
+                        {errors.items?.[index]?.unitPrice && (
+                          <p className="text-xs text-destructive mt-1">{errors.items[index]?.unitPrice?.message}</p>
+                        )}
                       </TableCell>
                       <TableCell className="align-top">
                         <Input
                           type="number"
                           min="0"
                           step="0.1"
-                          value={item.taxRate}
-                          onChange={(e) => handleItemChange(item.id, 'taxRate', e.target.value)}
+                          {...register(`items.${index}.taxRate`)}
                           className="h-9"
                         />
+                        {errors.items?.[index]?.taxRate && (
+                          <p className="text-xs text-destructive mt-1">{errors.items[index]?.taxRate?.message}</p>
+                        )}
                       </TableCell>
                       <TableCell className="align-top text-right font-medium pt-4">
-                        ${((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toFixed(2)}
+                        ${((Number(items?.[index]?.quantity) || 0) * (Number(items?.[index]?.unitPrice) || 0)).toFixed(2)}
                       </TableCell>
                       <TableCell className="align-top">
-                        {items.length > 1 && (
-                          <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive/90 hover:bg-destructive/10" onClick={() => handleRemoveItem(item.id)}>
+                        {fields.length > 1 && (
+                          <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive/90 hover:bg-destructive/10" onClick={() => remove(index)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
@@ -276,11 +285,11 @@ export default function NewInvoicePage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Notes for Customer</Label>
-                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Thank you for your business!" />
+                <Textarea {...register('notes')} placeholder="Thank you for your business!" />
               </div>
               <div className="space-y-2">
                 <Label>Terms and Conditions</Label>
-                <Textarea value={terms} onChange={(e) => setTerms(e.target.value)} placeholder="Please pay within 30 days." />
+                <Textarea {...register('terms')} placeholder="Please pay within 30 days." />
               </div>
             </CardContent>
           </Card>
@@ -306,8 +315,8 @@ export default function NewInvoicePage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={handleSave} disabled={saving} className="w-full bg-primary hover:bg-primary-tint text-primary-foreground">
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Save Invoice'}
+              <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting} className="w-full bg-primary hover:bg-primary-tint text-primary-foreground">
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Save Invoice'}
               </Button>
             </CardFooter>
           </Card>
