@@ -1,5 +1,6 @@
 'use client';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Ticket,
@@ -11,7 +12,11 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Controller } from 'react-hook-form';
 import {
   Table,
   TableBody,
@@ -28,7 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createCouponSchema, type CreateCouponForm } from '@/lib/schemas/coupon';
@@ -202,7 +207,7 @@ export default function CouponsPage() {
             <DialogDescription>Add a custom validation-based promotional code.</DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(handleCreateCoupon)} className="space-y-4">
-            {error && <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">{error}</div>}
+            { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
 
             <div className="space-y-1">
               <Label htmlFor="coup-code">Promo Code *</Label>
@@ -221,14 +226,21 @@ export default function CouponsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="coup-type">Discount Type *</Label>
-                <select
-                  id="coup-type"
-                  {...form.register('discountType')}
-                  className="w-full h-10 px-3 bg-background border rounded-md text-sm outline-none"
-                >
-                  <option value="percentage">Percentage (%)</option>
-                  <option value="fixed">Fixed Amount ($)</option>
-                </select>
+                <Controller
+                  control={form.control}
+                  name="discountType"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger id="coup-type" className="w-full">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">Percentage (%)</SelectItem>
+                        <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="coup-val">Discount Value *</Label>
@@ -262,11 +274,16 @@ export default function CouponsPage() {
             </div>
 
             <div className="flex items-center gap-2 pt-2">
-              <input
-                id="coup-active"
-                type="checkbox"
-                {...form.register('isActive')}
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              <Controller
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <Checkbox
+                    id="coup-active"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
               />
               <Label htmlFor="coup-active">Coupon Active status</Label>
             </div>

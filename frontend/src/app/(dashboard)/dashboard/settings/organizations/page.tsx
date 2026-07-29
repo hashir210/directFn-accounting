@@ -1,11 +1,13 @@
 'use client';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/features/auth/useAuth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch, ApiError } from '@/lib/api';
 import { Building2, Loader2, Plus, Mail, Users, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -138,9 +140,7 @@ export default function OrganizationsPage() {
       </div>
 
       {error && (
-        <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg font-medium">
-          {error}
-        </div>
+        <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert>
       )}
       {success && (
         <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-sm rounded-lg font-medium">
@@ -184,15 +184,16 @@ export default function OrganizationsPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Subscription Plan</label>
-                  <select
-                    value={planId}
-                    onChange={(e) => setPlanId(e.target.value)}
-                    className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    {availablePlans.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                  <Select value={planId} onValueChange={setPlanId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select Plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availablePlans.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <Button type="submit" disabled={isCreating} className="w-full md:w-auto">

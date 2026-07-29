@@ -47,7 +47,7 @@ software must never reuse brand green/lime for these states):
 SHADOW TOKENS (soft-UI system — use CSS custom properties, dual-shadow technique)
   --shadow-soft-raised: 
       6px 6px 14px rgba(0,0,0,0.06),      /* dark side, bottom-right */
-      -6px -6px 14px rgba(255,255,255,0.9) /* light side, top-left */
+      -6px -6px 4px rgba(255,255,255,0.9) /* light side, top-left */
   --shadow-soft-pressed (for active/toggled-on states — inset, inverted):
       inset 4px 4px 8px rgba(0,0,0,0.06),
       inset -4px -4px 8px rgba(255,255,255,0.8)
@@ -109,15 +109,15 @@ pages):
 
 STAT CARD (used in: Tenant Dashboard, Platform Admin Dashboard, Invoices List 
 summary, Subscription usage):
-  bg-surface, radius-lg, shadow-soft-raised, padding 24px. Label (500 weight, 
+  bg-surface, radius-lg, shadow-none, border-subtle border (1px), padding 24px. Label (500 weight, 
   neutral-ink, small) → big number (600 weight, brand-primary or ink) → 
   optional progress bar (track: bg-surface-sunken, fill: brand-primary or 
   brand-accent) → optional trend badge (status token colors) in top-right corner.
 
 DATA TABLE (used in: Invoices, Products, Accounting, Reports, Registered 
 Companies, Suppliers):
-  Container: bg-surface-raised, radius-lg, shadow-soft-raised (once, on the 
-  whole table), overflow-hidden.
+  Container: bg-surface-raised, radius-lg, shadow-none, border-subtle border (1px), 
+  overflow-hidden.
   Header row: bg-surface, 500 weight, neutral-ink, sticky on scroll, 
   border-b border-subtle.
   Rows: NO shadow, border-b border-subtle (last row: none), hover: bg-page 
@@ -313,3 +313,11 @@ REPORTS & NOTIFICATIONS
   everywhere that pattern recurs, don't one-off it.
 - Every interactive element needs a visible focus state (--shadow-focus-glow) 
   for accessibility/keyboard nav — this is a finance product, cannot skip a11y.
+
+============================================================
+9. ALERTS & NOTIFICATIONS UX
+============================================================
+- Toasts: top-right corner, stacked, auto-dismiss ~4-5s, non-blocking. Used ONLY for confirmations of an action the user just took (e.g., "Permissions saved," "Invoice sent"). Never center-align toasts. Never use a toast for anything requiring a decision.
+- Modals/Dialogs: centered, dimmed/blurred backdrop, blocking until dismissed. Used ONLY when a decision is required before continuing (e.g., "Are you sure?"). Do not overuse for routine actions.
+- Inline/on-screen banners: embedded in-flow with the content they relate to, not fixed to a screen edge. Used for persistent states the user needs to notice and possibly act on (e.g., overdue invoice warning, low-stock badge).
+- Notification feed/bell icon: top-right of app shell nav, opens dropdown/side-panel. Async feed for things that happened but don't need immediate attention (e.g., system updates, team comments).

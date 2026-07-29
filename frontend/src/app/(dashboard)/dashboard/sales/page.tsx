@@ -1,5 +1,6 @@
 'use client';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   ShoppingCart,
@@ -15,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -328,20 +330,19 @@ export default function SalesOrdersPage() {
             <DialogDescription>Draft a new sales order for a customer.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateOrder} className="space-y-4">
-            {error && <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">{error}</div>}
+            { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="customer">Customer *</Label>
-                <select
-                  id="customer"
-                  value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  className="w-full h-10 px-3 bg-background border rounded-md text-sm outline-none"
-                >
-                  <option value="">Select Customer</option>
-                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                  <SelectTrigger id="customer" className="w-full">
+                    <SelectValue placeholder="Select Customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="coupon">Coupon Code (Optional)</Label>
@@ -359,14 +360,14 @@ export default function SalesOrdersPage() {
               <Label>Add Order Items</Label>
               <div className="grid grid-cols-4 gap-2 items-end">
                 <div className="col-span-2 space-y-1">
-                  <select
-                    value={currProductId}
-                    onChange={(e) => setCurrProductId(e.target.value)}
-                    className="w-full h-8 px-2 bg-background border rounded-md text-xs outline-none"
-                  >
-                    <option value="">Select Product</option>
-                    {products.map((p) => <option key={p.id} value={p.id}>{p.name} (${Number(p.sellingPrice).toFixed(2)})</option>)}
-                  </select>
+                  <Select value={currProductId} onValueChange={setCurrProductId}>
+                    <SelectTrigger className="w-full h-9 text-xs">
+                      <SelectValue placeholder="Select Product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} (${Number(p.sellingPrice).toFixed(2)})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <Input

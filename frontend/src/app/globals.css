@@ -106,7 +106,7 @@
   --status-neutral-text: #333F3C;
 
   /* Shadows (renamed slightly with -val to avoid loop in tailwind config) */
-  --shadow-soft-raised-val: 6px 6px 14px rgba(0,0,0,0.06), -6px -6px 14px rgba(255,255,255,0.9);
+  --shadow-soft-raised-val: 6px 6px 14px rgba(0,0,0,0.06), -6px -6px 4px rgba(255,255,255,0.9);
   --shadow-soft-pressed-val: inset 4px 4px 8px rgba(0,0,0,0.06), inset -4px -4px 8px rgba(255,255,255,0.8);
   --shadow-focus-glow-val: 0 0 0 3px rgba(226,251,108,0.35);
   --shadow-flat-border-val: 0 0 0 1px var(--border-subtle);

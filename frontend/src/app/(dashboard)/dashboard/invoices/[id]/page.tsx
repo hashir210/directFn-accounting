@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Printer, Download, Mail, CheckCircle, Clock, AlertTriangle, Loader2 } from 'lucide-react';
 import apiFetch from '@/lib/api';
 import { QRCodeSVG } from 'qrcode.react';
+import { toast } from 'sonner';
 
 // Using require for html2pdf to avoid type errors if types aren't installed
 const getHtml2Pdf = async () => {
@@ -52,7 +53,7 @@ export default function InvoiceViewerPage() {
     try {
       const html2pdf = await getHtml2Pdf();
       if (!html2pdf) {
-        alert('PDF library not available. Try the "Server PDF" button instead.');
+        toast.error('PDF library not available. Try the "Server PDF" button instead.');
         return;
       }
 
@@ -64,8 +65,9 @@ export default function InvoiceViewerPage() {
         jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
       };
       await html2pdf().set(opt).from(invoiceRef.current).save();
+      toast.success('PDF downloaded successfully!');
     } catch (err: any) {
-      alert(err?.message || 'Failed to generate PDF. Try the "Server PDF" button instead.');
+      toast.error(err?.message || 'Failed to generate PDF. Try the "Server PDF" button instead.');
     }
   };
 
@@ -90,8 +92,9 @@ export default function InvoiceViewerPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast.success('Server PDF downloaded successfully!');
     } catch (err: any) {
-      alert(err.message || 'Failed to generate server PDF');
+      toast.error(err.message || 'Failed to generate server PDF');
     } finally {
       setServerPdfLoading(false);
     }
@@ -101,9 +104,9 @@ export default function InvoiceViewerPage() {
     setEmailing(true);
     try {
       const res = await apiFetch(`/api/v1/invoices/${id}/email`, { method: 'POST', body: JSON.stringify({}) });
-      if (res) alert('Invoice emailed successfully!');
+      if (res) toast.success('Invoice emailed successfully!');
     } catch (err: any) {
-      alert(err.message || 'Failed to email invoice');
+      toast.error(err.message || 'Failed to email invoice');
     } finally {
       setEmailing(false);
     }

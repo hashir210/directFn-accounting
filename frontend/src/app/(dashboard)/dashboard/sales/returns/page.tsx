@@ -1,5 +1,6 @@
 'use client';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   RotateCcw,
@@ -13,6 +14,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -29,7 +32,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
 
@@ -234,23 +236,22 @@ export default function SalesReturnsPage() {
             <DialogDescription>Create a refund or credit note against a sales invoice.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateReturn} className="space-y-4">
-            {error && <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">{error}</div>}
+            { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
 
             <div className="space-y-1">
               <Label htmlFor="invoice-select">Invoice Reference *</Label>
-              <select
-                id="invoice-select"
-                value={selectedInvoiceId}
-                onChange={(e) => handleInvoiceChange(e.target.value)}
-                className="w-full h-10 px-3 bg-background border rounded-md text-sm outline-none"
-              >
-                <option value="">Select Invoice</option>
-                {invoices.map((inv) => (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.invoiceNo} - {inv.customerName} (${Number(inv.amount).toFixed(2)})
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedInvoiceId} onValueChange={handleInvoiceChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Invoice" />
+                </SelectTrigger>
+                <SelectContent>
+                  {invoices.map((inv) => (
+                    <SelectItem key={inv.id} value={inv.id}>
+                      {inv.invoiceNumber} - {inv.customerName} - ${Number(inv.totalAmount).toFixed(2)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {itemsToReturn.length > 0 && (

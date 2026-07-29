@@ -3,6 +3,7 @@ import { Outfit, Inter } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/features/auth/useAuth";
 import { SocketProvider } from "@/context/SocketContext";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -37,6 +38,7 @@ export default function RootLayout({
             </SocketProvider>
           </AuthProvider>
         </TooltipProvider>
+        <Toaster position="top-right" />
       </body>
     </html>
   );

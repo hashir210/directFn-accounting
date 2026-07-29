@@ -91,7 +91,6 @@ export default function DashboardLayout({
   const { user, loading, isAuthenticated, hasPermission, isScreenAllowed, logout } = useAuth();
   const { notifications, unreadCount, markAllAsRead } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string }>>([]);
   const [activeOrgName, setActiveOrgName] = useState('FinFlow');
 
@@ -107,13 +106,6 @@ export default function DashboardLayout({
       }).catch(() => {});
     }
   }, [user]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = searchQuery.trim();
-    if (!q) return;
-    router.push(`/dashboard/invoices?search=${encodeURIComponent(q)}`);
-  };
 
   // Auth guard: redirect unauthenticated users to /login
   useEffect(() => {
@@ -579,37 +571,7 @@ export default function DashboardLayout({
 
           {/* Right side */}
           <div className="flex items-center gap-2">
-            {/* Search */}
-            <form onSubmit={handleSearch} className="relative hidden md:block">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                type="text"
-                placeholder="Search invoices..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-48 pl-8 h-8"
-              />
-            </form>
 
-            {/* Manage */}
-            <Tooltip>
-              <TooltipTrigger render={
-                <Button variant="ghost" size="icon-sm" className="cursor-pointer" onClick={() => router.push('/dashboard/settings')} />
-              }>
-                  <SlidersHorizontal className="h-4 w-4" />
-              </TooltipTrigger>
-              <TooltipContent>Manage</TooltipContent>
-            </Tooltip>
-
-            {/* Share */}
-            <Tooltip>
-              <TooltipTrigger render={
-                <Button variant="ghost" size="icon-sm" className="cursor-pointer" onClick={() => { navigator.clipboard.writeText(window.location.href); }} />
-              }>
-                  <Share2 className="h-4 w-4" />
-              </TooltipTrigger>
-              <TooltipContent>Share</TooltipContent>
-            </Tooltip>
 
             {/* Notifications */}
             <div className="relative">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createIncomeSchema, type CreateIncomeForm } from '@/lib/schemas/income';
 import { DollarSign, Download, Loader2, Plus, TrendingUp } from 'lucide-react';
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type Income = { id: string; category: string; description?: string | null; amount: number; date: string; referenceNo?: string | null };
@@ -177,14 +178,22 @@ export default function IncomePage() {
             <div className="space-y-3 py-4">
               <Label>
                 Category
-                <select
-                  className="mt-1 h-9 w-full rounded-md border bg-background px-3"
-                  {...incomeForm.register('category')}
-                >
-                  {categories.map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
-                </select>
+                <Controller
+                  control={incomeForm.control}
+                  name="category"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </Label>
               <Label>
                 Amount

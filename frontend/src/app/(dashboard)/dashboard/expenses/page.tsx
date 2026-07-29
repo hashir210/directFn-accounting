@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createExpenseSchema, type CreateExpenseForm } from '@/lib/schemas/expense';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Dialog,
@@ -174,18 +175,25 @@ export default function ExpensesPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>
-                    <select
-                      id="category"
-                      className="w-full h-9 px-3 py-1 bg-background border rounded-md text-xs font-medium focus:ring-2 focus:ring-primary cursor-pointer"
-                      {...expenseForm.register('category')}
-                    >
-                      <option value="Office">Office</option>
-                      <option value="Salary">Salary</option>
-                      <option value="Utilities">Utilities</option>
-                      <option value="Fuel">Fuel</option>
-                      <option value="Internet">Internet</option>
-                      <option value="Miscellaneous">Miscellaneous</option>
-                    </select>
+                    <Controller
+                      control={expenseForm.control}
+                      name="category"
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger id="category" className="w-full">
+                            <SelectValue placeholder="Select Category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Office">Office</SelectItem>
+                            <SelectItem value="Salary">Salary</SelectItem>
+                            <SelectItem value="Utilities">Utilities</SelectItem>
+                            <SelectItem value="Fuel">Fuel</SelectItem>
+                            <SelectItem value="Internet">Internet</SelectItem>
+                            <SelectItem value="Miscellaneous">Miscellaneous</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="amount">Amount ($)</Label>

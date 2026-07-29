@@ -1,5 +1,6 @@
 'use client';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   FileText,
@@ -12,8 +13,9 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -229,25 +231,24 @@ export default function PurchaseInvoicesPage() {
             <DialogDescription>Generate a purchase invoice/bill from a Purchase Order.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateInvoice} className="space-y-4">
-            {error && <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">{error}</div>}
+            { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
 
             <div className="space-y-1">
               <Label htmlFor="po-bill-select">Purchase Order Reference *</Label>
-              <select
-                id="po-bill-select"
-                value={selectedPoId}
-                onChange={(e) => setSelectedPoId(e.target.value)}
-                className="w-full h-10 px-3 bg-background border rounded-md text-sm outline-none"
-              >
-                <option value="">Select PO</option>
-                {purchaseOrders
-                  .filter((po) => ['Sent', 'Partially Received', 'Received'].includes(po.status))
-                  .map((po) => (
-                    <option key={po.id} value={po.id}>
-                      {po.orderNo} - {po.supplier?.name} (${Number(po.totalAmount).toFixed(2)})
-                    </option>
-                  ))}
-              </select>
+              <Select value={selectedPoId} onValueChange={setSelectedPoId}>
+                <SelectTrigger id="po-bill-select" className="w-full">
+                  <SelectValue placeholder="Select PO" />
+                </SelectTrigger>
+                <SelectContent>
+                  {purchaseOrders
+                    .filter((po) => ['Sent', 'Partially Received', 'Received'].includes(po.status))
+                    .map((po) => (
+                      <SelectItem key={po.id} value={po.id}>
+                        {po.orderNo} - {po.supplier?.name} (${Number(po.totalAmount).toFixed(2)})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1">
@@ -278,7 +279,7 @@ export default function PurchaseInvoicesPage() {
             <DialogDescription>Document transaction check or wire transfers paid to supplier.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleRecordPayment} className="space-y-4">
-            {error && <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">{error}</div>}
+            { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
 
             <div className="space-y-1">
               <Label htmlFor="pay-amt">Payment Amount ($) *</Label>

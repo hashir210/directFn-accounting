@@ -1,5 +1,6 @@
 'use client';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   ClipboardList,
@@ -13,7 +14,10 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Controller } from 'react-hook-form';
 import {
   Table,
   TableBody,
@@ -30,7 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createPurchaseOrderSchema, type CreatePurchaseOrderForm } from '@/lib/schemas/purchase-order';
@@ -307,19 +311,25 @@ export default function PurchaseOrdersPage() {
             <DialogDescription>Draft a stock order to send to a supplier.</DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(handleCreateOrder)} className="space-y-4">
-            {error && <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">{error}</div>}
+            { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="supplier">Supplier *</Label>
-                <select
-                  id="supplier"
-                  {...form.register('supplierId')}
-                  className="w-full h-10 px-3 bg-background border rounded-md text-sm outline-none"
-                >
-                  <option value="">Select Supplier</option>
-                  {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <Controller
+                  control={form.control}
+                  name="supplierId"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger id="supplier" className="w-full">
+                        <SelectValue placeholder="Select Supplier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {form.formState.errors.supplierId && <p className="text-xs text-destructive">{form.formState.errors.supplierId.message}</p>}
               </div>
               <div className="space-y-1">
@@ -333,14 +343,14 @@ export default function PurchaseOrdersPage() {
               <Label>Add Product Items</Label>
               <div className="grid grid-cols-4 gap-2 items-end">
                 <div className="col-span-2 space-y-1">
-                  <select
-                    value={currProductId}
-                    onChange={(e) => setCurrProductId(e.target.value)}
-                    className="w-full h-8 px-2 bg-background border rounded-md text-xs outline-none"
-                  >
-                    <option value="">Select Product</option>
-                    {products.map((p) => <option key={p.id} value={p.id}>{p.name} (Cost: ${Number(p.purchasePrice).toFixed(2)})</option>)}
-                  </select>
+                  <Select value={currProductId} onValueChange={setCurrProductId}>
+                    <SelectTrigger className="w-full h-9 text-xs">
+                      <SelectValue placeholder="Select Product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} (Cost: ${Number(p.purchasePrice).toFixed(2)})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <Input

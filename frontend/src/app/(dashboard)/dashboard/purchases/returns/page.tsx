@@ -1,5 +1,6 @@
 'use client';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   RotateCcw,
@@ -15,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -252,19 +254,18 @@ export default function SupplierReturnsPage() {
             <DialogDescription>Draft returned units for vendor credit settlement.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateReturn} className="space-y-4">
-            {error && <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">{error}</div>}
+            { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
 
             <div className="space-y-1">
               <Label htmlFor="sup-select">Supplier *</Label>
-              <select
-                id="sup-select"
-                value={selectedSupplierId}
-                onChange={(e) => setSelectedSupplierId(e.target.value)}
-                className="w-full h-10 px-3 bg-background border rounded-md text-sm outline-none"
-              >
-                <option value="">Select Supplier</option>
-                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
+                <SelectTrigger id="sup-select" className="w-full">
+                  <SelectValue placeholder="Select Supplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Line Item addition */}
@@ -272,14 +273,14 @@ export default function SupplierReturnsPage() {
               <Label>Add Product Items</Label>
               <div className="grid grid-cols-4 gap-2 items-end">
                 <div className="col-span-2 space-y-1">
-                  <select
-                    value={currProductId}
-                    onChange={(e) => setCurrProductId(e.target.value)}
-                    className="w-full h-8 px-2 bg-background border rounded-md text-xs outline-none"
-                  >
-                    <option value="">Select Product</option>
-                    {products.map((p) => <option key={p.id} value={p.id}>{p.name} (Cost: ${Number(p.purchasePrice).toFixed(2)})</option>)}
-                  </select>
+                  <Select value={currProductId} onValueChange={setCurrProductId}>
+                    <SelectTrigger className="w-full h-9 text-xs">
+                      <SelectValue placeholder="Select Product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} (Cost: ${Number(p.purchasePrice).toFixed(2)})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <Input

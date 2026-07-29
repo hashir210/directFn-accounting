@@ -1,5 +1,6 @@
 'use client';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import React, { useState, useEffect } from 'react';
 import {
   Monitor,
@@ -15,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch } from '@/lib/api';
 
 interface Product {
@@ -187,14 +189,10 @@ export default function POSPage() {
 
         <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
           {successMsg && (
-            <div className="p-3 bg-emerald-500/15 text-emerald-600 rounded-lg text-xs font-semibold flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" /> {successMsg}
-            </div>
+            <Alert variant="success" className="p-3 flex items-center gap-2"><CheckCircle className="h-4 w-4" /><AlertDescription className="font-semibold">{ successMsg }</AlertDescription></Alert>
           )}
           {errorMsg && (
-            <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">
-              {errorMsg}
-            </div>
+            <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ errorMsg }</AlertDescription></Alert>
           )}
 
           {cart.length === 0 ? (
@@ -229,19 +227,18 @@ export default function POSPage() {
           <div className="w-full space-y-2">
             <div className="space-y-1">
               <Label htmlFor="pos-customer" className="text-xs">Customer *</Label>
-              <select
-                id="pos-customer"
-                value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
-                className="w-full h-8 px-2 bg-background border rounded-md text-xs outline-none"
-              >
-                <option value="">Select Customer</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                <SelectTrigger id="pos-customer" className="w-full">
+                  <SelectValue placeholder="Select Customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label htmlFor="pos-coupon" className="text-xs">Coupon Code</Label>

@@ -1,5 +1,6 @@
 'use client';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   PackageCheck,
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -219,23 +221,22 @@ export default function GoodsReceivedPage() {
             <DialogDescription>Check in inventory items from supplier delivery.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateGrn} className="space-y-4">
-            {error && <div className="p-3 bg-destructive/15 text-destructive rounded-lg text-xs font-semibold">{error}</div>}
+            { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
 
             <div className="space-y-1">
               <Label htmlFor="po-select">Select Outstanding Purchase Order *</Label>
-              <select
-                id="po-select"
-                value={selectedPoId}
-                onChange={(e) => handlePoChange(e.target.value)}
-                className="w-full h-10 px-3 bg-background border rounded-md text-sm outline-none"
-              >
-                <option value="">Select PO</option>
-                {purchaseOrders.map((po) => (
-                  <option key={po.id} value={po.id}>
-                    {po.orderNo} - {po.supplier?.name} (${Number(po.totalAmount).toFixed(2)})
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedPoId} onValueChange={handlePoChange}>
+                <SelectTrigger id="po-select" className="w-full">
+                  <SelectValue placeholder="Select PO" />
+                </SelectTrigger>
+                <SelectContent>
+                  {purchaseOrders.map((po) => (
+                    <SelectItem key={po.id} value={po.id}>
+                      {po.orderNo} - {po.supplier?.name} (${Number(po.totalAmount).toFixed(2)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {itemsToReceive.length > 0 && (

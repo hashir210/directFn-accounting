@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Download, Loader2, TrendingUp, Calendar as CalendarIcon, FileText } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, TrendingUp, Calendar as CalendarIcon, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import apiFetch from '@/lib/api';
+import { toast } from 'sonner';
 
 const COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-1)'];
 
@@ -140,8 +141,9 @@ export default function ReportViewerPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast.success('Report PDF downloaded successfully!');
     } catch (err: any) {
-      alert(err.message || 'Failed to generate report PDF');
+      toast.error(err.message || 'Failed to generate report PDF');
     } finally {
       setServerPdfLoading(false);
     }

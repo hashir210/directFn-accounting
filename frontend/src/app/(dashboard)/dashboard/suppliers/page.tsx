@@ -23,6 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Controller } from 'react-hook-form';
 import {
   Dialog,
   DialogContent,
@@ -221,18 +223,24 @@ export default function SupplierManagementPage() {
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
                       <Label>Select Supplier</Label>
-                      <select
-                        className="w-full h-10 px-3 border rounded-md text-sm bg-background"
-                        {...billForm.register('supplierId')}
-                        required
-                      >
-                        <option value="">-- Choose Supplier --</option>
-                        {suppliers.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
+                      <Controller
+                        control={billForm.control}
+                        name="supplierId"
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="-- Choose Supplier --" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {suppliers.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>
+                                  {s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">

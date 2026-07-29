@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, Save, ArrowLeft, Loader2 } from 'lucide-react';
 import apiFetch from '@/lib/api';
@@ -155,15 +156,22 @@ export default function NewInvoicePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Customer</Label>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    {...register('customerId')}
-                  >
-                    <option value="">Select Customer...</option>
-                    {customers.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                  <Controller
+                    control={control}
+                    name="customerId"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Customer..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                   {errors.customerId && <p className="text-xs text-destructive">{errors.customerId.message}</p>}
                 </div>
                 <div className="space-y-2">
@@ -202,19 +210,22 @@ export default function NewInvoicePage() {
                           control={control}
                           name={`items.${index}.productId`}
                           render={({ field: selectField }) => (
-                            <select
-                              className="flex mb-2 h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            <Select
                               value={selectField.value || ''}
-                              onChange={(e) => {
-                                selectField.onChange(e);
-                                onProductSelect(index, e.target.value);
+                              onValueChange={(val) => {
+                                selectField.onChange(val);
+                                onProductSelect(index, val);
                               }}
                             >
-                              <option value="">Custom Item...</option>
-                              {products.map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                              ))}
-                            </select>
+                              <SelectTrigger className="w-full h-9 mb-2 text-sm">
+                                <SelectValue placeholder="Select Product..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {products.map(p => (
+                                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           )}
                         />
                         <Input

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { apiFetch, ApiError } from '@/lib/api';
 
 function VerifyInner() {
@@ -135,17 +136,17 @@ function VerifyInner() {
               )}
 
               {resendStatus === 'success' && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 rounded-lg space-y-1 text-center">
+                <Alert variant="success" className="p-4 space-y-1 text-center">
                   <CheckCircle2 className="h-5 w-5 mx-auto mb-2" />
-                  <p className="text-sm font-medium">{message}</p>
-                </div>
+                  <AlertDescription className="text-sm font-medium">{message}</AlertDescription>
+                </Alert>
               )}
 
               {resendStatus === 'error' && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-lg flex items-center gap-2">
+                <Alert variant="destructive" className="p-3 flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-ping" />
-                  {message}
-                </div>
+                  <AlertDescription className="font-semibold">{message}</AlertDescription>
+                </Alert>
               )}
 
               {resendStatus !== 'success' && (

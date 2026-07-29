@@ -6,17 +6,14 @@ function cn(...inputs: (string | undefined | null | false)[]) {
 }
 
 const alertVariants = cva(
-  "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
+  "relative w-full rounded-lg p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
   {
     variants: {
       variant: {
-        default: "bg-background text-foreground",
-        destructive:
-          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
-        success:
-          "border-emerald-500/30 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300 [&>svg]:text-emerald-600",
-        warning:
-          "border-amber-500/30 bg-amber-50 text-amber-800 dark:bg-amber-950/20 dark:text-amber-300 [&>svg]:text-amber-600",
+        default: "bg-status-neutral-bg text-status-neutral-text [&>svg]:text-status-neutral-text",
+        destructive: "bg-status-danger-bg text-status-danger-text [&>svg]:text-status-danger-text",
+        success: "bg-status-success-bg text-status-success-text [&>svg]:text-status-success-text",
+        warning: "bg-status-warning-bg text-status-warning-text [&>svg]:text-status-warning-text",
       },
     },
     defaultVariants: {
