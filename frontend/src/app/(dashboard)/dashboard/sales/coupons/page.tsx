@@ -8,6 +8,7 @@ import {
   Search,
   Trash2,
   Loader2,
+  Edit,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ export default function CouponsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [openAdd, setOpenAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const form = useForm<CreateCouponForm>({
@@ -86,32 +88,77 @@ export default function CouponsPage() {
     fetchCoupons();
   }, [fetchCoupons]);
 
-  const handleCreateCoupon = async (data: CreateCouponForm) => {
+  const resetForm = () => {
+    form.reset({ code: '', discountType: 'percentage', discountValue: 10, minOrderAmount: undefined, maxDiscount: undefined, usageLimit: undefined, isActive: true, startDate: '', endDate: '' });
+    setEditingId(null);
+    setError('');
+  };
+
+  const openEdit = async (coupon: Coupon) => {
     try {
-      setError('');
-      await apiFetch('/api/v1/coupons', {
-        method: 'POST',
-        body: JSON.stringify({
-          code: data.code,
-          discountType: data.discountType,
-          discountValue: data.discountValue,
-          minOrderAmount: data.minOrderAmount || undefined,
-          maxDiscount: data.maxDiscount || undefined,
-          usageLimit: data.usageLimit || undefined,
-          isActive: data.isActive ?? true,
-          startDate: data.startDate,
-          endDate: data.endDate,
-        }),
-      });
-      setOpenAdd(false);
-      form.reset();
-      fetchCoupons();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create coupon');
+      const res = await apiFetch(`/api/v1/coupons/${coupon.id}`);
+      const data = res.data || res;
+      setEditingId(coupon.id);
+      form.setValue('code', data.code);
+      form.setValue('discountType', data.discountType);
+      form.setValue('discountValue', data.discountValue);
+      form.setValue('minOrderAmount', data.minOrderAmount || undefined);
+      form.setValue('maxDiscount', data.maxDiscount || undefined);
+      form.setValue('usageLimit', data.usageLimit || undefined);
+      form.setValue('isActive', data.isActive);
+      form.setValue('startDate', data.startDate ? data.startDate.split('T')[0] : '');
+      form.setValue('endDate', data.endDate ? data.endDate.split('T')[0] : '');
+      setOpenAdd(true);
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const handleDeleteCoupon = async (id: string) => {
+  const handleSave = async (data: CreateCouponForm) => {
+    try {
+      setError('');
+
+      if (editingId) {
+        await apiFetch(`/api/v1/coupons/${editingId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            code: data.code,
+            discountType: data.discountType,
+            discountValue: data.discountValue,
+            minOrderAmount: data.minOrderAmount || undefined,
+            maxDiscount: data.maxDiscount || undefined,
+            usageLimit: data.usageLimit || undefined,
+            isActive: data.isActive ?? true,
+            startDate: data.startDate,
+            endDate: data.endDate,
+          }),
+        });
+      } else {
+        await apiFetch('/api/v1/coupons', {
+          method: 'POST',
+          body: JSON.stringify({
+            code: data.code,
+            discountType: data.discountType,
+            discountValue: data.discountValue,
+            minOrderAmount: data.minOrderAmount || undefined,
+            maxDiscount: data.maxDiscount || undefined,
+            usageLimit: data.usageLimit || undefined,
+            isActive: data.isActive ?? true,
+            startDate: data.startDate,
+            endDate: data.endDate,
+          }),
+        });
+      }
+
+      setOpenAdd(false);
+      resetForm();
+      fetchCoupons();
+    } catch (err: any) {
+      setError(err.message || 'Failed to save coupon');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this coupon?')) return;
     try {
       await apiFetch(`/api/v1/coupons/${id}`, { method: 'DELETE' });
@@ -128,10 +175,10 @@ export default function CouponsPage() {
           <h1 className="text-2xl font-display font-semibold tracking-tight">
             Coupons
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">Generate and distribute promo codes.</p>
+          <p className="text-muted-foreground text-sm mt-1">Generate and distribute promo codes with usage tracking.</p>
         </div>
         {canEdit && (
-          <Button onClick={() => setOpenAdd(true)}>
+          <Button onClick={() => { resetForm(); setOpenAdd(true); }}>
             <Plus className="h-4 w-4 mr-2" /> Create Coupon
           </Button>
         )}
@@ -140,7 +187,7 @@ export default function CouponsPage() {
       <Card className="shadow-none border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Discount Coupons</CardTitle>
-          <CardDescription>View all promo codes, active periods, and usage stats.</CardDescription>
+          <CardDescription>Manage promo codes, active periods, and usage stats.</CardDescription>
           <div className="flex mt-4 max-w-sm">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -173,40 +220,59 @@ export default function CouponsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {coupons.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-mono font-bold text-primary">{c.code}</TableCell>
-                    <TableCell>{c.discountType === 'percentage' ? `${c.discountValue}%` : `$${c.discountValue.toFixed(2)}`}</TableCell>
-                    <TableCell>{c.usedCount} / {c.usageLimit || '∞'}</TableCell>
-                    <TableCell className="text-xs">
-                      {new Date(c.startDate).toLocaleDateString()} - {new Date(c.endDate).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={c.isActive ? 'default' : 'outline'}>{c.isActive ? 'Active' : 'Inactive'}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {canEdit && (
-                        <Button size="xs" variant="destructive" onClick={() => handleDeleteCoupon(c.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {coupons.map((c) => {
+                  const now = new Date();
+                  const expired = c.endDate && new Date(c.endDate) < now;
+                  const notStarted = c.startDate && new Date(c.startDate) > now;
+                  const usageExhausted = c.usageLimit && c.usedCount >= c.usageLimit;
+                  const effActive = c.isActive && !expired && !notStarted && !usageExhausted;
+
+                  return (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-mono font-bold text-primary">{c.code}</TableCell>
+                      <TableCell>{c.discountType === 'percentage' ? `${c.discountValue}%` : `$${c.discountValue.toFixed(2)}`}</TableCell>
+                      <TableCell>{c.usedCount} / {c.usageLimit || '∞'}</TableCell>
+                      <TableCell className="text-xs">
+                        {new Date(c.startDate).toLocaleDateString()} - {new Date(c.endDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {usageExhausted ? (
+                          <Badge variant="destructive">Exhausted</Badge>
+                        ) : expired ? (
+                          <Badge variant="destructive">Expired</Badge>
+                        ) : notStarted ? (
+                          <Badge variant="outline">Scheduled</Badge>
+                        ) : effActive ? (
+                          <Badge variant="default">Active</Badge>
+                        ) : (
+                          <Badge variant="outline">Inactive</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        {canEdit && (
+                          <>
+                            <Button size="xs" variant="outline" onClick={() => openEdit(c)}><Edit className="h-3 w-3" /></Button>
+                            <Button size="xs" variant="destructive" onClick={() => handleDelete(c.id)}><Trash2 className="h-3 w-3" /></Button>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
 
-      {/* Add Coupon Dialog */}
-      <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+      {/* Add/Edit Coupon Dialog */}
+      <Dialog open={openAdd} onOpenChange={(v) => { if (!v) resetForm(); setOpenAdd(v); }}>
         <DialogContent className="max-w-md bg-card border border-muted/40 shadow-xl">
           <DialogHeader>
-            <DialogTitle>Create Coupon Code</DialogTitle>
-            <DialogDescription>Add a custom validation-based promotional code.</DialogDescription>
+            <DialogTitle>{editingId ? 'Edit Coupon Code' : 'Create Coupon Code'}</DialogTitle>
+            <DialogDescription>{editingId ? 'Update coupon settings.' : 'Add a custom validation-based promotional code.'}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={form.handleSubmit(handleCreateCoupon)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSave)} className="space-y-4">
             { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
 
             <div className="space-y-1">
@@ -289,9 +355,9 @@ export default function CouponsPage() {
             </div>
 
             <DialogFooter className="gap-2 pt-3 border-t">
-              <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { resetForm(); setOpenAdd(false); }}>Cancel</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Coupon
+                {form.formState.isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} {editingId ? 'Update Coupon' : 'Create Coupon'}
               </Button>
             </DialogFooter>
           </form>

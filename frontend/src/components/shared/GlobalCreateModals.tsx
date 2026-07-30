@@ -22,11 +22,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Controller } from 'react-hook-form';
 import { Loader2, DollarSign, Calendar } from 'lucide-react';
 import { apiFetch, ApiError } from '@/lib/api';
 import { createCustomerSchema, type CreateCustomerForm } from '@/lib/schemas/customer';
 import { createSupplierSchema, type CreateSupplierForm } from '@/lib/schemas/supplier';
 import { createProductSchema, type CreateProductForm } from '@/lib/schemas/product';
+import { createCouponSchema, type CreateCouponForm } from '@/lib/schemas/coupon';
+import { createDiscountSchema, type CreateDiscountForm } from '@/lib/schemas/discount';
 
 export function GlobalCreateModals() {
   const [isTxOpen, setIsTxOpen] = useState(false);
@@ -34,6 +38,9 @@ export function GlobalCreateModals() {
   const [isSupOpen, setIsSupOpen] = useState(false);
   const [isProdOpen, setIsProdOpen] = useState(false);
   const [isInvOpen, setIsInvOpen] = useState(false);
+  const [isWhOpen, setIsWhOpen] = useState(false);
+  const [isCouponOpen, setIsCouponOpen] = useState(false);
+  const [isDiscountOpen, setIsDiscountOpen] = useState(false);
 
   useEffect(() => {
     const onTx = () => setIsTxOpen(true);
@@ -41,12 +48,18 @@ export function GlobalCreateModals() {
     const onSup = () => setIsSupOpen(true);
     const onProd = () => setIsProdOpen(true);
     const onInv = () => setIsInvOpen(true);
+    const onWh = () => setIsWhOpen(true);
+    const onCoupon = () => setIsCouponOpen(true);
+    const onDiscount = () => setIsDiscountOpen(true);
 
     window.addEventListener('open-transaction-modal', onTx);
     window.addEventListener('open-customer-modal', onCust);
     window.addEventListener('open-supplier-modal', onSup);
     window.addEventListener('open-product-modal', onProd);
     window.addEventListener('open-inventory-modal', onInv);
+    window.addEventListener('open-warehouse-modal', onWh);
+    window.addEventListener('open-coupon-modal', onCoupon);
+    window.addEventListener('open-discount-modal', onDiscount);
 
     return () => {
       window.removeEventListener('open-transaction-modal', onTx);
@@ -54,6 +67,9 @@ export function GlobalCreateModals() {
       window.removeEventListener('open-supplier-modal', onSup);
       window.removeEventListener('open-product-modal', onProd);
       window.removeEventListener('open-inventory-modal', onInv);
+      window.removeEventListener('open-warehouse-modal', onWh);
+      window.removeEventListener('open-coupon-modal', onCoupon);
+      window.removeEventListener('open-discount-modal', onDiscount);
     };
   }, []);
 
@@ -70,8 +86,19 @@ export function GlobalCreateModals() {
     try {
       const endpoint = txType === 'Invoice' ? '/api/v1/invoices' : '/api/v1/expenses';
       const payload = txType === 'Invoice'
-        ? { customerName: data.customerName, amount: parseFloat(data.amount) || 0, dueAt: new Date(data.dueDate).toISOString(), status: 'pending' }
-        : { category: 'General', amount: parseFloat(data.amount) || 0, vendor: data.customerName, date: new Date(data.dueDate).toISOString(), status: 'pending' };
+        ? { 
+            customerName: data.customerName, 
+            dueAt: new Date(data.dueDate).toISOString(), 
+            status: 'pending',
+            items: [
+              {
+                description: 'General Transaction',
+                quantity: 1,
+                unitPrice: parseFloat(data.amount) || 0
+              }
+            ]
+          }
+        : { category: 'Miscellaneous', amount: parseFloat(data.amount) || 0, vendor: data.customerName, date: new Date(data.dueDate).toISOString(), status: 'pending' };
 
       await apiFetch(endpoint, { method: 'POST', body: JSON.stringify(payload) });
       setIsTxOpen(false);
@@ -216,6 +243,94 @@ export function GlobalCreateModals() {
     }
   };
 
+  // 6. Warehouse Form
+  const whForm = useForm({ defaultValues: { name: '', code: '', address: '', isDefault: false } });
+
+  const handleWhSubmit = async (data: { name: string; code: string; address: string; isDefault: boolean }) => {
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await apiFetch('/api/v1/inventory/warehouses', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      setIsWhOpen(false);
+      whForm.reset();
+      window.dispatchEvent(new CustomEvent('refresh-warehouses'));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to create warehouse');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 7. Coupon Form
+  const couponForm = useForm<CreateCouponForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(createCouponSchema) as any,
+    defaultValues: { code: '', discountType: 'percentage', discountValue: 10, minOrderAmount: undefined, maxDiscount: undefined, usageLimit: undefined, isActive: true, startDate: '', endDate: '' },
+  });
+
+  const handleCouponSubmit = async (data: CreateCouponForm) => {
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await apiFetch('/api/v1/coupons', {
+        method: 'POST',
+        body: JSON.stringify({
+          code: data.code,
+          discountType: data.discountType,
+          discountValue: data.discountValue,
+          minOrderAmount: data.minOrderAmount || undefined,
+          maxDiscount: data.maxDiscount || undefined,
+          usageLimit: data.usageLimit || undefined,
+          isActive: data.isActive ?? true,
+          startDate: data.startDate,
+          endDate: data.endDate,
+        }),
+      });
+      setIsCouponOpen(false);
+      couponForm.reset();
+      window.dispatchEvent(new CustomEvent('refresh-coupons'));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to create coupon');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 8. Discount Form
+  const discountForm = useForm<CreateDiscountForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(createDiscountSchema) as any,
+    defaultValues: { name: '', type: 'percentage', value: 10, minOrderAmount: undefined, maxDiscount: undefined, isActive: true },
+  });
+
+  const handleDiscountSubmit = async (data: CreateDiscountForm) => {
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await apiFetch('/api/v1/discounts', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: data.name,
+          type: data.type,
+          value: data.value,
+          minOrderAmount: data.minOrderAmount || undefined,
+          maxDiscount: data.maxDiscount || undefined,
+          isActive: data.isActive ?? true,
+        }),
+      });
+      setIsDiscountOpen(false);
+      discountForm.reset();
+      window.dispatchEvent(new CustomEvent('refresh-discounts'));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to create discount');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleOpenChange = (setOpen: React.Dispatch<React.SetStateAction<boolean>>, val: boolean) => {
     setOpen(val);
     if (!val) setError('');
@@ -245,20 +360,23 @@ export function GlobalCreateModals() {
             </div>
             <div className="space-y-2">
               <Label>{txType === 'Invoice' ? 'Client Name' : 'Vendor Name'}</Label>
-              <Input required placeholder="e.g. Stark Industries" {...txForm.register('customerName')} className="h-10" />
+              <Input placeholder="e.g. Stark Industries" {...txForm.register('customerName', { required: 'Client name is required' })} className="h-10" />
+              {txForm.formState.errors.customerName && <p className="text-xs text-destructive">{String(txForm.formState.errors.customerName.message)}</p>}
             </div>
             <div className="space-y-2">
               <Label>Amount (PKR)</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input type="number" required min="1" placeholder="5000" {...txForm.register('amount')} className="pl-9 h-10" />
+                <Input type="number" min="1" placeholder="5000" {...txForm.register('amount', { required: 'Amount is required' })} className="pl-9 h-10" />
+                {txForm.formState.errors.amount && <p className="text-xs text-destructive mt-1">{String(txForm.formState.errors.amount.message)}</p>}
               </div>
             </div>
             <div className="space-y-2">
               <Label>Due Date</Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input type="date" required {...txForm.register('dueDate')} className="pl-9 h-10" />
+                <Input type="date" {...txForm.register('dueDate', { required: 'Date is required' })} className="pl-9 h-10" />
+                {txForm.formState.errors.dueDate && <p className="text-xs text-destructive mt-1">{String(txForm.formState.errors.dueDate.message)}</p>}
               </div>
             </div>
             <div className="space-y-2">
@@ -296,7 +414,7 @@ export function GlobalCreateModals() {
               {error && <div className="text-sm text-destructive font-medium">{error}</div>}
               <div className="space-y-2">
                 <Label>Customer / Company Name</Label>
-                <Input required placeholder="e.g. Apex Global" {...custForm.register('name')} />
+                <Input placeholder="e.g. Apex Global" {...custForm.register('name')} />
                 {custForm.formState.errors.name && <p className="text-xs text-destructive">{custForm.formState.errors.name.message}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -336,7 +454,7 @@ export function GlobalCreateModals() {
               {error && <div className="text-sm text-destructive font-medium">{error}</div>}
               <div className="space-y-2">
                 <Label>Supplier Name</Label>
-                <Input required placeholder="e.g. AWS Cloud" {...supForm.register('name')} />
+                <Input placeholder="e.g. AWS Cloud" {...supForm.register('name')} />
                 {supForm.formState.errors.name && <p className="text-xs text-destructive">{supForm.formState.errors.name.message}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -376,7 +494,7 @@ export function GlobalCreateModals() {
               {error && <div className="text-sm text-destructive font-medium">{error}</div>}
               <div className="space-y-2">
                 <Label>Product Name</Label>
-                <Input required placeholder="e.g. POS Smart Terminal V2" {...prodForm.register('name')} />
+                <Input placeholder="e.g. POS Smart Terminal V2" {...prodForm.register('name')} />
                 {prodForm.formState.errors.name && <p className="text-xs text-destructive">{prodForm.formState.errors.name.message}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -396,7 +514,7 @@ export function GlobalCreateModals() {
                 </div>
                 <div className="space-y-2">
                   <Label>Selling Price ($)</Label>
-                  <Input type="number" required placeholder="349.00" {...prodForm.register('sellingPrice')} />
+                  <Input type="number" placeholder="349.00" {...prodForm.register('sellingPrice')} />
                   {prodForm.formState.errors.sellingPrice && <p className="text-xs text-destructive">{prodForm.formState.errors.sellingPrice.message}</p>}
                 </div>
               </div>
@@ -442,12 +560,14 @@ export function GlobalCreateModals() {
               </div>
               <div className="space-y-2">
                 <Label>Item Name</Label>
-                <Input required placeholder="e.g. Thermal Receipt Paper" {...invForm.register('itemName')} />
+                <Input placeholder="e.g. Thermal Receipt Paper" {...invForm.register('itemName', { required: 'Item name is required' })} />
+                {invForm.formState.errors.itemName && <p className="text-xs text-destructive mt-1">{String(invForm.formState.errors.itemName.message)}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>SKU</Label>
-                  <Input required placeholder="FF-TRP-80" {...invForm.register('sku')} />
+                  <Input placeholder="FF-TRP-80" {...invForm.register('sku', { required: 'SKU is required' })} />
+                  {invForm.formState.errors.sku && <p className="text-xs text-destructive mt-1">{String(invForm.formState.errors.sku.message)}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label>Quantity</Label>
@@ -478,6 +598,215 @@ export function GlobalCreateModals() {
               <Button type="button" variant="outline" onClick={() => setIsInvOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Submit Record
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 6. Warehouse Modal */}
+      <Dialog open={isWhOpen} onOpenChange={(val) => handleOpenChange(setIsWhOpen, val)}>
+        <DialogContent className="max-w-md">
+          <form onSubmit={whForm.handleSubmit(handleWhSubmit)}>
+            <DialogHeader>
+              <DialogTitle>Add New Warehouse</DialogTitle>
+              <DialogDescription>Register a new warehouse to track inventory and stock movements.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {error && <div className="text-sm text-destructive font-medium">{error}</div>}
+              <div className="space-y-2">
+                <Label>Warehouse Name</Label>
+                <Input placeholder="e.g. Regional Distribution Center" {...whForm.register('name', { required: 'Name is required' })} />
+                {whForm.formState.errors.name && <p className="text-xs text-destructive mt-1">{String(whForm.formState.errors.name.message)}</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Code</Label>
+                  <Input placeholder="e.g. RDC-01" {...whForm.register('code')} />
+                </div>
+                <div className="space-y-2 flex items-center pt-8">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm">
+                    <input type="checkbox" {...whForm.register('isDefault')} className="accent-primary h-4 w-4" />
+                    Set as Default
+                  </label>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Address</Label>
+                <Input placeholder="e.g. 123 Warehouse St, City" {...whForm.register('address')} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsWhOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Save Warehouse
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 7. Coupon Modal */}
+      <Dialog open={isCouponOpen} onOpenChange={(val) => handleOpenChange(setIsCouponOpen, val)}>
+        <DialogContent className="max-w-md">
+          <form onSubmit={couponForm.handleSubmit(handleCouponSubmit)} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>Create Coupon Code</DialogTitle>
+              <DialogDescription>Add a custom validation-based promotional code.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {error && <div className="text-sm text-destructive font-medium">{error}</div>}
+              <div className="space-y-2">
+                <Label>Promo Code *</Label>
+                <Input
+                  placeholder="e.g. WELCOME50"
+                  {...couponForm.register('code')}
+                  onChange={(e) => {
+                    const upper = e.target.value.toUpperCase();
+                    couponForm.setValue('code', upper, { shouldValidate: true });
+                  }}
+                />
+                {couponForm.formState.errors.code && <p className="text-xs text-destructive">{couponForm.formState.errors.code.message}</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Discount Type *</Label>
+                  <Controller
+                    control={couponForm.control}
+                    name="discountType"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percentage">Percentage (%)</SelectItem>
+                          <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Discount Value *</Label>
+                  <Input type="number" {...couponForm.register('discountValue')} />
+                  {couponForm.formState.errors.discountValue && <p className="text-xs text-destructive mt-1">{couponForm.formState.errors.discountValue.message}</p>}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Min Order ($)</Label>
+                  <Input type="number" placeholder="Optional" {...couponForm.register('minOrderAmount')} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Usage Limit (count)</Label>
+                  <Input type="number" placeholder="Optional" {...couponForm.register('usageLimit')} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date *</Label>
+                  <Input type="date" {...couponForm.register('startDate')} />
+                  {couponForm.formState.errors.startDate && <p className="text-xs text-destructive mt-1">{couponForm.formState.errors.startDate.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>End Date *</Label>
+                  <Input type="date" {...couponForm.register('endDate')} />
+                  {couponForm.formState.errors.endDate && <p className="text-xs text-destructive mt-1">{couponForm.formState.errors.endDate.message}</p>}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-2">
+                <Controller
+                  control={couponForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+                <Label>Coupon Active status</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsCouponOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Create Coupon
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 8. Discount Modal */}
+      <Dialog open={isDiscountOpen} onOpenChange={(val) => handleOpenChange(setIsDiscountOpen, val)}>
+        <DialogContent className="max-w-md">
+          <form onSubmit={discountForm.handleSubmit(handleDiscountSubmit)} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>Add Discount Rule</DialogTitle>
+              <DialogDescription>Create a new org-wide campaign discount.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {error && <div className="text-sm text-destructive font-medium">{error}</div>}
+              <div className="space-y-2">
+                <Label>Campaign Name *</Label>
+                <Input placeholder="e.g. Summer Special 10%" {...discountForm.register('name')} />
+                {discountForm.formState.errors.name && <p className="text-xs text-destructive mt-1">{discountForm.formState.errors.name.message}</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Type *</Label>
+                  <Controller
+                    control={discountForm.control}
+                    name="type"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percentage">Percentage (%)</SelectItem>
+                          <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Discount Value *</Label>
+                  <Input type="number" {...discountForm.register('value')} />
+                  {discountForm.formState.errors.value && <p className="text-xs text-destructive mt-1">{discountForm.formState.errors.value.message}</p>}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Min Order ($)</Label>
+                  <Input type="number" placeholder="Optional" {...discountForm.register('minOrderAmount')} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Cap Amount ($)</Label>
+                  <Input type="number" placeholder="Optional" {...discountForm.register('maxDiscount')} />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-2">
+                <Controller
+                  control={discountForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+                <Label>Campaign Active status</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsDiscountOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Create Discount
               </Button>
             </DialogFooter>
           </form>

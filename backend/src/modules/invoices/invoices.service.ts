@@ -20,8 +20,7 @@ export class InvoicesService {
     const limit = options.limit || 10;
     const skip = (page - 1) * limit;
 
-    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
-    const where: any = org?.isPlatform ? {} : { organizationId };
+    const where: any = { organizationId };
     if (options.status && options.status !== 'all') {
       where.status = options.status;
     }
@@ -67,6 +66,100 @@ export class InvoicesService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  static async listUnified(organizationId: string, options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    type?: string;
+  }) {
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [legacyInvoices, salesInvoices, purchaseBills] = await Promise.all([
+      prisma.invoice.findMany({
+        where: { organizationId },
+        include: { customer: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.salesInvoice.findMany({
+        where: { organizationId },
+        include: { salesOrder: { select: { orderNo: true, customer: { select: { id: true, name: true } } } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.purchaseBill.findMany({
+        where: { organizationId },
+        include: { supplier: { select: { id: true, name: true } }, purchaseOrder: { select: { orderNo: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    let unified: any[] = [
+      ...legacyInvoices.map(inv => ({
+        id: inv.id,
+        invoiceNo: inv.invoiceNo,
+        type: 'direct',
+        typeLabel: 'Invoice',
+        counterpartyName: inv.customer.name,
+        counterpartyEmail: inv.customer.email,
+        amount: toNumber(inv.amount),
+        status: inv.status,
+        issuedAt: inv.issuedAt.toISOString().split('T')[0],
+        dueAt: inv.dueAt.toISOString().split('T')[0],
+        createdAt: inv.createdAt,
+      })),
+      ...salesInvoices.map(inv => ({
+        id: inv.id,
+        invoiceNo: inv.invoiceNo,
+        type: 'sales',
+        typeLabel: 'Sales Invoice',
+        counterpartyName: inv.salesOrder?.customer?.name || 'Customer',
+        counterpartyEmail: null,
+        amount: toNumber(inv.totalAmount),
+        status: inv.status,
+        issuedAt: inv.createdAt.toISOString().split('T')[0],
+        dueAt: inv.dueAt.toISOString().split('T')[0],
+        createdAt: inv.createdAt,
+      })),
+      ...purchaseBills.map(bill => ({
+        id: bill.id,
+        invoiceNo: bill.billNo,
+        type: 'purchase',
+        typeLabel: 'Purchase Bill',
+        counterpartyName: bill.supplier.name,
+        counterpartyEmail: null,
+        amount: toNumber(bill.amount),
+        status: bill.status,
+        issuedAt: bill.createdAt.toISOString().split('T')[0],
+        dueAt: bill.dueDate.toISOString().split('T')[0],
+        createdAt: bill.createdAt,
+      })),
+    ];
+
+    // Filter by type
+    if (options.type && options.type !== 'all') {
+      unified = unified.filter(inv => inv.type === options.type);
+    }
+
+    // Filter by search
+    if (options.search) {
+      const q = options.search.toLowerCase();
+      unified = unified.filter(inv =>
+        inv.invoiceNo.toLowerCase().includes(q) ||
+        inv.counterpartyName.toLowerCase().includes(q)
+      );
+    }
+
+    // Sort by createdAt desc
+    unified.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const total = unified.length;
+    const totalPages = Math.ceil(total / limit);
+    const items = unified.slice(skip, skip + limit);
+
+    return { data: items, pagination: { page, limit, total, totalPages } };
   }
 
   static async getById(organizationId: string, id: string) {
@@ -359,5 +452,29 @@ export class InvoicesService {
     });
 
     return { message: 'Invoice emailed successfully', email: targetEmail };
+  }
+
+  static async cancel(organizationId: string, id: string, userId: string) {
+    const invoice = await prisma.invoice.findFirst({ where: { id, organizationId } });
+    if (!invoice) throw new NotFoundError('Invoice not found');
+    if (invoice.status === 'paid') throw new BadRequestError('Cannot cancel a paid invoice');
+    await prisma.invoice.update({ where: { id }, data: { status: 'cancelled' } });
+    eventEmitter.emit(EventTypes.AUDIT_LOG, {
+      organizationId, userId, action: 'CANCEL', entity: 'INVOICE', entityId: id,
+      details: JSON.stringify({ invoiceNo: invoice.invoiceNo, previousStatus: invoice.status }),
+    });
+    return { message: 'Invoice cancelled' };
+  }
+
+  static async publish(organizationId: string, id: string, userId: string) {
+    const invoice = await prisma.invoice.findFirst({ where: { id, organizationId } });
+    if (!invoice) throw new NotFoundError('Invoice not found');
+    if (invoice.status !== 'draft') throw new BadRequestError('Only draft invoices can be published');
+    await prisma.invoice.update({ where: { id }, data: { status: 'pending', issuedAt: new Date() } });
+    eventEmitter.emit(EventTypes.AUDIT_LOG, {
+      organizationId, userId, action: 'PUBLISH', entity: 'INVOICE', entityId: id,
+      details: JSON.stringify({ invoiceNo: invoice.invoiceNo }),
+    });
+    return { message: 'Invoice published' };
   }
 }

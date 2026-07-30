@@ -1,116 +1,155 @@
 "use client";
 
-import { Star, Quote, MessageSquare } from "lucide-react";
-import { SiExpedia } from "react-icons/si";
-import { FaMicrosoft, FaSalesforce, FaGoogle, FaAmazon } from "react-icons/fa";
+import React, { useState } from "react";
+import { Star, TrendingUp, Shirt, Factory, Package, ShoppingBag } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const data = [
+  {
+    company: "Loom & Co.",
+    icon: Shirt,
+    quote: "FinFlow changed how we track inventory assets and cost centers. Auditing our textile production previously took weeks, but with their allocation engine, it's done in two clicks.",
+    author: "Andrea Clark",
+    role: "Finance Director, Loom & Co.",
+    initials: "AC",
+    stats: [
+      { value: "87%", label: "Increase in cost visibility" },
+      { value: "38%", label: "Increase in operational efficiency" }
+    ]
+  },
+  {
+    company: "Apex Manufacturing",
+    icon: Factory,
+    quote: "The seamless integration with our supply chain systems has made FinFlow indispensable. It drastically cut down our reconciliation time across all our global factories.",
+    author: "Marcus Peterson",
+    role: "VP of Finance, Apex",
+    initials: "MP",
+    stats: [
+      { value: "92%", label: "Faster month-end close" },
+      { value: "45%", label: "Reduction in manual errors" }
+    ]
+  },
+  {
+    company: "Global Supply",
+    icon: Package,
+    quote: "FinFlow provides unparalleled insights into our logistics cash flow. The real-time dashboards allow us to make strategic shipping decisions with absolute confidence.",
+    author: "Sarah Jenkins",
+    role: "CFO, Global Supply",
+    initials: "SJ",
+    stats: [
+      { value: "95%", label: "Accuracy in cash forecasting" },
+      { value: "60%", label: "Time saved on reporting" }
+    ]
+  },
+  {
+    company: "Nordic Retail",
+    icon: ShoppingBag,
+    quote: "Managing multi-store ledgers used to be a nightmare before FinFlow. Now, we can consolidate financials across all our retail outlets in just a few clicks.",
+    author: "David Chen",
+    role: "Global Controller, Nordic Retail",
+    initials: "DC",
+    stats: [
+      { value: "99%", label: "Compliance with tax regulations" },
+      { value: "50%", label: "Reduction in audit duration" }
+    ]
+  }
+];
 
 export function Testimonials() {
-  const reviews = [
-    {
-      stars: 5,
-      quote: "FinFlow changed how we track donor restricted assets. Auditing previously took weeks, but with their cost center allocation engine, it's done in two clicks.",
-      author: "Andrea Clark",
-      role: "Finance Director",
-      organization: "K-12 School Group",
-      initials: "AC"
-    },
-    {
-      stars: 5,
-      quote: "The fundraising module syncs seamlessly with our double-entry ledger. Our donors get instant tax-compliant receipts, and our bookkeeping is always error-free.",
-      author: "Marcus Peterson",
-      role: "Treasurer",
-      organization: "World Education Trust",
-      initials: "MP"
-    },
-    {
-      stars: 5,
-      quote: "Excellent multi-entity ledger management. The real-time cash flow graphs are incredible for presenting financial health reports directly to our board of trustees.",
-      author: "Sarah Jenkins",
-      role: "Chief Financial Officer",
-      organization: "Beacon Foundation",
-      initials: "SJ"
-    }
-  ];
-
-  const brandLogos = [
-    { name: "Expedia", icon: SiExpedia },
-    { name: "Microsoft", icon: FaMicrosoft },
-    { name: "Salesforce", icon: FaSalesforce },
-    { name: "Google", icon: FaGoogle },
-    { name: "Amazon", icon: FaAmazon }
-  ];
+  const [activeTab, setActiveTab] = useState(0);
+  const activeData = data[activeTab];
 
   return (
-    <section className="py-24 bg-zinc-50/50 dark:bg-zinc-950/40 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-24 bg-zinc-50 dark:bg-zinc-950/40 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto">
         
         {/* Header */}
-        <div className="text-center max-w-xl mx-auto mb-16">
-          <div className="text-primary font-bold text-xs uppercase tracking-widest mb-3 flex items-center justify-center">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            <span>Testimonials</span>
-          </div>
+        <div className="text-center max-w-2xl mx-auto mb-12">
           <h2 className="font-display font-bold text-3xl sm:text-4xl text-zinc-900 dark:text-zinc-50 tracking-tight mb-4">
-            What customer say about us
+            Endorsed by industry leaders
           </h2>
           <p className="text-muted-foreground text-sm sm:text-base font-sans font-light leading-relaxed">
-            Leading schools and global foundations manage assets and audit ledgers using FinFlow.
+            Industry leaders trust our commitment to excellence, validating our innovative solutions and fostering partnerships.
           </p>
         </div>
 
-        {/* Testimonial Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-          {reviews.map((rev, idx) => (
-            <div 
-              key={idx} 
-              className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/50 p-8 rounded-3xl relative shadow-xs hover:shadow-md hover:border-primary/20 dark:hover:border-primary/20 transition-all duration-300 flex flex-col justify-between"
-            >
+        {/* Tabs */}
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-12">
+          {data.map((item, index) => {
+            const Icon = item.icon;
+            const isActive = activeTab === index;
+            return (
+              <button
+                key={item.company}
+                onClick={() => setActiveTab(index)}
+                className={cn(
+                  "flex items-center space-x-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 cursor-pointer",
+                  isActive 
+                    ? "bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-md transform scale-105" 
+                    : "bg-zinc-200/50 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                )}
+              >
+                <Icon className={cn("h-4 w-4", isActive ? "text-white dark:text-zinc-900" : "text-zinc-500 dark:text-zinc-400")} />
+                <span>{item.company}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Main Content Card */}
+        <div className="bg-zinc-100/50 dark:bg-zinc-900/30 rounded-3xl p-4 sm:p-6 md:p-8 relative">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
+            
+            {/* Left Testimonial Panel */}
+            <div className="md:col-span-3 bg-white dark:bg-zinc-900 rounded-2xl p-8 shadow-sm relative flex flex-col justify-between min-h-[300px]">
               <div>
-                {/* Quotes floating background */}
-                <Quote className="absolute top-6 right-8 h-10 w-10 text-zinc-100 dark:text-zinc-800/60 pointer-events-none z-0" />
-                
-                {/* Stars */}
-                <div className="flex items-center space-x-1 mb-6 relative z-10">
-                  {[...Array(rev.stars)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-amber-400 stroke-amber-400" />
+                <div className="flex items-center space-x-1 mb-6">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-5 w-5 fill-amber-400 stroke-amber-400" />
                   ))}
                 </div>
-
-                {/* Quote Text */}
-                <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed mb-8 relative z-10 font-sans font-light italic">
-                  &ldquo;{rev.quote}&rdquo;
+                <p className="text-zinc-800 dark:text-zinc-200 text-base leading-relaxed font-sans font-light">
+                  {activeData.quote}
                 </p>
               </div>
 
-              {/* Author Info */}
-              <div className="flex items-center space-x-4 pt-4 border-t border-zinc-100 dark:border-zinc-800/50 relative z-10">
-                <div className="w-10 h-10 bg-primary/10 text-primary text-sm font-bold font-display rounded-full flex items-center justify-center">
-                  {rev.initials}
+              <div className="flex items-center justify-between mt-10">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-primary/10 text-primary text-base font-bold font-display rounded-full flex items-center justify-center">
+                    {activeData.initials}
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-zinc-900 dark:text-zinc-100">{activeData.author}</h4>
+                    <p className="text-xs text-muted-foreground">{activeData.role}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{rev.author}</h4>
-                  <p className="text-[10px] text-muted-foreground">{rev.role}, {rev.organization}</p>
+                {/* Quote Icon styling like the image (two thick slashes/quotes) */}
+                <div className="text-emerald-700 dark:text-emerald-500 font-serif text-6xl font-black leading-none opacity-80 select-none">
+                  &#8221;
                 </div>
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* Trusted Partners / Brands Ticker */}
-        <div className="border-t border-zinc-200/50 dark:border-zinc-800/50 pt-16">
-          <p className="text-center text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-10">
-            Empowering organizations trusted worldwide
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-12 sm:gap-16 opacity-40 dark:opacity-30">
-            {brandLogos.map((brand) => {
-              const BrandIcon = brand.icon;
-              return (
-                <div key={brand.name} className="flex items-center space-x-2 text-zinc-700 dark:text-zinc-300 hover:text-primary transition-colors duration-200">
-                  <BrandIcon className="h-6 w-6 sm:h-7 sm:w-7" />
-                  <span className="font-display font-semibold text-sm sm:text-base tracking-tight">{brand.name}</span>
+            {/* Right Stats Panel */}
+            <div className="md:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl p-8 shadow-sm flex flex-col justify-center gap-8">
+              {activeData.stats.map((stat, i) => (
+                <div key={i} className={cn(
+                  "flex flex-col",
+                  i === 0 ? "pb-8 border-b border-zinc-100 dark:border-zinc-800" : ""
+                )}>
+                  <div className="flex items-start space-x-2 mb-2">
+                    <span className="text-4xl font-bold font-display tracking-tight text-zinc-900 dark:text-zinc-50">
+                      {stat.value}
+                    </span>
+                    <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-500 mt-1" strokeWidth={3} />
+                  </div>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-snug pr-4">
+                    {stat.label}
+                  </p>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+
           </div>
         </div>
 

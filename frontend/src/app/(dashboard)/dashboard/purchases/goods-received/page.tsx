@@ -57,18 +57,23 @@ export default function GoodsReceivedPage() {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const fetchGrns = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch(`/api/v1/purchase-orders/goods-received`);
-      setGrns(res.items || []);
+      const res = await apiFetch(`/api/v1/purchase-orders/goods-received?page=${page}`);
+      const data = res.data || res;
+      setGrns(data.items || []);
+      const pag = data.pagination;
+      if (pag) setTotalPages(pag.totalPages || 1);
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [page]);
 
   const fetchPOs = async () => {
     try {
@@ -182,7 +187,7 @@ export default function GoodsReceivedPage() {
             </div>
           ) : grns.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">No GRNs recorded.</div>
-          ) : (
+          ) : (<>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -209,7 +214,14 @@ export default function GoodsReceivedPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-4">
+                <Button size="xs" variant="outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
+                <Button size="xs" variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+              </div>
+            )}
+          </>)}
         </CardContent>
       </Card>
 

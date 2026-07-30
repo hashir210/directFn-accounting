@@ -78,8 +78,8 @@ export default function NewInvoicePage() {
           apiFetch('/api/v1/customers?limit=100'),
           apiFetch('/api/v1/products?limit=100'),
         ]);
-        setCustomers(custRes.data?.data || []);
-        setProducts(prodRes.data?.data || []);
+        setCustomers(custRes.items || []);
+        setProducts(prodRes.items || []);
       } catch (err) {
         console.error('Failed to load data', err);
       } finally {

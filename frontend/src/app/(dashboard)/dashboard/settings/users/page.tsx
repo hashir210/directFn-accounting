@@ -34,6 +34,16 @@ import {
   Save,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { z } from 'zod';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+const inviteSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
+  name: z.string().optional(),
+  roleId: z.string().min(1, 'Please select a role'),
+});
+type InviteFormValues = z.infer<typeof inviteSchema>;
 
 interface Role {
   id: string;
@@ -71,11 +81,13 @@ export default function UsersPage() {
 
   // Invite User Dialog State
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteName, setInviteName] = useState('');
-  const [inviteRoleId, setInviteRoleId] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [inviteResult, setInviteResult] = useState<{ email: string; tempPassword: string } | null>(null);
+
+  const inviteForm = useForm<InviteFormValues>({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: { email: '', name: '', roleId: '' },
+  });
 
   // Fetch Users & Roles for current organization
   const fetchUsersData = useCallback(async () => {
@@ -132,19 +144,16 @@ export default function UsersPage() {
   };
 
   // Invite User Handler
-  const handleInviteUser = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmitInvite = async (data: InviteFormValues) => {
     setIsInviting(true);
     setUserError('');
     try {
       const result = await apiFetch<{ user: Record<string, unknown>; tempPassword: string }>('/api/v1/users/invite', {
         method: 'POST',
-        body: JSON.stringify({ email: inviteEmail, name: inviteName, roleId: inviteRoleId }),
+        body: JSON.stringify({ email: data.email, name: data.name, roleId: data.roleId }),
       });
-      setInviteResult({ email: inviteEmail, tempPassword: result.tempPassword });
-      setInviteEmail('');
-      setInviteName('');
-      setInviteRoleId('');
+      setInviteResult({ email: data.email, tempPassword: result.tempPassword });
+      inviteForm.reset();
       fetchUsersData();
     } catch (err) {
       setUserError(err instanceof ApiError ? err.message : 'Failed to invite user');
@@ -241,7 +250,7 @@ export default function UsersPage() {
                 </DialogFooter>
               </>
             ) : (
-              <form onSubmit={handleInviteUser}>
+              <form onSubmit={inviteForm.handleSubmit(onSubmitInvite)}>
                 <DialogHeader>
                   <DialogTitle>Invite Team Member</DialogTitle>
                   <DialogDescription>Add a user to your organization workspace.</DialogDescription>
@@ -256,26 +265,34 @@ export default function UsersPage() {
                   )}
                   <div className="space-y-2">
                     <Label htmlFor="invite-email">Email Address</Label>
-                    <Input id="invite-email" type="email" required value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="user@company.com" />
+                    <Input id="invite-email" type="email" placeholder="user@company.com" {...inviteForm.register('email')} />
+                    {inviteForm.formState.errors.email && <p className="text-xs text-destructive">{inviteForm.formState.errors.email.message}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="invite-name">Full Name (Optional)</Label>
-                    <Input id="invite-name" value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Jane Doe" />
+                    <Input id="invite-name" placeholder="Jane Doe" {...inviteForm.register('name')} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="invite-role">Role</Label>
-                    <Select value={inviteRoleId} onValueChange={setInviteRoleId}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select a role..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>
-                            {r.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      control={inviteForm.control}
+                      name="roleId"
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Select a role..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.map((r) => (
+                              <SelectItem key={r.id} value={r.id}>
+                                {r.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {inviteForm.formState.errors.roleId && <p className="text-xs text-destructive">{inviteForm.formState.errors.roleId.message}</p>}
                   </div>
                 </div>
                 <DialogFooter>

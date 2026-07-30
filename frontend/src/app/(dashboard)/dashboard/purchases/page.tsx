@@ -10,6 +10,8 @@ import {
   FileText,
   Loader2,
   Trash2,
+  Eye,
+  Edit,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,6 +92,16 @@ export default function PurchaseOrdersPage() {
   const [openAdd, setOpenAdd] = useState(false);
   const [error, setError] = useState('');
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // View dialog
+  const [viewOrder, setViewOrder] = useState<PurchaseOrder | null>(null);
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   const form = useForm<CreatePurchaseOrderForm>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(createPurchaseOrderSchema) as any,
@@ -104,14 +116,17 @@ export default function PurchaseOrdersPage() {
   const fetchOrders = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch(`/api/v1/purchase-orders?search=${search}&status=${statusFilter}`);
-      setOrders(res.items || []);
+      const res = await apiFetch(`/api/v1/purchase-orders?search=${search}&status=${statusFilter}&page=${page}`);
+      const data = res.data || res;
+      setOrders(data.items || []);
+      const pag = data.pagination;
+      if (pag) setTotalPages(pag.totalPages || 1);
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, [search, statusFilter]);
+  }, [search, statusFilter, page]);
 
   const fetchMetadata = async () => {
     try {
@@ -138,7 +153,6 @@ export default function PurchaseOrdersPage() {
     if (!prod) return;
 
     const price = Number(prod.purchasePrice);
-    const taxRate = 0;
     const lineTotal = currQty * price;
 
     const newItem: PurchaseOrderItem = {
@@ -146,7 +160,7 @@ export default function PurchaseOrdersPage() {
       productName: prod.name,
       quantity: currQty,
       unitPrice: price,
-      taxRate,
+      taxRate: 0,
       lineTotal,
     };
 
@@ -159,6 +173,35 @@ export default function PurchaseOrdersPage() {
     setOrderItems(orderItems.filter((_, i) => i !== index));
   };
 
+  const resetForm = () => {
+    form.reset();
+    setOrderItems([]);
+    setEditingId(null);
+    setError('');
+  };
+
+  const openEditOrder = async (order: PurchaseOrder) => {
+    try {
+      const res = await apiFetch(`/api/v1/purchase-orders/${order.id}`);
+      const data = res.data || res;
+      setEditingId(order.id);
+      form.setValue('supplierId', data.supplierId);
+      form.setValue('expectedDate', data.expectedDate ? data.expectedDate.split('T')[0] : '');
+      form.setValue('notes', data.notes || '');
+      setOrderItems(data.items.map((i: any) => ({
+        productId: i.productId,
+        productName: i.product?.name || 'Product',
+        quantity: i.quantity,
+        unitPrice: Number(i.unitPrice),
+        taxRate: Number(i.taxRate),
+        lineTotal: Number(i.lineTotal),
+      })));
+      setOpenAdd(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleCreateOrder = async (data: CreatePurchaseOrderForm) => {
     if (orderItems.length === 0) {
       setError('Please add at least one item');
@@ -167,21 +210,34 @@ export default function PurchaseOrdersPage() {
 
     try {
       setError('');
-      await apiFetch('/api/v1/purchase-orders', {
-        method: 'POST',
-        body: JSON.stringify({
-          supplierId: data.supplierId,
-          items: orderItems.map(i => ({ productId: i.productId, quantity: i.quantity, unitPrice: i.unitPrice, taxRate: i.taxRate })),
-          expectedDate: data.expectedDate || undefined,
-          notes: data.notes || undefined,
-        }),
-      });
+
+      if (editingId) {
+        await apiFetch(`/api/v1/purchase-orders/${editingId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            supplierId: data.supplierId,
+            items: orderItems.map(i => ({ productId: i.productId, quantity: i.quantity, unitPrice: i.unitPrice, taxRate: i.taxRate })),
+            expectedDate: data.expectedDate || undefined,
+            notes: data.notes || undefined,
+          }),
+        });
+      } else {
+        await apiFetch('/api/v1/purchase-orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            supplierId: data.supplierId,
+            items: orderItems.map(i => ({ productId: i.productId, quantity: i.quantity, unitPrice: i.unitPrice, taxRate: i.taxRate })),
+            expectedDate: data.expectedDate || undefined,
+            notes: data.notes || undefined,
+          }),
+        });
+      }
+
       setOpenAdd(false);
-      form.reset();
-      setOrderItems([]);
+      resetForm();
       fetchOrders();
     } catch (err: any) {
-      setError(err.message || 'Failed to create purchase order');
+      setError(err.message || 'Failed to save purchase order');
     }
   };
 
@@ -216,7 +272,7 @@ export default function PurchaseOrdersPage() {
           <p className="text-muted-foreground text-sm mt-1">Draft and coordinate stock acquisition from suppliers.</p>
         </div>
         {canEdit && (
-          <Button onClick={() => setOpenAdd(true)} className="bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 text-white shadow-lg">
+          <Button onClick={() => { resetForm(); setOpenAdd(true); }} className="bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 text-white shadow-lg">
             <Plus className="h-4 w-4 mr-2" /> New Purchase Order
           </Button>
         )}
@@ -232,7 +288,7 @@ export default function PurchaseOrdersPage() {
               <Input
                 placeholder="Search by PO number or supplier..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="pl-9 bg-background"
               />
             </div>
@@ -242,7 +298,7 @@ export default function PurchaseOrdersPage() {
                   key={status}
                   variant={statusFilter === status ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setStatusFilter(status)}
+                  onClick={() => { setStatusFilter(status); setPage(1); }}
                   className="capitalize"
                 >
                   {status}
@@ -259,56 +315,113 @@ export default function PurchaseOrdersPage() {
           ) : orders.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">No orders found.</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>PO No</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Total Cost</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Expected Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((o) => (
-                  <TableRow key={o.id}>
-                    <TableCell className="font-bold">{o.orderNo}</TableCell>
-                    <TableCell>{o.supplier?.name}</TableCell>
-                    <TableCell>${Number(o.totalAmount).toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          o.status === 'Received' ? 'secondary' :
-                          o.status === 'Sent' ? 'default' : 'outline'
-                        }
-                      >
-                        {o.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{o.expectedDate ? new Date(o.expectedDate).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      {o.status === 'Draft' && (
-                        <>
-                          <Button size="xs" variant="outline" onClick={() => handleSendOrder(o.id)}>Send to Supplier</Button>
-                          <Button size="xs" variant="destructive" onClick={() => handleDeleteOrder(o.id)}><Trash2 className="h-3 w-3" /></Button>
-                        </>
-                      )}
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>PO No</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Total Cost</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Expected Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-bold">{o.orderNo}</TableCell>
+                      <TableCell>{o.supplier?.name}</TableCell>
+                      <TableCell>${Number(o.totalAmount).toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            o.status === 'Received' ? 'secondary' :
+                            o.status === 'Sent' ? 'default' : 'outline'
+                          }
+                        >
+                          {o.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{o.expectedDate ? new Date(o.expectedDate).toLocaleDateString() : '-'}</TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button size="xs" variant="ghost" onClick={() => setViewOrder(o)}><Eye className="h-3 w-3" /></Button>
+                        {o.status === 'Draft' && (
+                          <>
+                            <Button size="xs" variant="outline" onClick={() => openEditOrder(o)}><Edit className="h-3 w-3" /></Button>
+                            <Button size="xs" variant="outline" onClick={() => handleSendOrder(o.id)}>Send</Button>
+                            <Button size="xs" variant="destructive" onClick={() => handleDeleteOrder(o.id)}><Trash2 className="h-3 w-3" /></Button>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <Button size="xs" variant="outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                  <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
+                  <Button size="xs" variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* New Purchase Order Dialog */}
-      <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+      {/* View PO Dialog */}
+      <Dialog open={!!viewOrder} onOpenChange={() => setViewOrder(null)}>
         <DialogContent className="max-w-2xl bg-card border border-muted/40 shadow-xl">
           <DialogHeader>
-            <DialogTitle>Create Purchase Order</DialogTitle>
-            <DialogDescription>Draft a stock order to send to a supplier.</DialogDescription>
+            <DialogTitle>PO {viewOrder?.orderNo}</DialogTitle>
+            <DialogDescription>
+              Supplier: {viewOrder?.supplier?.name} | Status: {viewOrder?.status} | Total: ${Number(viewOrder?.totalAmount || 0).toFixed(2)}
+              {viewOrder?.expectedDate && ` | Expected: ${new Date(viewOrder.expectedDate).toLocaleDateString()}`}
+            </DialogDescription>
+          </DialogHeader>
+          {viewOrder && (
+            <div className="space-y-4">
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead className="py-2 text-xs">Product</TableHead>
+                      <TableHead className="py-2 text-xs">Qty</TableHead>
+                      <TableHead className="py-2 text-xs">Unit Cost</TableHead>
+                      <TableHead className="py-2 text-xs text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {viewOrder.items?.map((item, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="py-2 text-xs">{item.productName || 'Product'}</TableCell>
+                        <TableCell className="py-2 text-xs">{item.quantity}</TableCell>
+                        <TableCell className="py-2 text-xs">${Number(item.unitPrice).toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs text-right">${Number(item.lineTotal).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><span className="text-muted-foreground">Subtotal:</span> <span className="font-semibold">${viewOrder.subtotal.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Tax:</span> <span className="font-semibold">${viewOrder.taxAmount.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Total:</span> <span className="font-semibold text-primary">${viewOrder.totalAmount.toFixed(2)}</span></div>
+              </div>
+              {viewOrder.notes && <p className="text-xs text-muted-foreground">Notes: {viewOrder.notes}</p>}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* New/Edit Purchase Order Dialog */}
+      <Dialog open={openAdd} onOpenChange={(v) => { if (!v) resetForm(); setOpenAdd(v); }}>
+        <DialogContent className="max-w-2xl bg-card border border-muted/40 shadow-xl">
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Edit Purchase Order' : 'Create Purchase Order'}</DialogTitle>
+            <DialogDescription>{editingId ? 'Update the draft purchase order.' : 'Draft a stock order to send to a supplier.'}</DialogDescription>
           </DialogHeader>
           <form onSubmit={form.handleSubmit(handleCreateOrder)} className="space-y-4">
             { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
@@ -404,9 +517,9 @@ export default function PurchaseOrdersPage() {
             <div className="flex justify-between items-center pt-3 border-t">
               <div className="text-sm font-semibold">Total Order Cost: <span className="text-primary">${totalCalc.toFixed(2)}</span></div>
               <DialogFooter className="gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => { resetForm(); setOpenAdd(false); }}>Cancel</Button>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Draft PO
+                  {form.formState.isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} {editingId ? 'Update PO' : 'Create Draft PO'}
                 </Button>
               </DialogFooter>
             </div>

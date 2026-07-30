@@ -31,7 +31,7 @@ export class DashboardService {
       where: { id: organizationId }, 
       select: { isPlatform: true, revenueTarget: true, expenseBudget: true, profitGoal: true } 
     });
-    const orgWhere: any = org?.isPlatform ? {} : { organizationId };
+    const orgWhere: any = { organizationId };
 
     // Fetch all paid invoices and expenses for the organization (or connected system for platform admin)
     const [paidInvoices, expenses] = await Promise.all([

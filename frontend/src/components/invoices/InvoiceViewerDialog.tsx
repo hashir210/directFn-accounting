@@ -10,15 +10,6 @@ import apiFetch from '@/lib/api';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 
-// Using require for html2pdf to avoid type errors if types aren't installed
-const getHtml2Pdf = async () => {
-  if (typeof window !== 'undefined') {
-    // @ts-ignore
-    return (await import('html2pdf.js')).default;
-  }
-  return null;
-};
-
 interface InvoiceViewerDialogProps {
   invoiceId: string | null;
   open: boolean;
@@ -56,29 +47,6 @@ export function InvoiceViewerDialog({ invoiceId, open, onOpenChange }: InvoiceVi
   };
 
   const handleDownloadPdf = async () => {
-    if (!invoiceRef.current || !invoice) return;
-    try {
-      const html2pdf = await getHtml2Pdf();
-      if (!html2pdf) {
-        toast.error('PDF library not available. Try the "Server PDF" button instead.');
-        return;
-      }
-
-      const opt = {
-        margin: [15, 15, 15, 15] as [number, number, number, number],
-        filename: `${invoice.invoiceNo}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
-      };
-      await html2pdf().set(opt).from(invoiceRef.current).save();
-      toast.success('PDF downloaded successfully!');
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to generate PDF. Try the "Server PDF" button instead.');
-    }
-  };
-
-  const handleServerPdfDownload = async () => {
     if (!invoiceId || !invoice) return;
     setServerPdfLoading(true);
     try {
@@ -100,9 +68,9 @@ export function InvoiceViewerDialog({ invoiceId, open, onOpenChange }: InvoiceVi
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('Server PDF downloaded successfully!');
+      toast.success('PDF downloaded successfully!');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to generate server PDF');
+      toast.error(err.message || 'Failed to generate PDF');
     } finally {
       setServerPdfLoading(false);
     }
@@ -140,12 +108,9 @@ export function InvoiceViewerDialog({ invoiceId, open, onOpenChange }: InvoiceVi
               <Button variant="outline" onClick={handlePrint}>
                 <Printer className="h-4 w-4 mr-2" /> Print
               </Button>
-              <Button variant="outline" onClick={handleDownloadPdf}>
-                <Download className="h-4 w-4 mr-2" /> PDF
-              </Button>
-              <Button variant="outline" onClick={handleServerPdfDownload} disabled={serverPdfLoading}>
+              <Button variant="outline" onClick={handleDownloadPdf} disabled={serverPdfLoading}>
                 {serverPdfLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                {serverPdfLoading ? 'Generating...' : 'Server PDF'}
+                {serverPdfLoading ? 'Generating...' : 'Download PDF'}
               </Button>
               <Button onClick={handleEmail} disabled={emailing} className="bg-primary hover:bg-primary-tint text-primary-foreground">
                 {emailing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}

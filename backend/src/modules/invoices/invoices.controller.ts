@@ -17,6 +17,21 @@ export class InvoicesController {
     }
   }
 
+  static async listUnified(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { page, limit, search, type } = req.query;
+      const result = await InvoicesService.listUnified(req.user!.organizationId, {
+        page: page ? parseInt(page as string) : undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
+        search: search as string,
+        type: type as string,
+      });
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await InvoicesService.getById(req.user!.organizationId, req.params.id);
@@ -66,6 +81,24 @@ export class InvoicesController {
     try {
       const { email } = req.body;
       const result = await InvoicesService.emailInvoice(req.user!.organizationId, req.params.id, email);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async cancel(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await InvoicesService.cancel(req.user!.organizationId, req.params.id, req.user!.id);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async publish(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await InvoicesService.publish(req.user!.organizationId, req.params.id, req.user!.id);
       res.status(200).json({ success: true, data: result });
     } catch (error) {
       next(error);

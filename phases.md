@@ -127,62 +127,62 @@ This document tracks all implemented phases, module scopes, and feature checklis
 ## Phase 9 — Sales Module
 
 **Scope:**
-- [ ] POS
-- [ ] Sales Orders
-- [ ] Invoice
-- [ ] Returns
-- [ ] Discounts
-- [ ] Coupons
+- [x] POS (`/dashboard/sales/pos` — product grid, cart, checkout, coupon entry)
+- [x] Sales Orders (`/dashboard/sales` — CRUD, confirm, generate invoice)
+- [x] Invoice (`/dashboard/invoices/new` + `/dashboard/invoices/[id]` + SalesInvoice from orders)
+- [x] Returns (`/dashboard/sales/returns` — CRUD)
+- [x] Discounts (`/dashboard/sales/discounts` — CRUD)
+- [x] Coupons (`/dashboard/sales/coupons` — CRUD)
 
 ---
 
 ## Phase 10 — Purchase Module
 
 **Scope:**
-- [ ] Purchase Orders
-- [ ] Goods Received
-- [ ] Purchase Invoice
-- [ ] Supplier Returns
+- [x] Purchase Orders (`/dashboard/purchases` — CRUD, send, receive, invoice)
+- [x] Goods Received (`/dashboard/purchases/goods-received` — GRN list)
+- [x] Purchase Invoice (`/dashboard/purchases/invoices` — purchase bills from POs)
+- [x] Supplier Returns (`/dashboard/purchases/returns` — CRUD)
 
 ---
 
 ## Phase 11 — Accounting
 
 **Scope:**
-- [ ] Chart of Accounts
-- [ ] Assets
-- [ ] Liabilities
-- [ ] Equity
-- [ ] Income
-- [ ] Expenses
-- [ ] Journal Entries
-- [ ] General Ledger
-- [ ] Trial Balance
-- [ ] Balance Sheet
-- [ ] Profit & Loss
-- [ ] Cash Flow
+- [x] Chart of Accounts (accounts module + tab in `/dashboard/accounting`)
+- [x] Assets (account type in Chart of Accounts)
+- [x] Liabilities (account type in Chart of Accounts)
+- [x] Equity (account type in Chart of Accounts)
+- [x] Income (account type in Chart of Accounts)
+- [x] Expenses (account type in Chart of Accounts)
+- [x] Journal Entries (journal-entries module + tab in `/dashboard/accounting`)
+- [x] General Ledger (accounting module endpoint + tab in `/dashboard/accounting`)
+- [x] Trial Balance (accounting module endpoint + tab in `/dashboard/accounting`)
+- [x] Balance Sheet (accounting module endpoint + tab in `/dashboard/accounting`)
+- [x] Profit & Loss (accounting module endpoint + tab in `/dashboard/accounting`)
+- [x] Cash Flow (accounting module endpoint + tab in `/dashboard/accounting`)
 
 ---
 
 ## Phase 12 — Expense Module
 
 **Scope:**
-- [ ] Office
-- [ ] Salary
-- [ ] Utilities
-- [ ] Fuel
-- [ ] Internet
-- [ ] Miscellaneous
+- [x] Office (category filter in `/dashboard/expenses`)
+- [x] Salary (category filter in `/dashboard/expenses`)
+- [x] Utilities (category filter in `/dashboard/expenses`)
+- [x] Fuel (category filter in `/dashboard/expenses`)
+- [x] Internet (category filter in `/dashboard/expenses`)
+- [x] Miscellaneous (category filter in `/dashboard/expenses`)
 
 ---
 
 ## Phase 13 — Income Module
 
 **Scope:**
-- [ ] Sales
-- [ ] Services
-- [ ] Investment
-- [ ] Other Income
+- [x] Sales (category filter in `/dashboard/income`)
+- [x] Services (category filter in `/dashboard/income`)
+- [x] Investment (category filter in `/dashboard/income`)
+- [x] Other Income (category filter in `/dashboard/income`)
 
 ---
 
@@ -214,12 +214,12 @@ This document tracks all implemented phases, module scopes, and feature checklis
 ## Phase 16 — Advanced Reports System
 
 **Scope:**
-- [ ] Reports Center Dashboard (`/dashboard/reports`)
-- [ ] Financial Statements (Profit/Loss, Balance Sheet, Cash Flow)
-- [ ] Sales & Income Reports (Sales Report, Income Report)
-- [ ] Expense & Purchase Reports (Expense Report, Purchase Report)
-- [ ] Statements & Inventory (Customer Statement, Supplier Statement, Inventory Report, Tax Report)
-- [ ] Aggregation API for generating report data
+- [x] Reports Center Dashboard (`/dashboard/reports` — categorized report cards hub)
+- [x] Financial Statements (Profit/Loss, Balance Sheet, Cash Flow at `/dashboard/reports/[type]`)
+- [x] Sales & Income Reports (Sales Report, Income Report at `/dashboard/reports/[type]`)
+- [x] Expense & Purchase Reports (Expense Report, Purchase Report at `/dashboard/reports/[type]`)
+- [x] Statements & Inventory (Customer Statement, Supplier Statement, Inventory Report, Tax Report at `/dashboard/reports/[type]`)
+- [x] Aggregation API for generating report data (`backend/src/modules/reports/`)
 
 ---
 

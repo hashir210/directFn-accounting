@@ -30,6 +30,9 @@ import accountsRoutes from './modules/accounts/accounts.routes';
 import journalEntriesRoutes from './modules/journal-entries/journal-entries.routes';
 import accountingRoutes from './modules/accounting/accounting.routes';
 import incomeRoutes from './modules/income/income.routes';
+import bankAccountsRoutes from './modules/bank-accounts/bank-accounts.routes';
+import taxesRoutes from './modules/taxes/taxes.routes';
+import categoriesRoutes from './modules/categories/categories.routes';
 // Import services to register event listeners globally
 import './modules/notification/notification.service';
 import './modules/audit/audit.service';
@@ -73,7 +76,6 @@ app.use('/api/v1/payments', paymentsRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
 app.use('/api/v1/archives', archiveRoutes);
-app.use('/api/v1/reports', reportsRoutes);
 app.use('/api/v1/pdf', pdfRoutes);
 
 // Contact / Newsletter endpoint (public)
@@ -98,6 +100,9 @@ app.use('/api/v1/accounts', accountsRoutes);
 app.use('/api/v1/journal-entries', journalEntriesRoutes);
 app.use('/api/v1/accounting', accountingRoutes);
 app.use('/api/v1/income', incomeRoutes);
+app.use('/api/v1/bank-accounts', bankAccountsRoutes);
+app.use('/api/v1/taxes', taxesRoutes);
+app.use('/api/v1/categories', categoriesRoutes);
 
 // Centralized Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

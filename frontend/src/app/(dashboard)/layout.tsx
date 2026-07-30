@@ -97,7 +97,7 @@ export default function DashboardLayout({
   useEffect(() => {
     if (user?.isPlatformOrg) {
       apiFetch('/api/v1/platform/organizations?limit=100').then((res: any) => {
-        if (res?.items) setOrganizations(res.items.map((o: any) => ({ id: o.id, name: o.name })));
+        if (Array.isArray(res)) setOrganizations(res.map((o: any) => ({ id: o.id, name: o.name })));
       }).catch(() => {});
     }
     if (user?.organizationId) {
@@ -180,13 +180,14 @@ export default function DashboardLayout({
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, key: 'dashboard' },
   ].filter(i => isScreenAllowed(i.key));
 
-  const tenantOnlyKeys = ['customers', 'suppliers', 'products', 'inventory', 'sales', 'purchases', 'payments', 'invoices', 'expenses', 'income', 'accounting'];
+  const tenantOnlyKeys = ['customers', 'suppliers', 'products', 'inventory', 'sales', 'purchases', 'payments', 'income', 'accounting'];
 
   const financeItems = [
-    { href: "/dashboard/invoices", label: "Invoices", icon: Receipt, badge: 3, key: 'invoices', permission: 'invoices.view' },
+    { href: "/dashboard/invoices", label: "All Invoices", icon: Receipt, key: 'invoices', permission: 'invoices.view' },
     { href: "/dashboard/income", label: "Income", icon: TrendingUp, key: 'income', permission: 'income.view' },
     { href: "/dashboard/expenses", label: "Expenses", icon: CreditCard, key: 'expenses', permission: 'expenses.view' },
     { href: "/dashboard/accounting", label: "Accounting", icon: Landmark, key: 'accounting', permission: 'accounting.view' },
+    { href: "/dashboard/accounting/bank-accounts", label: "Bank Accounts", icon: Landmark, key: 'accounting', permission: 'accounting.view' },
     { href: "/dashboard/payments", label: "Payments", icon: TrendingUp, badge: 7, key: 'payments', permission: 'payments.view' },
   ].filter(i => {
     if (!isScreenAllowed(i.key)) return false;
@@ -200,6 +201,7 @@ export default function DashboardLayout({
   const salesItems = [
     { href: "/dashboard/sales/pos", label: "POS", icon: Monitor, key: 'sales', permission: 'sales.view' },
     { href: "/dashboard/sales", label: "Sales Orders", icon: ShoppingCart, key: 'sales', permission: 'sales.view' },
+    { href: "/dashboard/sales/invoices", label: "Sales Invoices", icon: FileText, key: 'sales', permission: 'sales.view' },
     { href: "/dashboard/sales/returns", label: "Returns", icon: RotateCcw, key: 'sales', permission: 'sales.view' },
     { href: "/dashboard/sales/discounts", label: "Discounts", icon: Percent, key: 'sales', permission: 'sales.view' },
     { href: "/dashboard/sales/coupons", label: "Coupons", icon: Ticket, key: 'sales', permission: 'sales.view' },
@@ -213,7 +215,7 @@ export default function DashboardLayout({
   const purchaseItems = [
     { href: "/dashboard/purchases", label: "Purchase Orders", icon: ClipboardList, key: 'purchases', permission: 'purchases.view' },
     { href: "/dashboard/purchases/goods-received", label: "Goods Received", icon: PackageCheck, key: 'purchases', permission: 'purchases.view' },
-    { href: "/dashboard/purchases/invoices", label: "Purchase Invoice", icon: FileText, key: 'purchases', permission: 'purchases.view' },
+    { href: "/dashboard/purchases/invoices", label: "Purchase Bills", icon: FileText, key: 'purchases', permission: 'purchases.view' },
     { href: "/dashboard/purchases/returns", label: "Supplier Returns", icon: RotateCcw, key: 'purchases', permission: 'purchases.view' },
   ].filter(i => {
     if (!isScreenAllowed(i.key)) return false;
@@ -230,6 +232,7 @@ export default function DashboardLayout({
     { href: "/dashboard/suppliers", label: "Suppliers", icon: Truck, key: 'suppliers' },
     { href: "/dashboard/products", label: "Products", icon: Package, key: 'products', permission: 'products.view' },
     { href: "/dashboard/inventory", label: "Inventory", icon: Warehouse, key: 'inventory', permission: 'products.view' },
+    { href: "/dashboard/inventory/warehouses", label: "Warehouses", icon: Building2, key: 'inventory', permission: 'products.view' },
   ].filter(i => {
     if (i.adminOnly && isStaff) return false;
     if (!isScreenAllowed(i.key)) return false;
@@ -256,6 +259,8 @@ export default function DashboardLayout({
 
   if (hasPermission('settings.view') && isScreenAllowed('settings')) {
     settingsItems.push({ href: "/dashboard/settings", label: "Settings", icon: Settings });
+    settingsItems.push({ href: "/dashboard/settings/taxes", label: "Taxes", icon: Percent });
+    settingsItems.push({ href: "/dashboard/settings/categories", label: "Categories", icon: FileText });
     settingsItems.push({ href: "/dashboard/settings/sessions", label: "Sessions", icon: Monitor });
     settingsItems.push({ href: "/dashboard/settings/audit", label: "Audit Logs", icon: ActivitySquare });
   }
@@ -651,28 +656,46 @@ export default function DashboardLayout({
                     New Transaction
                   </DropdownMenuItem>
                 )}
-                {isScreenAllowed('customers') && (
+                {!user?.isPlatformOrg && isScreenAllowed('customers') && (
                   <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-customer-modal'))}>
                     <ContactRound className="mr-2 h-4 w-4" />
                     Customer
                   </DropdownMenuItem>
                 )}
-                {isScreenAllowed('suppliers') && (
+                {!user?.isPlatformOrg && isScreenAllowed('suppliers') && (
                   <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-supplier-modal'))}>
                     <Truck className="mr-2 h-4 w-4" />
                     Supplier
                   </DropdownMenuItem>
                 )}
-                {isScreenAllowed('products') && (
+                {!user?.isPlatformOrg && isScreenAllowed('products') && (
                   <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-product-modal'))}>
                     <Package className="mr-2 h-4 w-4" />
                     Product
                   </DropdownMenuItem>
                 )}
-                {isScreenAllowed('inventory') && (
+                {!user?.isPlatformOrg && isScreenAllowed('inventory') && (
                   <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-inventory-modal'))}>
                     <Warehouse className="mr-2 h-4 w-4" />
                     Inventory
+                  </DropdownMenuItem>
+                )}
+                {!user?.isPlatformOrg && isScreenAllowed('inventory') && (
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-warehouse-modal'))}>
+                    <Building2 className="mr-2 h-4 w-4" />
+                    Warehouse
+                  </DropdownMenuItem>
+                )}
+                {!user?.isPlatformOrg && isScreenAllowed('sales') && (
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-coupon-modal'))}>
+                    <Ticket className="mr-2 h-4 w-4" />
+                    Coupon
+                  </DropdownMenuItem>
+                )}
+                {!user?.isPlatformOrg && isScreenAllowed('sales') && (
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => window.dispatchEvent(new CustomEvent('open-discount-modal'))}>
+                    <Percent className="mr-2 h-4 w-4" />
+                    Discount
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

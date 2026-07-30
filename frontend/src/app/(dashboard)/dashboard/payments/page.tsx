@@ -72,10 +72,10 @@ export default function PaymentsPage() {
   const fetchPayments = async () => {
     setLoading(true);
     try {
-      const result = await apiFetch<{ data: PaymentTransaction[] }>('/api/v1/payments');
-      setPayments(result.data || []);
-      const banks = await apiFetch<{ data: BankAccount[] }>('/api/v1/bank-accounts');
-      setBankAccounts(banks.data || []);
+      const result = await apiFetch<PaymentTransaction[]>('/api/v1/payments');
+      setPayments(result || []);
+      const banks = await apiFetch<BankAccount[]>('/api/v1/bank-accounts');
+      setBankAccounts(banks || []);
     } catch (err) {
       console.error(err);
       setPayments([]);

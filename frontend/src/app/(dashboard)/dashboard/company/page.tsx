@@ -13,6 +13,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
+import { z } from 'zod';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+const regSchema = z.object({
+  orgName: z.string().min(1, 'Company Name is required'),
+  ownerName: z.string().min(1, 'Owner Name is required'),
+  ownerEmail: z.string().email('Invalid owner email'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  contactEmail: z.string().email('Invalid email').or(z.literal('')),
+  maxUsers: z.string().optional(),
+  planId: z.string().optional(),
+  address: z.string().optional(),
+  gstVatNumber: z.string().optional(),
+  fiscalYear: z.string(),
+  currency: z.string(),
+  timeZone: z.string(),
+});
+type RegFormValues = z.infer<typeof regSchema>;
 
 interface OrgSummary {
   id: string; name: string; planId?: string | null;
@@ -54,16 +73,19 @@ export default function CompanyManagementPage() {
 
   // Register dialog
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
-  const [regForm, setRegForm] = useState({
-    orgName: '', ownerName: '', ownerEmail: '', password: '',
-    contactEmail: '', maxUsers: '5', planId: '',
-    address: '', gstVatNumber: '', fiscalYear: 'jan-dec', currency: 'PKR', timeZone: 'UTC-5',
+  const regForm = useForm<RegFormValues>({
+    resolver: zodResolver(regSchema),
+    defaultValues: {
+      orgName: '', ownerName: '', ownerEmail: '', password: '',
+      contactEmail: '', maxUsers: '5', planId: '',
+      address: '', gstVatNumber: '', fiscalYear: 'jan-dec', currency: 'PKR', timeZone: 'UTC-5',
+    }
   });
   const [isRegistering, setIsRegistering] = useState(false);
 
   const loadTenant = useCallback(async () => {
     try {
-      const data = await apiFetch<Record<string, string | null>>('/api/v1/organization/current');
+      const data = await apiFetch<Record<string, string | null>>('/api/v1/organizations/current');
       setTenantCompany({
         name: data.name || '', contactEmail: data.contactEmail || '',
         gstVatNumber: data.gstVatNumber || '', address: data.address || '',
@@ -93,27 +115,26 @@ export default function CompanyManagementPage() {
   }, [isPlatformAdmin, loadAllOrgs, loadTenant]);
 
   const openRegister = () => {
-    setRegForm({ orgName: '', ownerName: '', ownerEmail: '', password: '', contactEmail: '', maxUsers: '5', planId: plans[0]?.id || '', address: '', gstVatNumber: '', fiscalYear: 'jan-dec', currency: 'PKR', timeZone: 'UTC-5' });
+    regForm.reset({ orgName: '', ownerName: '', ownerEmail: '', password: '', contactEmail: '', maxUsers: '5', planId: plans[0]?.id || '', address: '', gstVatNumber: '', fiscalYear: 'jan-dec', currency: 'PKR', timeZone: 'UTC-5' });
     setIsRegisterOpen(true);
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegister = async (data: RegFormValues) => {
     setIsRegistering(true);
     try {
       await apiFetch('/api/v1/platform/organizations', {
         method: 'POST',
         body: JSON.stringify({
-          orgName: regForm.orgName, planId: regForm.planId || undefined,
-          ownerName: regForm.ownerName, ownerEmail: regForm.ownerEmail,
-          password: regForm.password, contactEmail: regForm.contactEmail || undefined,
-          maxUsers: regForm.maxUsers ? parseInt(regForm.maxUsers, 10) : undefined,
+          orgName: data.orgName, planId: data.planId || undefined,
+          ownerName: data.ownerName, ownerEmail: data.ownerEmail,
+          password: data.password, contactEmail: data.contactEmail || undefined,
+          maxUsers: data.maxUsers ? parseInt(data.maxUsers, 10) : undefined,
         }),
       });
       const orgsList = await apiFetch<OrgSummary[]>('/api/v1/platform/organizations');
-      const created = orgsList.find(o => o.name === regForm.orgName);
+      const created = orgsList.find(o => o.name === data.orgName);
       if (created) {
-        await apiFetch(`/api/v1/platform/organizations/${created.id}/settings`, { method: 'PATCH', body: JSON.stringify({ address: regForm.address || undefined, gstVatNumber: regForm.gstVatNumber || undefined, fiscalYear: regForm.fiscalYear, currency: regForm.currency, timeZone: regForm.timeZone }) });
+        await apiFetch(`/api/v1/platform/organizations/${created.id}/settings`, { method: 'PATCH', body: JSON.stringify({ address: data.address || undefined, gstVatNumber: data.gstVatNumber || undefined, fiscalYear: data.fiscalYear, currency: data.currency, timeZone: data.timeZone }) });
       }
       setIsRegisterOpen(false);
       loadAllOrgs();
@@ -325,7 +346,7 @@ export default function CompanyManagementPage() {
       {/* Register Dialog */}
       <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
         <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
-          <form onSubmit={handleRegister}>
+          <form onSubmit={regForm.handleSubmit(handleRegister)}>
             <DialogHeader>
               <DialogTitle>Register New Company</DialogTitle>
               <DialogDescription>Create a new client company with owner account and details.</DialogDescription>
@@ -333,49 +354,69 @@ export default function CompanyManagementPage() {
             <div className="space-y-3 py-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Company Name</Label>
-                <Input required value={regForm.orgName} onChange={(e) => setRegForm({ ...regForm, orgName: e.target.value })} placeholder="Acme Corp" />
+                <Input placeholder="Acme Corp" {...regForm.register('orgName')} />
+                {regForm.formState.errors.orgName && <p className="text-xs text-destructive">{regForm.formState.errors.orgName.message}</p>}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Contact Email</Label>
-                  <Input type="email" value={regForm.contactEmail} onChange={(e) => setRegForm({ ...regForm, contactEmail: e.target.value })} placeholder="billing@acme.com" />
+                  <Input type="email" placeholder="billing@acme.com" {...regForm.register('contactEmail')} />
+                  {regForm.formState.errors.contactEmail && <p className="text-xs text-destructive">{regForm.formState.errors.contactEmail.message}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">GST / VAT Number</Label>
-                  <Input value={regForm.gstVatNumber} onChange={(e) => setRegForm({ ...regForm, gstVatNumber: e.target.value })} placeholder="GST-98420-DFN" />
+                  <Input placeholder="GST-98420-DFN" {...regForm.register('gstVatNumber')} />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Address</Label>
-                <Input value={regForm.address} onChange={(e) => setRegForm({ ...regForm, address: e.target.value })} placeholder="Address, City, Country" />
+                <Input placeholder="Address, City, Country" {...regForm.register('address')} />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Fiscal Year</Label>
-                  <Select value={regForm.fiscalYear} onValueChange={(val) => setRegForm({ ...regForm, fiscalYear: val })}>
-                    <SelectTrigger className="w-full h-8 text-xs"><SelectValue placeholder="Fiscal Year" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="jan-dec">Jan-Dec</SelectItem><SelectItem value="apr-mar">Apr-Mar</SelectItem><SelectItem value="jul-jun">Jul-Jun</SelectItem><SelectItem value="oct-sep">Oct-Sep</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={regForm.control}
+                    name="fiscalYear"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full h-8 text-xs"><SelectValue placeholder="Fiscal Year" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="jan-dec">Jan-Dec</SelectItem><SelectItem value="apr-mar">Apr-Mar</SelectItem><SelectItem value="jul-jun">Jul-Jun</SelectItem><SelectItem value="oct-sep">Oct-Sep</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Currency</Label>
-                  <Select value={regForm.currency} onValueChange={(val) => setRegForm({ ...regForm, currency: val })}>
-                    <SelectTrigger className="w-full h-8 text-xs"><SelectValue placeholder="Currency" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD</SelectItem><SelectItem value="EUR">EUR</SelectItem><SelectItem value="GBP">GBP</SelectItem><SelectItem value="PKR">PKR</SelectItem><SelectItem value="AED">AED</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={regForm.control}
+                    name="currency"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full h-8 text-xs"><SelectValue placeholder="Currency" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USD">USD</SelectItem><SelectItem value="EUR">EUR</SelectItem><SelectItem value="GBP">GBP</SelectItem><SelectItem value="PKR">PKR</SelectItem><SelectItem value="AED">AED</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Time Zone</Label>
-                  <Select value={regForm.timeZone} onValueChange={(val) => setRegForm({ ...regForm, timeZone: val })}>
-                    <SelectTrigger className="w-full h-8 text-xs"><SelectValue placeholder="Time Zone" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="UTC-5">EST</SelectItem><SelectItem value="UTC+0">GMT</SelectItem><SelectItem value="UTC+5">PKT</SelectItem><SelectItem value="UTC+4">GST</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={regForm.control}
+                    name="timeZone"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full h-8 text-xs"><SelectValue placeholder="Time Zone" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="UTC-5">EST</SelectItem><SelectItem value="UTC+0">GMT</SelectItem><SelectItem value="UTC+5">PKT</SelectItem><SelectItem value="UTC+4">GST</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
               </div>
               <div className="border-t pt-3">
@@ -383,30 +424,39 @@ export default function CompanyManagementPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Owner Name</Label>
-                    <Input value={regForm.ownerName} onChange={(e) => setRegForm({ ...regForm, ownerName: e.target.value })} placeholder="Jane Doe" />
+                    <Input placeholder="Jane Doe" {...regForm.register('ownerName')} />
+                    {regForm.formState.errors.ownerName && <p className="text-xs text-destructive">{regForm.formState.errors.ownerName.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Owner Email</Label>
-                    <Input type="email" required value={regForm.ownerEmail} onChange={(e) => setRegForm({ ...regForm, ownerEmail: e.target.value })} placeholder="jane@acme.com" />
+                    <Input type="email" placeholder="jane@acme.com" {...regForm.register('ownerEmail')} />
+                    {regForm.formState.errors.ownerEmail && <p className="text-xs text-destructive">{regForm.formState.errors.ownerEmail.message}</p>}
                   </div>
                 </div>
                 <div className="space-y-1.5 mt-2">
                   <Label className="text-xs">Initial Password</Label>
-                  <Input type="password" required value={regForm.password} onChange={(e) => setRegForm({ ...regForm, password: e.target.value })} placeholder="••••••••" />
+                  <Input type="password" placeholder="••••••••" {...regForm.register('password')} />
+                  {regForm.formState.errors.password && <p className="text-xs text-destructive">{regForm.formState.errors.password.message}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-2">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Plan</Label>
-                    <Select value={regForm.planId} onValueChange={(val) => setRegForm({ ...regForm, planId: val })}>
-                      <SelectTrigger className="w-full h-8 text-xs"><SelectValue placeholder="Select Plan" /></SelectTrigger>
-                      <SelectContent>
-                        {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <Controller
+                      control={regForm.control}
+                      name="planId"
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger className="w-full h-8 text-xs"><SelectValue placeholder="Select Plan" /></SelectTrigger>
+                          <SelectContent>
+                            {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Max Users</Label>
-                    <Input type="number" value={regForm.maxUsers} onChange={(e) => setRegForm({ ...regForm, maxUsers: e.target.value })} />
+                    <Input type="number" {...regForm.register('maxUsers')} />
                   </div>
                 </div>
               </div>

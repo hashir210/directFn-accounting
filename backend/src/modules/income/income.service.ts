@@ -66,8 +66,7 @@ export class IncomeService {
     const limit = options.limit || 10;
     const skip = (page - 1) * limit;
 
-    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
-    const where: Record<string, unknown> = org?.isPlatform ? {} : { organizationId };
+    const where: Record<string, unknown> = { organizationId };
 
     if (options.category && options.category !== 'all') {
       where.category = options.category;

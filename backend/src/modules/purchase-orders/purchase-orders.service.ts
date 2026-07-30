@@ -12,8 +12,7 @@ export class PurchaseOrdersService {
     const limit = options.limit || 20;
     const skip = (page - 1) * limit;
 
-    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
-    const where: any = org?.isPlatform ? {} : { organizationId };
+    const where: any = { organizationId };
     if (options.status && options.status !== 'all') where.status = options.status;
     if (options.search) {
       where.OR = [
@@ -218,9 +217,12 @@ export class PurchaseOrdersService {
   }
 
   static async createInvoice(organizationId: string, id: string, dueDate: string) {
-    const order = await prisma.purchaseOrder.findFirst({ where: { id, organizationId }, include: { supplier: true } });
+    const order = await prisma.purchaseOrder.findFirst({ where: { id, organizationId }, include: { supplier: true, purchaseBills: true } });
     if (!order) throw new NotFoundError('Purchase order not found');
     if (!['Sent', 'Partially Received', 'Received'].includes(order.status)) throw new BadRequestError('Cannot create invoice for this order status');
+
+    const existingBill = order.purchaseBills.find(b => b.status === 'Unpaid' || b.status === 'Paid');
+    if (existingBill) throw new BadRequestError(`Purchase bill ${existingBill.billNo} already exists for this order`);
 
     const count = await prisma.purchaseBill.count({ where: { organizationId } });
     const year = new Date().getFullYear();
@@ -253,8 +255,7 @@ export class PurchaseOrdersService {
     const limit = options.limit || 20;
     const skip = (page - 1) * limit;
 
-    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
-    const where: any = org?.isPlatform ? {} : { organizationId };
+    const where: any = { organizationId };
 
     const [items, total] = await Promise.all([
       prisma.goodsReceived.findMany({
@@ -279,8 +280,7 @@ export class PurchaseOrdersService {
     const limit = options.limit || 20;
     const skip = (page - 1) * limit;
 
-    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
-    const where: any = org?.isPlatform ? {} : { organizationId };
+    const where: any = { organizationId };
     if (options.status && options.status !== 'all') where.status = options.status;
 
     const [items, total] = await Promise.all([

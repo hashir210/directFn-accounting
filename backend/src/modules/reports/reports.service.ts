@@ -366,4 +366,69 @@ export class ReportsService {
       chartData,
     };
   }
+
+  static async getARAging(organizationId: string) {
+    const now = new Date();
+    const invoices = await prisma.invoice.findMany({
+      where: { organizationId, status: { in: ['pending', 'overdue'] } },
+      include: { customer: true },
+    });
+
+    const buckets: Record<string, { customerId: string; customerName: string; current: number; days30: number; days60: number; days90: number; older: number; total: number }> = {};
+
+    for (const inv of invoices) {
+      const amount = toNumber(inv.amount);
+      const daysOverdue = Math.floor((now.getTime() - new Date(inv.dueAt).getTime()) / (1000 * 60 * 60 * 24));
+      const cid = inv.customerId;
+
+      if (!buckets[cid]) {
+        buckets[cid] = { customerId: cid, customerName: inv.customer?.name || 'Unknown', current: 0, days30: 0, days60: 0, days90: 0, older: 0, total: 0 };
+      }
+      buckets[cid].total += amount;
+
+      if (daysOverdue <= 0) buckets[cid].current += amount;
+      else if (daysOverdue <= 30) buckets[cid].days30 += amount;
+      else if (daysOverdue <= 60) buckets[cid].days60 += amount;
+      else if (daysOverdue <= 90) buckets[cid].days90 += amount;
+      else buckets[cid].older += amount;
+    }
+
+    const customers = Object.values(buckets).sort((a, b) => b.total - a.total);
+    const grandTotal = customers.reduce((s, c) => s + c.total, 0);
+
+    return { customers, grandTotal, asOf: now.toISOString() };
+  }
+
+  static async getAPAging(organizationId: string) {
+    const now = new Date();
+    const bills = await prisma.purchaseBill.findMany({
+      where: { organizationId, status: 'Pending' },
+      include: { supplier: true },
+    });
+
+    const buckets: Record<string, { supplierId: string; supplierName: string; current: number; days30: number; days60: number; days90: number; older: number; total: number }> = {};
+
+    for (const bill of bills) {
+      const amount = toNumber(bill.amount) - toNumber(bill.paidAmount || 0);
+      if (amount <= 0) continue;
+      const daysOverdue = Math.floor((now.getTime() - new Date(bill.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+      const sid = bill.supplierId;
+
+      if (!buckets[sid]) {
+        buckets[sid] = { supplierId: sid, supplierName: bill.supplier?.name || 'Unknown', current: 0, days30: 0, days60: 0, days90: 0, older: 0, total: 0 };
+      }
+      buckets[sid].total += amount;
+
+      if (daysOverdue <= 0) buckets[sid].current += amount;
+      else if (daysOverdue <= 30) buckets[sid].days30 += amount;
+      else if (daysOverdue <= 60) buckets[sid].days60 += amount;
+      else if (daysOverdue <= 90) buckets[sid].days90 += amount;
+      else buckets[sid].older += amount;
+    }
+
+    const suppliers = Object.values(buckets).sort((a, b) => b.total - a.total);
+    const grandTotal = suppliers.reduce((s, c) => s + c.total, 0);
+
+    return { suppliers, grandTotal, asOf: now.toISOString() };
+  }
 }

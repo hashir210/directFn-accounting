@@ -12,8 +12,7 @@ export class SupplierReturnsService {
     const limit = options.limit || 20;
     const skip = (page - 1) * limit;
 
-    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
-    const where: any = org?.isPlatform ? {} : { organizationId };
+    const where: any = { organizationId };
     if (options.status && options.status !== 'all') where.status = options.status;
 
     const [items, total] = await Promise.all([
@@ -114,6 +113,27 @@ export class SupplierReturnsService {
         where: { id: ret.supplierId },
         data: { dueAmount: { decrement: ret.totalAmount } },
       });
+
+      // Update linked purchase bill if it exists
+      if (ret.purchaseOrderId) {
+        const bills = await prisma.purchaseBill.findMany({ where: { purchaseOrderId: ret.purchaseOrderId, organizationId } });
+        for (const bill of bills) {
+          const returnAmount = Number(ret.totalAmount);
+          const billPaid = Number(bill.paidAmount);
+          if (billPaid > 0) {
+            const refundedPaid = Math.min(billPaid, returnAmount);
+            await prisma.purchaseBill.update({
+              where: { id: bill.id },
+              data: { paidAmount: { decrement: refundedPaid } },
+            });
+          }
+          const newAmount = Math.max(0, Number(bill.amount) - returnAmount);
+          await prisma.purchaseBill.update({
+            where: { id: bill.id },
+            data: { amount: new Decimal(newAmount), status: newAmount <= Number(bill.paidAmount) ? 'Paid' : 'Unpaid' },
+          });
+        }
+      }
     }
 
     return prisma.supplierReturn.update({ where: { id }, data: { status: newStatus }, include: { items: true } });

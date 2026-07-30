@@ -1,4 +1,5 @@
 import puppeteer, { Browser, PDFOptions } from 'puppeteer';
+import fs from 'fs';
 
 let browserInstance: Browser | null = null;
 let browserUseCount = 0;
@@ -19,8 +20,16 @@ async function getBrowser(): Promise<Browser> {
     browserInstance = null;
   }
 
+  let executablePath = process.env.CHROME_BIN;
+  if (!executablePath && fs.existsSync('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe')) {
+    executablePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+  } else if (!executablePath && fs.existsSync('/usr/bin/google-chrome')) {
+    executablePath = '/usr/bin/google-chrome';
+  }
+
   browserInstance = await puppeteer.launch({
     headless: true,
+    ...(executablePath ? { executablePath } : {}),
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',

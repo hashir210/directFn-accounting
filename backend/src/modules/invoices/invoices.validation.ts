@@ -6,7 +6,7 @@ export const createInvoiceSchema = z.object({
     customerName: z.string().optional(),
     customerEmail: z.string().email().optional().or(z.literal('')),
     dueAt: z.string().optional(),
-    status: z.enum(['pending', 'paid', 'overdue']).optional().default('pending'),
+    status: z.enum(['draft', 'pending', 'paid', 'overdue', 'cancelled']).optional().default('pending'),
     notes: z.string().optional(),
     terms: z.string().optional(),
     items: z.array(z.object({
@@ -24,7 +24,7 @@ export const createInvoiceSchema = z.object({
 
 export const updateInvoiceSchema = z.object({
   body: z.object({
-    status: z.enum(['pending', 'paid', 'overdue']).optional(),
+    status: z.enum(['draft', 'pending', 'paid', 'overdue', 'cancelled']).optional(),
     notes: z.string().optional(),
     terms: z.string().optional(),
   }),

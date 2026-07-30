@@ -119,4 +119,22 @@ export class ReportsController {
       res.status(500).json({ success: false, error: error.message });
     }
   }
+
+  static async getARAging(req: Request, res: Response) {
+    try {
+      const data = await ReportsService.getARAging(req.user!.organizationId);
+      res.json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  static async getAPAging(req: Request, res: Response) {
+    try {
+      const data = await ReportsService.getAPAging(req.user!.organizationId);
+      res.json({ success: true, data });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
 }

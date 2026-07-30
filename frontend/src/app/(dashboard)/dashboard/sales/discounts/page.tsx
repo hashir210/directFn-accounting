@@ -8,6 +8,7 @@ import {
   Search,
   Trash2,
   Loader2,
+  Edit,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,7 @@ interface Discount {
   minOrderAmount: number | null;
   maxDiscount: number | null;
   isActive: boolean;
+  effective: boolean;
   startDate: string | null;
   endDate: string | null;
   createdAt: string;
@@ -61,12 +63,13 @@ export default function DiscountsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [openAdd, setOpenAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const form = useForm<CreateDiscountForm>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(createDiscountSchema) as any,
-    defaultValues: { name: '', type: 'percentage', value: 10, minOrderAmount: undefined, maxDiscount: undefined, isActive: true },
+    defaultValues: { name: '', type: 'percentage', value: 10, minOrderAmount: undefined, maxDiscount: undefined, isActive: true, startDate: '', endDate: '' },
   });
 
   const fetchDiscounts = useCallback(async () => {
@@ -85,29 +88,74 @@ export default function DiscountsPage() {
     fetchDiscounts();
   }, [fetchDiscounts]);
 
-  const handleCreateDiscount = async (data: CreateDiscountForm) => {
+  const resetForm = () => {
+    form.reset({ name: '', type: 'percentage', value: 10, minOrderAmount: undefined, maxDiscount: undefined, isActive: true, startDate: '', endDate: '' });
+    setEditingId(null);
+    setError('');
+  };
+
+  const openEdit = async (discount: Discount) => {
     try {
-      setError('');
-      await apiFetch('/api/v1/discounts', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: data.name,
-          type: data.type,
-          value: data.value,
-          minOrderAmount: data.minOrderAmount || undefined,
-          maxDiscount: data.maxDiscount || undefined,
-          isActive: data.isActive ?? true,
-        }),
-      });
-      setOpenAdd(false);
-      form.reset();
-      fetchDiscounts();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create discount');
+      const res = await apiFetch(`/api/v1/discounts/${discount.id}`);
+      const data = res.data || res;
+      setEditingId(discount.id);
+      form.setValue('name', data.name);
+      form.setValue('type', data.type);
+      form.setValue('value', data.value);
+      form.setValue('minOrderAmount', data.minOrderAmount || undefined);
+      form.setValue('maxDiscount', data.maxDiscount || undefined);
+      form.setValue('isActive', data.isActive);
+      form.setValue('startDate', data.startDate ? data.startDate.split('T')[0] : '');
+      form.setValue('endDate', data.endDate ? data.endDate.split('T')[0] : '');
+      setOpenAdd(true);
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const handleDeleteDiscount = async (id: string) => {
+  const handleSave = async (data: CreateDiscountForm) => {
+    try {
+      setError('');
+
+      if (editingId) {
+        await apiFetch(`/api/v1/discounts/${editingId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: data.name,
+            type: data.type,
+            value: data.value,
+            minOrderAmount: data.minOrderAmount || undefined,
+            maxDiscount: data.maxDiscount || undefined,
+            isActive: data.isActive ?? true,
+            startDate: data.startDate || undefined,
+            endDate: data.endDate || undefined,
+          }),
+        });
+      } else {
+        await apiFetch('/api/v1/discounts', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: data.name,
+            type: data.type,
+            value: data.value,
+            minOrderAmount: data.minOrderAmount || undefined,
+            maxDiscount: data.maxDiscount || undefined,
+            isActive: data.isActive ?? true,
+            startDate: data.startDate || undefined,
+            endDate: data.endDate || undefined,
+          }),
+        });
+      }
+
+      setOpenAdd(false);
+      resetForm();
+      fetchDiscounts();
+    } catch (err: any) {
+      setError(err.message || 'Failed to save discount');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this discount?')) return;
     try {
       await apiFetch(`/api/v1/discounts/${id}`, { method: 'DELETE' });
@@ -124,10 +172,10 @@ export default function DiscountsPage() {
           <h1 className="text-2xl font-display font-semibold tracking-tight">
             Discounts
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">Configure and manage reusable organization discount rules.</p>
+          <p className="text-muted-foreground text-sm mt-1">Configure and manage reusable organization discount rules with date scheduling.</p>
         </div>
         {canEdit && (
-          <Button onClick={() => setOpenAdd(true)}>
+          <Button onClick={() => { resetForm(); setOpenAdd(true); }}>
             <Plus className="h-4 w-4 mr-2" /> Add Discount Rule
           </Button>
         )}
@@ -136,7 +184,7 @@ export default function DiscountsPage() {
       <Card className="shadow-none border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Discount Campaigns</CardTitle>
-          <CardDescription>View current promotional discount structures.</CardDescription>
+          <CardDescription>Promotional discounts with optional date scheduling. Effective status considers both Active flag and date range.</CardDescription>
           <div className="flex mt-4 max-w-sm">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -161,48 +209,64 @@ export default function DiscountsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
                   <TableHead>Value</TableHead>
                   <TableHead>Min Order</TableHead>
-                  <TableHead>Max Discount</TableHead>
+                  <TableHead>Valid Period</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {discounts.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell className="font-semibold">{d.name}</TableCell>
-                    <TableCell className="capitalize">{d.type}</TableCell>
-                    <TableCell>{d.type === 'percentage' ? `${d.value}%` : `$${d.value.toFixed(2)}`}</TableCell>
-                    <TableCell>{d.minOrderAmount ? `$${d.minOrderAmount.toFixed(2)}` : '-'}</TableCell>
-                    <TableCell>{d.maxDiscount ? `$${d.maxDiscount.toFixed(2)}` : '-'}</TableCell>
-                    <TableCell>
-                      <Badge variant={d.isActive ? 'default' : 'outline'}>{d.isActive ? 'Active' : 'Inactive'}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {canEdit && (
-                        <Button size="xs" variant="destructive" onClick={() => handleDeleteDiscount(d.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {discounts.map((d) => {
+                  const now = new Date();
+                  const expired = d.endDate && new Date(d.endDate) < now;
+                  const notStarted = d.startDate && new Date(d.startDate) > now;
+                  const effActive = d.effective;
+
+                  return (
+                    <TableRow key={d.id}>
+                      <TableCell className="font-semibold">{d.name}</TableCell>
+                      <TableCell>{d.type === 'percentage' ? `${d.value}%` : `$${d.value.toFixed(2)}`}</TableCell>
+                      <TableCell>{d.minOrderAmount ? `$${d.minOrderAmount.toFixed(2)}` : '-'}</TableCell>
+                      <TableCell className="text-xs">
+                        {d.startDate ? new Date(d.startDate).toLocaleDateString() : 'Any'} - {d.endDate ? new Date(d.endDate).toLocaleDateString() : '∞'}
+                      </TableCell>
+                      <TableCell>
+                        {expired ? (
+                          <Badge variant="destructive">Expired</Badge>
+                        ) : notStarted ? (
+                          <Badge variant="outline">Scheduled</Badge>
+                        ) : effActive ? (
+                          <Badge variant="default">Active</Badge>
+                        ) : (
+                          <Badge variant="outline">Inactive</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        {canEdit && (
+                          <>
+                            <Button size="xs" variant="outline" onClick={() => openEdit(d)}><Edit className="h-3 w-3" /></Button>
+                            <Button size="xs" variant="destructive" onClick={() => handleDelete(d.id)}><Trash2 className="h-3 w-3" /></Button>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
 
-      {/* Add Discount Dialog */}
-      <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+      {/* Add/Edit Discount Dialog */}
+      <Dialog open={openAdd} onOpenChange={(v) => { if (!v) resetForm(); setOpenAdd(v); }}>
         <DialogContent className="max-w-md bg-card border border-muted/40 shadow-xl">
           <DialogHeader>
-            <DialogTitle>Add Discount Rule</DialogTitle>
-            <DialogDescription>Create a new org-wide campaign discount.</DialogDescription>
+            <DialogTitle>{editingId ? 'Edit Discount Rule' : 'Add Discount Rule'}</DialogTitle>
+            <DialogDescription>{editingId ? 'Update campaign settings and scheduling.' : 'Create a new org-wide campaign discount with optional date scheduling.'}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={form.handleSubmit(handleCreateDiscount)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSave)} className="space-y-4">
             { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
 
             <div className="space-y-1">
@@ -248,6 +312,17 @@ export default function DiscountsPage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="disc-start">Start Date</Label>
+                <Input id="disc-start" type="date" {...form.register('startDate')} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="disc-end">End Date</Label>
+                <Input id="disc-end" type="date" {...form.register('endDate')} />
+              </div>
+            </div>
+
             <div className="flex items-center gap-2 pt-2">
               <Controller
                 control={form.control}
@@ -264,9 +339,9 @@ export default function DiscountsPage() {
             </div>
 
             <DialogFooter className="gap-2 pt-3 border-t">
-              <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => { resetForm(); setOpenAdd(false); }}>Cancel</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Discount
+                {form.formState.isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} {editingId ? 'Update Discount' : 'Create Discount'}
               </Button>
             </DialogFooter>
           </form>

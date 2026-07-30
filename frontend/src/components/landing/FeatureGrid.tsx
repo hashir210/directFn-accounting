@@ -9,8 +9,8 @@ export function FeatureGrid() {
       title: "Fundraising CRM",
       description: "Build robust donor profiles and log communication pipelines.",
       icon: Heart,
-      color: "text-rose-500 bg-rose-50 dark:bg-rose-950/40",
-      image: "https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&q=80&w=800",
+      color: "bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 shadow-sm",
+      image: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=800&auto=format&fit=crop",
       href: "/login",
       colSpan: "lg:col-span-4"
     },
@@ -18,8 +18,8 @@ export function FeatureGrid() {
       title: "Double-Entry Ledger",
       description: "Manage unrestricted assets and restricted grants in real-time.",
       icon: Landmark,
-      color: "text-violet-500 bg-violet-50 dark:bg-violet-950/40",
-      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800",
+      color: "bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 shadow-sm",
+      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=800&auto=format&fit=crop",
       href: "/login",
       colSpan: "lg:col-span-8"
     },
@@ -27,8 +27,8 @@ export function FeatureGrid() {
       title: "Compliance Auditing",
       description: "Automate GAAP statements and lock accounts to prevent changes.",
       icon: ShieldCheck,
-      color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40",
-      image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=800",
+      color: "bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 shadow-sm",
+      image: "https://images.unsplash.com/photo-1554224154-26032ffc0d04?q=80&w=1200&auto=format&fit=crop",
       href: "/login",
       colSpan: "lg:col-span-12"
     }

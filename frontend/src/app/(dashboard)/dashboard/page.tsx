@@ -322,6 +322,9 @@ function TenantDashboard() {
   const [revenueTarget, setRevenueTarget] = useState(0);
   const [expenseBudget, setExpenseBudget] = useState(0);
   const [profitGoal, setProfitGoal] = useState(0);
+  const [prevMonthRevenue, setPrevMonthRevenue] = useState(0);
+  const [prevMonthExpenses, setPrevMonthExpenses] = useState(0);
+  const [prevMonthProfit, setPrevMonthProfit] = useState(0);
   const [bankAccounts, setBankAccounts] = useState<{ id: string; name: string; bankName: string; balance: number; currency: string }[]>([]);
   const [cashFlowData, setCashFlowData] = useState<{ name: string; Inflow: number; Outflow: number }[]>([]);
   const [salesExpensesData, setSalesExpensesData] = useState<{ name: string; Sales: number; Expenses: number }[]>([]);
@@ -373,6 +376,11 @@ function TenantDashboard() {
         );
         const salesMap = new Map(sales.data.map((s) => [s.month, s.revenue]));
         const expMap = new Map(expenses.data.map((e) => [e.month, e.expenses]));
+        const currentMonth = new Date().getMonth(); // 0-indexed
+        const prevMonth = currentMonth === 0 ? 12 : currentMonth;
+        setPrevMonthRevenue(salesMap.get(prevMonth) || 0);
+        setPrevMonthExpenses(expMap.get(prevMonth) || 0);
+        setPrevMonthProfit(prevMonthRevenue - prevMonthExpenses);
         setSalesExpensesData(
           Array.from({ length: 12 }, (_, i) => {
             const m = i + 1;
@@ -542,6 +550,12 @@ function TenantDashboard() {
               <Badge variant="success" className="gap-1">
                 <ArrowUpRight className="h-3 w-3" /> Target: PKR {revenueTarget.toLocaleString()}
               </Badge>
+              {prevMonthRevenue > 0 && (
+                <Badge variant={totalRevenue >= prevMonthRevenue ? 'success' : 'danger'} className="gap-1">
+                  {totalRevenue >= prevMonthRevenue ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                  {prevMonthRevenue > 0 ? Math.abs(((totalRevenue - prevMonthRevenue) / prevMonthRevenue) * 100).toFixed(0) : 0}% vs last month
+                </Badge>
+              )}
             </div>
             <Progress value={revenueTarget > 0 ? (totalRevenue / revenueTarget) * 100 : 0} className="mt-3 h-1" />
           </CardContent>
@@ -565,6 +579,12 @@ function TenantDashboard() {
               <Badge variant="danger" className="gap-1">
                 Budget: PKR {expenseBudget.toLocaleString()}
               </Badge>
+              {prevMonthExpenses > 0 && (
+                <Badge variant={totalExpenses <= prevMonthExpenses ? 'success' : 'danger'} className="gap-1">
+                  {totalExpenses <= prevMonthExpenses ? <ArrowDownRight className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3" />}
+                  {Math.abs(((totalExpenses - prevMonthExpenses) / prevMonthExpenses) * 100).toFixed(0)}% vs last month
+                </Badge>
+              )}
             </div>
             <Progress value={expenseBudget > 0 ? (totalExpenses / expenseBudget) * 100 : 0} className="mt-3 h-1" />
           </CardContent>
@@ -588,6 +608,14 @@ function TenantDashboard() {
               <Progress value={profitGoal > 0 ? (netProfit / profitGoal) * 100 : 0} className="h-1.5 flex-1" />
               <span className="font-semibold text-primary">{profitGoal > 0 ? ((netProfit / profitGoal) * 100).toFixed(0) : 0}%</span>
             </div>
+            {prevMonthProfit !== 0 && (
+              <div className="flex items-center gap-1.5 mt-1 text-xs">
+                <Badge variant={netProfit >= prevMonthProfit ? 'success' : 'danger'} className="gap-1">
+                  {netProfit >= prevMonthProfit ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                  {prevMonthProfit !== 0 ? Math.abs(((netProfit - prevMonthProfit) / Math.abs(prevMonthProfit)) * 100).toFixed(0) : 0}% vs last month
+                </Badge>
+              </div>
+            )}
           </CardContent>
         </Card>
 

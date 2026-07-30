@@ -8,8 +8,7 @@ export class SuppliersService {
     const limit = options.limit || 50;
     const skip = (page - 1) * limit;
 
-    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
-    const where: any = org?.isPlatform ? {} : { organizationId };
+    const where: any = { organizationId };
     if (options.search) {
       where.OR = [
         { name: { contains: options.search } },
@@ -161,6 +160,7 @@ export class SuppliersService {
     supplierId: string;
     amount: number;
     note?: string;
+    purchaseBillId?: string;
   }) {
     const supplier = await prisma.supplier.findFirst({ where: { id: data.supplierId, organizationId } });
     if (!supplier) throw new NotFoundError('Supplier not found');
@@ -178,6 +178,19 @@ export class SuppliersService {
       where: { id: data.supplierId },
       data: { dueAmount: new Decimal(newDue) },
     });
+
+    // Update purchase bill if specified
+    if (data.purchaseBillId) {
+      const bill = await prisma.purchaseBill.findFirst({ where: { id: data.purchaseBillId, organizationId } });
+      if (bill) {
+        const newPaid = Number(bill.paidAmount) + data.amount;
+        const newStatus = newPaid >= Number(bill.amount) ? 'Paid' : 'Unpaid';
+        await prisma.purchaseBill.update({
+          where: { id: data.purchaseBillId },
+          data: { paidAmount: new Decimal(newPaid), status: newStatus },
+        });
+      }
+    }
 
     return payment;
   }

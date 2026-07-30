@@ -8,9 +8,11 @@ import {
   Search,
   FileText,
   CheckCircle,
-  XCircle,
+  DollarSign,
   Loader2,
   Trash2,
+  Eye,
+  Edit,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,7 +36,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { apiFetch, ApiError } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
 
 interface Customer {
@@ -63,7 +65,7 @@ interface SalesOrder {
   id: string;
   orderNo: string;
   customerId: string;
-  customer: { name: string };
+  customer: { name: string; email?: string };
   subtotal: number;
   discountAmount: number;
   taxAmount: number;
@@ -88,6 +90,16 @@ export default function SalesOrdersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // View dialog
+  const [viewOrder, setViewOrder] = useState<SalesOrder | null>(null);
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   // Form State
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [orderItems, setOrderItems] = useState<SalesOrderItem[]>([]);
@@ -102,14 +114,17 @@ export default function SalesOrdersPage() {
   const fetchOrders = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch(`/api/v1/sales-orders?search=${search}&status=${statusFilter}`);
-      setOrders(res.items || []);
+      const res = await apiFetch(`/api/v1/sales-orders?search=${search}&status=${statusFilter}&page=${page}`);
+      const data = res.data || res;
+      setOrders(data.items || []);
+      const pag = data.pagination;
+      if (pag) setTotalPages(pag.totalPages || 1);
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, [search, statusFilter]);
+  }, [search, statusFilter, page]);
 
   const fetchMetadata = async () => {
     try {
@@ -136,9 +151,7 @@ export default function SalesOrdersPage() {
     if (!prod) return;
 
     const price = Number(prod.sellingPrice);
-    const taxRate = 0; // Defaulting to 0 for simplicity
     const baseTotal = currQty * price - currDiscount;
-    const lineTotal = baseTotal + baseTotal * (taxRate / 100);
 
     const newItem: SalesOrderItem = {
       productId: currProductId,
@@ -146,8 +159,8 @@ export default function SalesOrdersPage() {
       quantity: currQty,
       unitPrice: price,
       discount: currDiscount,
-      taxRate,
-      lineTotal,
+      taxRate: 0,
+      lineTotal: baseTotal,
     };
 
     setOrderItems([...orderItems, newItem]);
@@ -160,6 +173,37 @@ export default function SalesOrdersPage() {
     setOrderItems(orderItems.filter((_, i) => i !== index));
   };
 
+  const resetForm = () => {
+    setSelectedCustomerId('');
+    setOrderItems([]);
+    setNotes('');
+    setCouponCode('');
+    setEditingId(null);
+    setError('');
+  };
+
+  const openEditOrder = async (order: SalesOrder) => {
+    try {
+      const res = await apiFetch(`/api/v1/sales-orders/${order.id}`);
+      const data = res.data || res;
+      setEditingId(order.id);
+      setSelectedCustomerId(data.customerId);
+      setNotes(data.notes || '');
+      setOrderItems(data.items.map((i: any) => ({
+        productId: i.productId,
+        productName: i.product?.name || 'Product',
+        quantity: i.quantity,
+        unitPrice: Number(i.unitPrice),
+        discount: Number(i.discount),
+        taxRate: Number(i.taxRate),
+        lineTotal: Number(i.lineTotal),
+      })));
+      setOpenAdd(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomerId || orderItems.length === 0) {
@@ -170,23 +214,33 @@ export default function SalesOrdersPage() {
     try {
       setIsSubmitting(true);
       setError('');
-      await apiFetch('/api/v1/sales-orders', {
-        method: 'POST',
-        body: JSON.stringify({
-          customerId: selectedCustomerId,
-          items: orderItems,
-          couponCode: couponCode || undefined,
-          notes: notes || undefined,
-        }),
-      });
+
+      if (editingId) {
+        await apiFetch(`/api/v1/sales-orders/${editingId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            customerId: selectedCustomerId,
+            items: orderItems,
+            notes: notes || undefined,
+          }),
+        });
+      } else {
+        await apiFetch('/api/v1/sales-orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            customerId: selectedCustomerId,
+            items: orderItems,
+            couponCode: couponCode || undefined,
+            notes: notes || undefined,
+          }),
+        });
+      }
+
       setOpenAdd(false);
-      setSelectedCustomerId('');
-      setOrderItems([]);
-      setNotes('');
-      setCouponCode('');
+      resetForm();
       fetchOrders();
     } catch (err: any) {
-      setError(err.message || 'Failed to create sales order');
+      setError(err.message || 'Failed to save sales order');
     } finally {
       setIsSubmitting(false);
     }
@@ -204,6 +258,15 @@ export default function SalesOrdersPage() {
   const handleGenerateInvoice = async (id: string) => {
     try {
       await apiFetch(`/api/v1/sales-orders/${id}/invoice`, { method: 'POST', body: JSON.stringify({ dueDate: new Date(Date.now() + 14 * 86400000).toISOString() }) });
+      fetchOrders();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handlePayInvoice = async (id: string) => {
+    try {
+      await apiFetch(`/api/v1/sales-orders/${id}/pay`, { method: 'POST' });
       fetchOrders();
     } catch (err) {
       console.error(err);
@@ -232,7 +295,7 @@ export default function SalesOrdersPage() {
           <p className="text-muted-foreground text-sm mt-1">Manage and track your customer sales orders.</p>
         </div>
         {canEdit && (
-          <Button onClick={() => setOpenAdd(true)} className="bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 text-white shadow-lg">
+          <Button onClick={() => { resetForm(); setOpenAdd(true); }} className="bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 text-white shadow-lg">
             <Plus className="h-4 w-4 mr-2" /> New Sales Order
           </Button>
         )}
@@ -248,7 +311,7 @@ export default function SalesOrdersPage() {
               <Input
                 placeholder="Search by order number or customer..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="pl-9 bg-background/50"
               />
             </div>
@@ -258,7 +321,7 @@ export default function SalesOrdersPage() {
                   key={status}
                   variant={statusFilter === status ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setStatusFilter(status)}
+                  onClick={() => { setStatusFilter(status); setPage(1); }}
                   className="capitalize"
                 >
                   {status}
@@ -275,59 +338,121 @@ export default function SalesOrdersPage() {
           ) : orders.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">No orders found.</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order No</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Total Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created At</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((o) => (
-                  <TableRow key={o.id}>
-                    <TableCell className="font-bold">{o.orderNo}</TableCell>
-                    <TableCell>{o.customer?.name}</TableCell>
-                    <TableCell>${Number(o.totalAmount).toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          o.status === 'Completed' || o.status === 'Invoiced' ? 'secondary' :
-                          o.status === 'Confirmed' ? 'default' : 'outline'
-                        }
-                      >
-                        {o.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(o.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      {o.status === 'Draft' && (
-                        <>
-                          <Button size="xs" variant="outline" onClick={() => handleConfirmOrder(o.id)}>Confirm</Button>
-                          <Button size="xs" variant="destructive" onClick={() => handleDeleteOrder(o.id)}><Trash2 className="h-3 w-3" /></Button>
-                        </>
-                      )}
-                      {o.status === 'Confirmed' && (
-                        <Button size="xs" onClick={() => handleGenerateInvoice(o.id)}>Invoice</Button>
-                      )}
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order No</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Total Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created At</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-bold">{o.orderNo}</TableCell>
+                      <TableCell>{o.customer?.name}</TableCell>
+                      <TableCell>${Number(o.totalAmount).toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            o.status === 'Completed' || o.status === 'Invoiced' ? 'secondary' :
+                            o.status === 'Confirmed' ? 'default' : 'outline'
+                          }
+                        >
+                          {o.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(o.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button size="xs" variant="ghost" onClick={() => setViewOrder(o)}><Eye className="h-3 w-3" /></Button>
+                        {o.status === 'Draft' && (
+                          <>
+                            <Button size="xs" variant="outline" onClick={() => openEditOrder(o)}><Edit className="h-3 w-3" /></Button>
+                            <Button size="xs" variant="outline" onClick={() => handleConfirmOrder(o.id)}>Confirm</Button>
+                            <Button size="xs" variant="destructive" onClick={() => handleDeleteOrder(o.id)}><Trash2 className="h-3 w-3" /></Button>
+                          </>
+                        )}
+                        {o.status === 'Confirmed' && (
+                          <Button size="xs" onClick={() => handleGenerateInvoice(o.id)}>Invoice</Button>
+                        )}
+                        {o.status === 'Invoiced' && (
+                          <Button size="xs" variant="secondary" onClick={() => handlePayInvoice(o.id)}><DollarSign className="h-3 w-3 mr-1" /> Pay</Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <Button size="xs" variant="outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                  <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
+                  <Button size="xs" variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* New Sales Order Dialog */}
-      <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+      {/* View Order Dialog */}
+      <Dialog open={!!viewOrder} onOpenChange={() => setViewOrder(null)}>
         <DialogContent className="max-w-2xl bg-card border border-muted/40 shadow-xl">
           <DialogHeader>
-            <DialogTitle>Create Sales Order</DialogTitle>
-            <DialogDescription>Draft a new sales order for a customer.</DialogDescription>
+            <DialogTitle>Order {viewOrder?.orderNo}</DialogTitle>
+            <DialogDescription>
+              Customer: {viewOrder?.customer?.name} | Status: {viewOrder?.status} | Total: ${Number(viewOrder?.totalAmount || 0).toFixed(2)}
+            </DialogDescription>
+          </DialogHeader>
+          {viewOrder && (
+            <div className="space-y-4">
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead className="py-2 text-xs">Product</TableHead>
+                      <TableHead className="py-2 text-xs">Qty</TableHead>
+                      <TableHead className="py-2 text-xs">Price</TableHead>
+                      <TableHead className="py-2 text-xs">Discount</TableHead>
+                      <TableHead className="py-2 text-xs text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {viewOrder.items?.map((item, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="py-2 text-xs">{item.productName || 'Product'}</TableCell>
+                        <TableCell className="py-2 text-xs">{item.quantity}</TableCell>
+                        <TableCell className="py-2 text-xs">${Number(item.unitPrice).toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">${Number(item.discount).toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs text-right">${Number(item.lineTotal).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><span className="text-muted-foreground">Subtotal:</span> <span className="font-semibold">${viewOrder.subtotal.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Discount:</span> <span className="font-semibold">-${viewOrder.discountAmount.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Tax:</span> <span className="font-semibold">${viewOrder.taxAmount.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Total:</span> <span className="font-semibold text-primary">${viewOrder.totalAmount.toFixed(2)}</span></div>
+              </div>
+              {viewOrder.notes && <p className="text-xs text-muted-foreground">Notes: {viewOrder.notes}</p>}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* New/Edit Sales Order Dialog */}
+      <Dialog open={openAdd} onOpenChange={(v) => { if (!v) resetForm(); setOpenAdd(v); }}>
+        <DialogContent className="max-w-2xl bg-card border border-muted/40 shadow-xl">
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Edit Sales Order' : 'Create Sales Order'}</DialogTitle>
+            <DialogDescription>{editingId ? 'Update the draft order.' : 'Draft a new sales order for a customer.'}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateOrder} className="space-y-4">
             { error && <Alert variant="destructive" className="p-3"><AlertDescription className="font-semibold">{ error }</AlertDescription></Alert> }
@@ -344,21 +469,23 @@ export default function SalesOrdersPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="coupon">Coupon Code (Optional)</Label>
-                <Input
-                  id="coupon"
-                  placeholder="e.g. WELCOME50"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                />
-              </div>
+              {!editingId && (
+                <div className="space-y-1">
+                  <Label htmlFor="coupon">Coupon Code (Optional)</Label>
+                  <Input
+                    id="coupon"
+                    placeholder="e.g. WELCOME50"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Line Item addition */}
             <div className="border p-3 rounded-lg bg-muted/20 space-y-2">
               <Label>Add Order Items</Label>
-              <div className="grid grid-cols-4 gap-2 items-end">
+              <div className="grid grid-cols-5 gap-2 items-end">
                 <div className="col-span-2 space-y-1">
                   <Select value={currProductId} onValueChange={setCurrProductId}>
                     <SelectTrigger className="w-full h-9 text-xs">
@@ -379,6 +506,16 @@ export default function SalesOrdersPage() {
                     min={1}
                   />
                 </div>
+                <div className="space-y-1">
+                  <Input
+                    type="number"
+                    placeholder="Disc $"
+                    value={currDiscount}
+                    onChange={(e) => setCurrDiscount(parseFloat(e.target.value) || 0)}
+                    className="h-8 text-xs"
+                    min={0}
+                  />
+                </div>
                 <Button type="button" size="sm" onClick={handleAddItem} className="h-8">Add</Button>
               </div>
             </div>
@@ -392,6 +529,7 @@ export default function SalesOrdersPage() {
                       <TableHead className="py-2 text-[11px]">Product</TableHead>
                       <TableHead className="py-2 text-[11px]">Qty</TableHead>
                       <TableHead className="py-2 text-[11px]">Price</TableHead>
+                      <TableHead className="py-2 text-[11px]">Disc</TableHead>
                       <TableHead className="py-2 text-[11px]">Total</TableHead>
                       <TableHead className="py-2 text-right text-[11px]"></TableHead>
                     </TableRow>
@@ -402,6 +540,7 @@ export default function SalesOrdersPage() {
                         <TableCell className="py-2 text-xs">{item.productName}</TableCell>
                         <TableCell className="py-2 text-xs">{item.quantity}</TableCell>
                         <TableCell className="py-2 text-xs">${item.unitPrice.toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">${item.discount.toFixed(2)}</TableCell>
                         <TableCell className="py-2 text-xs">${item.lineTotal.toFixed(2)}</TableCell>
                         <TableCell className="py-2 text-right">
                           <Button size="xs" variant="ghost" onClick={() => handleRemoveItem(idx)}>✕</Button>
@@ -426,9 +565,9 @@ export default function SalesOrdersPage() {
             <div className="flex justify-between items-center pt-3 border-t">
               <div className="text-sm font-semibold">Total Order Amount: <span className="text-primary">${totalCalc.toFixed(2)}</span></div>
               <DialogFooter className="gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>Cancel</Button>
+                <Button type="button" variant="outline" onClick={() => { resetForm(); setOpenAdd(false); }}>Cancel</Button>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create Order
+                  {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} {editingId ? 'Update Order' : 'Create Order'}
                 </Button>
               </DialogFooter>
             </div>

@@ -5,26 +5,38 @@ import { ArrowRight, CheckCircle, Play, Shield, Loader2 } from "lucide-react";
 import { SiExpedia } from "react-icons/si";
 import { FaMicrosoft, FaSalesforce, FaGoogle, FaAmazon } from "react-icons/fa";
 import { apiFetch } from "@/lib/api";
+import { Card, CardContent } from "@/components/ui/card";
+
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const formSchema = z.object({
+  email: z.string().min(1, "Please enter your email.").email("Please enter a valid email address.")
+});
+type FormValues = z.infer<typeof formSchema>;
 
 export function Hero() {
-  const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { email: "" },
+  });
+
+  const onSubmit = async (values: FormValues) => {
     setSending(true);
     try {
       await apiFetch('/api/v1/contact', {
         method: 'POST',
-        body: JSON.stringify({ email, name: '', message: 'Get Started - Landing Page' }),
+        body: JSON.stringify({ email: values.email, name: '', message: 'Get Started - Landing Page' }),
       });
       setSubmitted(true);
-      setEmail("");
+      form.reset();
     } catch {
       setSubmitted(true);
-      setEmail("");
+      form.reset();
     } finally {
       setSending(false);
     }
@@ -63,82 +75,67 @@ export function Hero() {
         </p>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center animate-in slide-in-from-bottom-10 duration-700">
-          <form onSubmit={handleSubmit} className="flex items-center w-full max-w-sm bg-white dark:bg-zinc-900 p-1.5 border border-zinc-200 dark:border-zinc-800 rounded-full focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary shadow-sm transition-all">
-            <input
-              type="email"
-              required
-              placeholder="Enter work email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 bg-transparent border-none outline-none px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 font-sans"
-            />
-            <button
-              type="submit"
-              className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-sm font-semibold rounded-full px-6 py-2.5 transition-colors flex items-center space-x-1"
-            >
-              <span>{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Start Free"}</span>
-            </button>
-          </form>
-          <button className="flex items-center justify-center space-x-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors py-3 px-6 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800">
+        <div className="flex flex-col sm:flex-row items-start gap-4 w-full justify-center animate-in slide-in-from-bottom-10 duration-700">
+          <div className="flex flex-col w-full max-w-sm">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center w-full bg-white dark:bg-zinc-900 p-1.5 border border-zinc-200 dark:border-zinc-800 rounded-full focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary shadow-sm transition-all">
+              <input
+                type="email"
+                placeholder="Enter work email"
+                {...form.register("email")}
+                className="flex-1 bg-transparent border-none outline-none px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 font-sans"
+              />
+              <button
+                type="submit"
+                className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-sm font-semibold rounded-full px-6 py-2.5 transition-colors flex items-center space-x-1"
+              >
+                <span>{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Start Free"}</span>
+              </button>
+            </form>
+            {form.formState.errors.email && (
+              <p className="text-destructive text-[13px] font-medium text-left px-4 mt-2">
+                {form.formState.errors.email.message}
+              </p>
+            )}
+            {submitted && (
+              <div className="mt-2 px-4 text-emerald-600 dark:text-emerald-400 text-[13px] font-medium flex items-center gap-2 text-left">
+                <CheckCircle className="h-4 w-4" /> We've received your request!
+              </div>
+            )}
+          </div>
+          
+          <button className="flex items-center justify-center space-x-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors py-[13px] px-6 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 shrink-0">
             <Play className="h-4 w-4 fill-current" />
             <span>Watch Demo</span>
           </button>
         </div>
 
-        {submitted && (
-          <div className="mt-4 text-emerald-600 dark:text-emerald-400 text-sm font-medium flex items-center gap-2">
-            <CheckCircle className="h-4 w-4" /> We've received your request!
-          </div>
-        )}
-
       </div>
 
-      {/* Massive Graphic / Unsplash Image Panel */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 animate-in fade-in duration-1000 delay-300">
-        <div className="w-full aspect-video md:aspect-[21/9] rounded-2xl md:rounded-[2rem] overflow-hidden border border-zinc-200/50 dark:border-zinc-800/50 shadow-2xl relative bg-zinc-100 dark:bg-zinc-900 group">
-          {/* Unsplash Image Placeholder */}
-          <img 
-            src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2000" 
-            alt="Dashboard Dashboard Overview"
-            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105"
-          />
-          {/* Glass Overlay Vignette */}
-          <div className="absolute inset-0 bg-gradient-to-t from-white/20 dark:from-black/40 to-transparent pointer-events-none"></div>
+      {/* SaaS Showcase Browser Mockup */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10 animate-in fade-in duration-1000 delay-300">
+        {/* Glow behind the mockup */}
+        <div className="absolute inset-0 -z-10 bg-primary/10 dark:bg-primary/20 blur-[120px] rounded-[3rem]" />
+        
+        <Card className="rounded-xl border-zinc-200/50 dark:border-zinc-800/50 shadow-2xl overflow-hidden bg-white dark:bg-zinc-950">
+          {/* Mac-style Browser Top Bar */}
+          <div className="flex items-center gap-1.5 border-b border-zinc-100 dark:border-zinc-900 bg-zinc-50 dark:bg-zinc-900/50 px-4 py-3">
+            <div className="h-2.5 w-2.5 rounded-full bg-[#FF5F56] border border-[#E0443E]" />
+            <div className="h-2.5 w-2.5 rounded-full bg-[#FFBD2E] border border-[#DEA123]" />
+            <div className="h-2.5 w-2.5 rounded-full bg-[#27C93F] border border-[#1AAB29]" />
+          </div>
           
-          {/* Floating UI Elements over image */}
-          <div className="absolute -bottom-6 -left-6 z-20 bg-white/70 dark:bg-black/60 backdrop-blur-md border border-border/50 p-4 rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.1)] max-w-[220px] text-left transform -rotate-2 hover:rotate-0 transition-transform duration-300 pointer-events-none hidden md:block">
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="p-1.5 bg-primary/20 text-primary rounded-lg">
-                <Shield className="h-4 w-4" />
-              </div>
-              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Reconciled</span>
-            </div>
-            <span className="text-sm font-semibold text-zinc-900 dark:text-white">$2.4M Assets</span>
-            <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-1.5 rounded-full mt-3 overflow-hidden">
-              <div className="bg-primary h-full w-[85%] rounded-full"></div>
-            </div>
-          </div>
-        </div>
+          {/* Image Content */}
+          <CardContent className="p-0 bg-zinc-100 dark:bg-zinc-900">
+            <img 
+              src="/dashboard-preview.png" 
+              alt=""
+              className="w-full h-auto object-contain transition-all duration-700 hover:scale-[1.01]"
+            />
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Trusted Brands */}
-      <div className="max-w-7xl mx-auto mt-20 pt-10 border-t border-zinc-100 dark:border-zinc-900 relative z-10">
-        <p className="text-center text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-8">
-          Trusted by modern finance teams worldwide
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-12 sm:gap-20 opacity-40 dark:opacity-30 grayscale hover:grayscale-0 transition-all duration-500">
-          {brandLogos.map((brand) => {
-            const BrandIcon = brand.icon;
-            return (
-              <div key={brand.name} className="flex items-center space-x-2 text-zinc-900 dark:text-white">
-                <BrandIcon className="h-6 w-6" />
-                <span className="font-display font-semibold text-lg tracking-tight">{brand.name}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+
 
     </section>
   );

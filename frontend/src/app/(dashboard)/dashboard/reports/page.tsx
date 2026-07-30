@@ -15,7 +15,9 @@ import {
   Box, 
   Receipt,
   FileText,
-  DollarSign
+  DollarSign,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 
 const reportCategories = [
@@ -52,6 +54,14 @@ const reportCategories = [
     reports: [
       { id: 'inventory', title: 'Inventory Valuation', description: 'Total value of items currently in stock.', icon: Box, active: true },
       { id: 'tax', title: 'Tax Report', description: 'Sales tax collected vs purchase tax paid.', icon: Receipt, active: true },
+    ]
+  },
+  {
+    title: 'Aging Reports',
+    description: 'Monitor outstanding receivables and payables by age.',
+    reports: [
+      { id: 'ar-aging', title: 'AR Aging', description: 'Accounts receivable aging: who owes you and for how long.', icon: Clock, active: true },
+      { id: 'ap-aging', title: 'AP Aging', description: 'Accounts payable aging: what you owe suppliers and for how long.', icon: AlertTriangle, active: true },
     ]
   }
 ];

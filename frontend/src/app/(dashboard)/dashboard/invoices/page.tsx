@@ -7,21 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import {
   Receipt,
   Plus,
   Search,
   Download,
-  MoreVertical,
   CheckCircle2,
   Clock,
   AlertTriangle,
@@ -33,15 +22,16 @@ import {
 import apiFetch from '@/lib/api';
 import { useAuth } from '@/features/auth/useAuth';
 import { useRouter } from 'next/navigation';
-import { InvoiceViewerDialog } from '@/components/invoices/InvoiceViewerDialog';
 
-interface InvoiceItem {
+interface UnifiedInvoice {
   id: string;
   invoiceNo: string;
-  customerName: string;
-  customerEmail: string;
+  type: 'direct' | 'sales' | 'purchase';
+  typeLabel: string;
+  counterpartyName: string;
+  counterpartyEmail: string | null;
   amount: number;
-  status: 'paid' | 'pending' | 'overdue';
+  status: string;
   issuedAt: string;
   dueAt: string;
 }
@@ -50,52 +40,56 @@ export default function InvoicesPage() {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('invoices.edit');
   const router = useRouter();
-  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [invoices, setInvoices] = useState<UnifiedInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
-  const [viewerOpen, setViewerOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (typeFilter !== 'all') params.set('type', typeFilter);
       if (search) params.set('search', search);
-      const result = await apiFetch<{ data: InvoiceItem[] }>(`/api/v1/invoices?${params.toString()}`);
-      setInvoices(result.data);
+      params.set('page', String(page));
+      const result = await apiFetch<any>(`/api/v1/invoices/unified?${params.toString()}`);
+      setInvoices(result.data || []);
+      if (result.pagination) setTotalPages(result.pagination.totalPages || 1);
     } catch {
       setInvoices([]);
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter]);
+  }, [search, typeFilter, page]);
 
   useEffect(() => {
     fetchInvoices();
   }, [fetchInvoices]);
 
   const totalInvoiced = invoices.reduce((acc, inv) => acc + inv.amount, 0);
-  const totalPaid = invoices.filter((i) => i.status === 'paid').reduce((acc, inv) => acc + inv.amount, 0);
-  const totalPending = invoices.filter((i) => i.status === 'pending').reduce((acc, inv) => acc + inv.amount, 0);
-  const totalOverdue = invoices.filter((i) => i.status === 'overdue').reduce((acc, inv) => acc + inv.amount, 0);
+  const totalPaid = invoices.filter((i) => i.status === 'paid' || i.status === 'Paid').reduce((acc, inv) => acc + inv.amount, 0);
+  const totalPending = invoices.filter((i) => i.status === 'pending' || i.status === 'Unpaid').reduce((acc, inv) => acc + inv.amount, 0);
 
-  const handleMarkPaid = async (id: string) => {
+  const handleMarkPaid = async (inv: UnifiedInvoice) => {
     try {
-      await apiFetch(`/api/v1/invoices/${id}/pay`, { method: 'POST' });
+      if (inv.type === 'sales') {
+        await apiFetch(`/api/v1/sales-orders/${inv.id}/pay`, { method: 'POST' });
+      } else if (inv.type === 'direct') {
+        await apiFetch(`/api/v1/invoices/${inv.id}/pay`, { method: 'POST' });
+      }
       fetchInvoices();
     } catch {}
   };
 
   const handleExportCSV = () => {
     if (invoices.length === 0) return;
-    const headers = ['Invoice No', 'Customer Name', 'Email', 'Amount', 'Status', 'Issued Date', 'Due Date'];
+    const headers = ['Invoice No', 'Type', 'Counterparty', 'Amount', 'Status', 'Issued Date', 'Due Date'];
     const rows = invoices.map((inv) => [
       inv.invoiceNo,
-      `"${inv.customerName.replace(/"/g, '""')}"`,
-      `"${(inv.customerEmail || '').replace(/"/g, '""')}"`,
+      inv.typeLabel,
+      `"${inv.counterpartyName.replace(/"/g, '""')}"`,
       inv.amount,
       inv.status,
       inv.issuedAt,
@@ -105,19 +99,28 @@ export default function InvoicesPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `invoices_export_${Date.now()}.csv`);
+    link.setAttribute('download', `all_invoices_export_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const typeBadgeVariant = (type: string) => {
+    switch (type) {
+      case 'direct': return 'default' as const;
+      case 'sales': return 'secondary' as const;
+      case 'purchase': return 'outline' as const;
+      default: return 'outline' as const;
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
+          <h1 className="text-2xl font-bold tracking-tight">All Invoices</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Create, issue, and manage customer invoices and accounts receivable.
+            Unified view of all invoices — direct, sales, and purchase bills.
           </p>
         </div>
 
@@ -129,48 +132,37 @@ export default function InvoicesPage() {
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="shadow-none border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total Invoiced</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalInvoiced.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-            <p className="text-xs text-muted-foreground mt-1">{invoices.length} invoices generated</p>
+            <p className="text-xs text-muted-foreground mt-1">{invoices.length} records</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-none border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Collected</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Collected / Paid</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-            <p className="text-xs text-primary/80 mt-1">Paid in full</p>
+            <p className="text-xs text-primary/80 mt-1">Settled</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-none border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Pending</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Outstanding</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">${totalPending.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground mt-1">Awaiting payment</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-none border-border">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Overdue</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">${totalOverdue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-            <p className="text-xs text-destructive/80 mt-1">Requires follow-up</p>
           </CardContent>
         </Card>
       </div>
@@ -181,24 +173,24 @@ export default function InvoicesPage() {
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search invoice # or customer..."
+                placeholder="Search invoice # or name..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="pl-8 h-9 text-xs"
               />
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="flex items-center gap-1 bg-muted p-1 rounded-lg text-xs font-medium">
-                {(['all', 'paid', 'pending', 'overdue'] as const).map((st) => (
+                {(['all', 'direct', 'sales', 'purchase'] as const).map((t) => (
                   <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
+                    key={t}
+                    onClick={() => { setTypeFilter(t); setPage(1); }}
                     className={`px-3 py-1 rounded-md capitalize transition-colors cursor-pointer ${
-                      statusFilter === st ? 'bg-background text-foreground shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'
+                      typeFilter === t ? 'bg-background text-foreground shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    {st}
+                    {t === 'direct' ? 'Direct' : t === 'sales' ? 'Sales' : t === 'purchase' ? 'Purchase' : 'All'}
                   </button>
                 ))}
               </div>
@@ -216,9 +208,10 @@ export default function InvoicesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Invoice #</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Issued Date</TableHead>
-                <TableHead>Due Date</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Counterparty</TableHead>
+                <TableHead>Issued</TableHead>
+                <TableHead>Due</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -227,28 +220,33 @@ export default function InvoicesPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                     <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : invoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                     No invoices found
                   </TableCell>
                 </TableRow>
               ) : (
                 invoices.map((inv) => (
-                  <TableRow key={inv.id} className="hover:bg-muted transition-colors">
+                  <TableRow key={`${inv.type}-${inv.id}`} className="hover:bg-muted transition-colors">
                     <TableCell className="font-semibold text-xs flex items-center gap-2">
                       <FileText className="h-4 w-4 text-primary shrink-0" />
                       {inv.invoiceNo}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-xs text-foreground">{inv.customerName}</span>
-                        <span className="text-[11px] text-muted-foreground">{inv.customerEmail}</span>
-                      </div>
+                      <Badge variant={typeBadgeVariant(inv.type)} className="text-[10px] capitalize">
+                        {inv.typeLabel}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium text-xs">{inv.counterpartyName}</span>
+                      {inv.counterpartyEmail && (
+                        <span className="text-[11px] text-muted-foreground block">{inv.counterpartyEmail}</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{inv.issuedAt}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{inv.dueAt}</TableCell>
@@ -258,34 +256,28 @@ export default function InvoicesPage() {
                     <TableCell>
                       <Badge
                         variant={
-                          inv.status === 'paid' ? 'secondary' : inv.status === 'pending' ? 'outline' : 'destructive'
+                          inv.status === 'paid' || inv.status === 'Paid' ? 'secondary' :
+                          inv.status === 'paid' || inv.status === 'Paid' ? 'secondary' :
+                          inv.status === 'pending' || inv.status === 'Unpaid' || inv.status === 'draft' ? 'outline' : 'destructive'
                         }
-                        className={`text-[10px] capitalize ${
-                          inv.status === 'paid' ? 'bg-primary-muted text-primary-muted-foreground border-primary-muted' : ''
-                        }`}
+                        className="text-[10px] capitalize"
                       >
                         {inv.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        {inv.status !== 'paid' && (
+                        {(inv.status === 'Unpaid' || inv.status === 'pending') && inv.type !== 'purchase' && (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-emerald-600 hover:text-emerald-700 cursor-pointer"
-                            onClick={() => handleMarkPaid(inv.id)}
+                            onClick={() => handleMarkPaid(inv)}
                             title="Mark as paid"
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => { setSelectedInvoiceId(inv.id); setViewerOpen(true); }} title="View Invoice">
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => router.push(`/dashboard/invoices/${inv.id}`)} title="Download / Print">
-                          <Download className="h-3.5 w-3.5" />
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -293,14 +285,15 @@ export default function InvoicesPage() {
               )}
             </TableBody>
           </Table>
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 p-4 border-t">
+              <Button size="xs" variant="outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
+              <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
+              <Button size="xs" variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      <InvoiceViewerDialog 
-        invoiceId={selectedInvoiceId}
-        open={viewerOpen}
-        onOpenChange={setViewerOpen}
-      />
     </div>
   );
 }

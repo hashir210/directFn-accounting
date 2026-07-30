@@ -15,5 +15,7 @@ router.patch('/:id', requirePermission('products.edit'), InventoryController.upd
 router.delete('/:id', requirePermission('products.edit'), InventoryController.deleteMovement);
 router.get('/warehouses', requirePermission('products.view'), InventoryController.listWarehouses);
 router.post('/warehouses', requirePermission('products.edit'), InventoryController.createWarehouse);
+router.patch('/warehouses/:id', requirePermission('products.edit'), InventoryController.updateWarehouse);
+router.delete('/warehouses/:id', requirePermission('products.edit'), InventoryController.deleteWarehouse);
 
 export default router;

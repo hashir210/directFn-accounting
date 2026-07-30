@@ -7,25 +7,36 @@ import { FaTwitter, FaGithub, FaLinkedin, FaYoutube } from "react-icons/fa";
 import { Send, CheckCircle2, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const formSchema = z.object({
+  email: z.string().min(1, "Please enter your email.").email("Please enter a valid email address.")
+});
+type FormValues = z.infer<typeof formSchema>;
+
 export function CTASection() {
-  const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const handleSubscribe = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { email: "" },
+  });
+
+  const onSubmit = async (values: FormValues) => {
     setSending(true);
     try {
       await apiFetch('/api/v1/contact', {
         method: 'POST',
-        body: JSON.stringify({ email, name: '', message: 'Contact Sales - Landing Page' }),
+        body: JSON.stringify({ email: values.email, name: '', message: 'Contact Sales - Landing Page' }),
       });
       setSubmitted(true);
-      setEmail("");
+      form.reset();
     } catch {
       setSubmitted(true);
-      setEmail("");
+      form.reset();
     } finally {
       setSending(false);
     }
@@ -102,20 +113,25 @@ export function CTASection() {
                   <span>Thank you! We&apos;ll reach out shortly.</span>
                 </div>
               ) : (
-                <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="email"
-                    required
-                    placeholder="Enter organizational email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="flex-1 bg-white/10 border border-white/20 rounded-full px-5 py-3 text-sm text-white placeholder-violet-200 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent transition-all font-sans"
-                  />
-                  <Button type="submit" size="lg" className="bg-white text-primary hover:bg-violet-50 font-semibold rounded-full px-6 py-3 h-auto shadow-sm flex items-center justify-center space-x-1.5 shrink-0">
-                    <span>Contact Sales</span>
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </form>
+                <div className="flex flex-col gap-2">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="email"
+                      placeholder="Enter organizational email"
+                      {...form.register("email")}
+                      className="flex-1 bg-white/10 border border-white/20 rounded-full px-5 py-3 text-sm text-white placeholder-violet-200 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent transition-all font-sans"
+                    />
+                    <Button type="submit" size="lg" className="bg-white text-primary hover:bg-violet-50 font-semibold rounded-full px-6 py-3 h-auto shadow-sm flex items-center justify-center space-x-1.5 shrink-0">
+                      <span>{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Contact Sales"}</span>
+                      {!sending && <Send className="h-4 w-4" />}
+                    </Button>
+                  </form>
+                  {form.formState.errors.email && (
+                    <p className="text-red-400 text-[13px] font-medium px-4 text-left">
+                      {form.formState.errors.email.message}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </div>

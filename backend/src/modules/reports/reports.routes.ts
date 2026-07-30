@@ -18,5 +18,7 @@ router.get('/customer-statement', requirePermission('reports.view'), ReportsCont
 router.get('/supplier-statement', requirePermission('reports.view'), ReportsController.getSupplierStatementReport);
 router.get('/inventory', requirePermission('reports.view'), ReportsController.getInventoryReport);
 router.get('/tax', requirePermission('reports.view'), ReportsController.getTaxReport);
+router.get('/ar-aging', requirePermission('reports.view'), ReportsController.getARAging);
+router.get('/ap-aging', requirePermission('reports.view'), ReportsController.getAPAging);
 
 export default router;

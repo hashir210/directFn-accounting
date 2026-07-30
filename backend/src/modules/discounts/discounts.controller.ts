@@ -41,4 +41,11 @@ export class DiscountsController {
       res.status(200).json({ success: true, data: result });
     } catch (error) { next(error); }
   }
+
+  static async validate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await DiscountsService.validate(req.user!.organizationId, req.body.discountId, req.body.orderAmount);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) { next(error); }
+  }
 }

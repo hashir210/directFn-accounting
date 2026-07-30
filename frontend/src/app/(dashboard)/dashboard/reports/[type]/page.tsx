@@ -28,6 +28,8 @@ const titles: Record<string, string> = {
   'supplier-statement': 'Supplier Statement',
   'inventory': 'Inventory Valuation',
   'tax': 'Tax Report',
+  'ar-aging': 'AR Aging',
+  'ap-aging': 'AP Aging',
 };
 
 export default function ReportViewerPage() {
@@ -110,6 +112,16 @@ export default function ReportViewerPage() {
       case 'tax':
         csvContent += 'Product,Taxable Amount,Tax Amount\n';
         data.chartData?.forEach((row: any) => { csvContent += `"${row.productName}",${row.taxableAmount},${row.taxAmount}\n`; });
+        break;
+      case 'ar-aging':
+        csvContent += 'Customer,Current,1-30 Days,31-60 Days,61-90 Days,90+ Days,Total\n';
+        data.customers?.forEach((row: any) => { csvContent += `"${row.customerName}",${row.current},${row.days30},${row.days60},${row.days90},${row.older},${row.total}\n`; });
+        csvContent += `GRAND TOTAL,,,,,,${data.grandTotal}\n`;
+        break;
+      case 'ap-aging':
+        csvContent += 'Supplier,Current,1-30 Days,31-60 Days,61-90 Days,90+ Days,Total\n';
+        data.suppliers?.forEach((row: any) => { csvContent += `"${row.supplierName}",${row.current},${row.days30},${row.days60},${row.days90},${row.older},${row.total}\n`; });
+        csvContent += `GRAND TOTAL,,,,,,${data.grandTotal}\n`;
         break;
     }
 
@@ -262,10 +274,95 @@ export default function ReportViewerPage() {
                 <CardSummary label="Avg Tax Rate" value={`${data.summary.averageTaxRate.toFixed(2)}%`} />
               </>
             )}
+            {(type === 'ar-aging' || type === 'ap-aging') && data && (
+              <>
+                <CardSummary
+                  label="Total Outstanding"
+                  value={`$${data.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                  color="text-destructive"
+                />
+                <CardSummary
+                  label="Current / Not Yet Due"
+                  value={`$${((type === 'ar-aging' ? data.customers : data.suppliers) as any[]).reduce((s: number, r: any) => s + r.current, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                  color="text-emerald-500"
+                />
+                <CardSummary
+                  label={`Report As Of`}
+                  value={new Date(data.asOf).toLocaleDateString()}
+                />
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2 shadow-sm border-border/50">
+            {(type === 'ar-aging' || type === 'ap-aging') && data ? (
+              <Card className="lg:col-span-3 shadow-sm border-border/50">
+                <CardHeader><CardTitle>{type === 'ar-aging' ? 'Accounts Receivable' : 'Accounts Payable'} Aging</CardTitle></CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{type === 'ar-aging' ? 'Customer' : 'Supplier'}</TableHead>
+                        <TableHead className="text-right">Current</TableHead>
+                        <TableHead className="text-right">1-30 Days</TableHead>
+                        <TableHead className="text-right">31-60 Days</TableHead>
+                        <TableHead className="text-right">61-90 Days</TableHead>
+                        <TableHead className="text-right">90+ Days</TableHead>
+                        <TableHead className="text-right font-bold">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(type === 'ar-aging' ? data.customers : data.suppliers).map((row: any, i: number) => (
+                        <TableRow key={i}>
+                          <TableCell className="font-medium text-xs">{row.customerName || row.supplierName}</TableCell>
+                          <TableCell className={`text-right text-xs ${row.current > 0 ? 'text-emerald-600 font-medium' : 'text-muted-foreground'}`}>
+                            ${row.current.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className={`text-right text-xs ${row.days30 > 0 ? '' : 'text-muted-foreground'}`}>
+                            ${row.days30.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className={`text-right text-xs ${row.days60 > 0 ? 'text-amber-600 font-medium' : 'text-muted-foreground'}`}>
+                            ${row.days60.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className={`text-right text-xs ${row.days90 > 0 ? 'text-orange-600 font-medium' : 'text-muted-foreground'}`}>
+                            ${row.days90.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className={`text-right text-xs ${row.older > 0 ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
+                            ${row.older.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className="text-right text-xs font-bold">
+                            ${row.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="bg-muted/50">
+                        <TableCell className="font-bold text-xs">GRAND TOTAL</TableCell>
+                        <TableCell className="text-right text-xs font-bold">
+                          ${(type === 'ar-aging' ? data.customers : data.suppliers).reduce((s: number, r: any) => s + r.current, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-bold">
+                          ${(type === 'ar-aging' ? data.customers : data.suppliers).reduce((s: number, r: any) => s + r.days30, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-bold">
+                          ${(type === 'ar-aging' ? data.customers : data.suppliers).reduce((s: number, r: any) => s + r.days60, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-bold">
+                          ${(type === 'ar-aging' ? data.customers : data.suppliers).reduce((s: number, r: any) => s + r.days90, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-bold text-destructive">
+                          ${(type === 'ar-aging' ? data.customers : data.suppliers).reduce((s: number, r: any) => s + r.older, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-bold text-primary">
+                          ${data.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                <Card className="lg:col-span-2 shadow-sm border-border/50">
               <CardHeader><CardTitle>Visualization</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[400px] w-full">
@@ -455,10 +552,22 @@ export default function ReportViewerPage() {
                         <RowItem label="Taxable Sales" value={`$${data.summary.totalTaxableSales.toLocaleString()}`} />
                       </>
                     )}
+                    {(type === 'ar-aging' || type === 'ap-aging') && data && (
+                      <>
+                        {(type === 'ar-aging' ? data.customers : data.suppliers).map((row: any, i: number) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium text-xs">{row.customerName || row.supplierName}</TableCell>
+                            <TableCell className="text-right text-xs">${row.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
+            </>
+          )}
           </div>
         </>
       )}

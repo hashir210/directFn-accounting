@@ -132,11 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     // 3. Platform Organization members see all remaining non-blocked screens
     if (user.isPlatformOrg) return true;
-    // 4. Subscription Plan-level feature gates
-    if (user.planFeatures && user.planFeatures.length > 0) {
-      return user.planFeatures.includes(screenKey);
-    }
-    // No plan features configured = no restrictions
+    // Tenants have access to all screens by default unless explicitly disabled above
     return true;
   }, [user]);
 

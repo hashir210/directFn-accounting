@@ -116,6 +116,13 @@
   --radius-md-val: 12px;
   --radius-lg-val: 16px;
   --radius-xl-val: 24px;
+
+  /* Charts */
+  --chart-1: #004838;
+  --chart-2: #C4E14F;
+  --chart-3: #0A5C48;
+  --chart-4: #E2FB6C;
+  --chart-5: #052018;
 }
 
 .dark {
@@ -130,6 +137,13 @@
   
   --shadow-soft-raised-val: 6px 6px 14px rgba(0,0,0,0.3), -2px -2px 10px rgba(255,255,255,0.03);
   --shadow-soft-pressed-val: inset 4px 4px 8px rgba(0,0,0,0.4), inset -2px -2px 8px rgba(255,255,255,0.02);
+
+  /* Charts */
+  --chart-1: #C4E14F;
+  --chart-2: #004838;
+  --chart-3: #E2FB6C;
+  --chart-4: #0A5C48;
+  --chart-5: #EEFFA0;
 }
 
 @layer base {

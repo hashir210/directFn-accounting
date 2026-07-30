@@ -11,6 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { apiFetch, ApiError } from '@/lib/api';
 import { Building2, Loader2, Plus, Mail, Users, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { z } from 'zod';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+const orgSchema = z.object({
+  orgName: z.string().min(1, 'Organization Name is required'),
+  contactEmail: z.string().email('Invalid email').or(z.literal('')),
+  ownerName: z.string().min(1, 'Owner Name is required'),
+  ownerEmail: z.string().min(1, 'Owner Email is required').email('Invalid email'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  maxUsers: z.coerce.number().min(1, 'Minimum 1 user'),
+  planId: z.string().optional(),
+});
+type OrgFormValues = z.infer<typeof orgSchema>;
 
 interface OrgSummary {
   id: string;
@@ -34,13 +48,19 @@ export default function OrganizationsPage() {
   const [success, setSuccess] = useState('');
 
   // Form State
-  const [orgName, setOrgName] = useState('');
-  const [ownerEmail, setOwnerEmail] = useState('');
-  const [ownerName, setOwnerName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [maxUsers, setMaxUsers] = useState(5);
-  const [password, setPassword] = useState('');
-  const [planId, setPlanId] = useState('');
+  const form = useForm<OrgFormValues>({
+    resolver: zodResolver(orgSchema),
+    defaultValues: {
+      orgName: '',
+      contactEmail: '',
+      ownerName: '',
+      ownerEmail: '',
+      password: '',
+      maxUsers: 5,
+      planId: '',
+    }
+  });
+
   const [availablePlans, setAvailablePlans] = useState<{ id: string; name: string; description: string }[]>([]);
 
   const fetchOrgs = async () => {
@@ -52,8 +72,8 @@ export default function OrganizationsPage() {
       ]);
       setOrgs(orgsData.filter(o => !o.isPlatform));
       setAvailablePlans(plansData);
-      if (!planId && plansData.length > 0) {
-        setPlanId(plansData[0].id);
+      if (!form.getValues('planId') && plansData.length > 0) {
+        form.setValue('planId', plansData[0].id);
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load data');
@@ -73,8 +93,7 @@ export default function OrganizationsPage() {
     }
   }, [loading, isAuthenticated, user, router]);
 
-  const handleCreateOrg = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: OrgFormValues) => {
     setIsCreating(true);
     setError('');
     setSuccess('');
@@ -83,24 +102,21 @@ export default function OrganizationsPage() {
       await apiFetch('/api/v1/platform/organizations', {
         method: 'POST',
         body: JSON.stringify({
-          orgName,
-          ownerEmail,
-          ownerName,
-          password,
-          contactEmail,
-          maxUsers: parseInt(maxUsers.toString()),
-          planId: planId || undefined,
+          orgName: data.orgName,
+          ownerEmail: data.ownerEmail,
+          ownerName: data.ownerName,
+          password: data.password,
+          contactEmail: data.contactEmail,
+          maxUsers: data.maxUsers,
+          planId: data.planId || undefined,
         }),
       });
       setSuccess('Organization created successfully!');
       setShowCreateForm(false);
-      setOrgName('');
-      setOwnerEmail('');
-      setOwnerName('');
-      setContactEmail('');
-      setMaxUsers(5);
-      setPassword('');
-      setPlanId(availablePlans.length > 0 ? availablePlans[0].id : '');
+      form.reset();
+      if (availablePlans.length > 0) {
+        form.setValue('planId', availablePlans[0].id);
+      }
       fetchOrgs();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to create organization');
@@ -156,44 +172,56 @@ export default function OrganizationsPage() {
             <CardDescription>Create a new organization and default owner account.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleCreateOrg} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Organization Name</label>
-                  <Input required value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Acme Corp" />
+                  <Input placeholder="Acme Corp" {...form.register('orgName')} />
+                  {form.formState.errors.orgName && <p className="text-xs text-destructive">{form.formState.errors.orgName.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Contact Email (Billing/Admin)</label>
-                  <Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="billing@acme.com" />
+                  <Input type="email" placeholder="billing@acme.com" {...form.register('contactEmail')} />
+                  {form.formState.errors.contactEmail && <p className="text-xs text-destructive">{form.formState.errors.contactEmail.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Owner Name</label>
-                  <Input required value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="Jane Doe" />
+                  <Input placeholder="Jane Doe" {...form.register('ownerName')} />
+                  {form.formState.errors.ownerName && <p className="text-xs text-destructive">{form.formState.errors.ownerName.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Owner Login Email</label>
-                  <Input required type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} placeholder="jane@acme.com" />
+                  <Input type="email" placeholder="jane@acme.com" {...form.register('ownerEmail')} />
+                  {form.formState.errors.ownerEmail && <p className="text-xs text-destructive">{form.formState.errors.ownerEmail.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Initial Password</label>
-                  <Input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Secure password" />
+                  <Input type="password" placeholder="Secure password" {...form.register('password')} />
+                  {form.formState.errors.password && <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Max Users Allowed</label>
-                  <Input required type="number" min="1" value={maxUsers} onChange={(e) => setMaxUsers(parseInt(e.target.value))} />
+                  <Input type="number" min="1" {...form.register('maxUsers')} />
+                  {form.formState.errors.maxUsers && <p className="text-xs text-destructive">{form.formState.errors.maxUsers.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Subscription Plan</label>
-                  <Select value={planId} onValueChange={setPlanId}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select Plan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availablePlans.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={form.control}
+                    name="planId"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Plan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availablePlans.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
               </div>
               <Button type="submit" disabled={isCreating} className="w-full md:w-auto">

@@ -1,9 +1,17 @@
 import { Decimal } from '@prisma/client/runtime/library';
 import prisma from '../../config/db';
-import { NotFoundError, ConflictError } from '../../utils/errors';
+import { NotFoundError, BadRequestError, ConflictError } from '../../utils/errors';
 
 function toNum(d: Decimal | null | undefined): number {
   return d ? Number(d.toString()) : 0;
+}
+
+function computeEffectiveStatus(discount: { isActive: boolean; startDate: Date | null; endDate: Date | null }): boolean {
+  if (!discount.isActive) return false;
+  const now = new Date();
+  if (discount.startDate && now < discount.startDate) return false;
+  if (discount.endDate && now > discount.endDate) return false;
+  return true;
 }
 
 export class DiscountsService {
@@ -12,8 +20,7 @@ export class DiscountsService {
     const limit = options.limit || 50;
     const skip = (page - 1) * limit;
 
-    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
-    const where: any = org?.isPlatform ? {} : { organizationId };
+    const where: any = { organizationId };
     if (options.search) {
       where.name = { contains: options.search };
     }
@@ -24,7 +31,13 @@ export class DiscountsService {
     ]);
 
     return {
-      items: items.map(d => ({ ...d, value: toNum(d.value), minOrderAmount: d.minOrderAmount ? toNum(d.minOrderAmount) : null, maxDiscount: d.maxDiscount ? toNum(d.maxDiscount) : null })),
+      items: items.map(d => ({
+        ...d,
+        value: toNum(d.value),
+        minOrderAmount: d.minOrderAmount ? toNum(d.minOrderAmount) : null,
+        maxDiscount: d.maxDiscount ? toNum(d.maxDiscount) : null,
+        effective: computeEffectiveStatus(d),
+      })),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   }
@@ -32,7 +45,13 @@ export class DiscountsService {
   static async getById(organizationId: string, id: string) {
     const discount = await prisma.discount.findFirst({ where: { id, organizationId } });
     if (!discount) throw new NotFoundError('Discount not found');
-    return { ...discount, value: toNum(discount.value), minOrderAmount: discount.minOrderAmount ? toNum(discount.minOrderAmount) : null, maxDiscount: discount.maxDiscount ? toNum(discount.maxDiscount) : null };
+    return {
+      ...discount,
+      value: toNum(discount.value),
+      minOrderAmount: discount.minOrderAmount ? toNum(discount.minOrderAmount) : null,
+      maxDiscount: discount.maxDiscount ? toNum(discount.maxDiscount) : null,
+      effective: computeEffectiveStatus(discount),
+    };
   }
 
   static async create(organizationId: string, data: {
@@ -46,6 +65,8 @@ export class DiscountsService {
         value: new Decimal(data.value),
         minOrderAmount: data.minOrderAmount !== undefined ? new Decimal(data.minOrderAmount) : null,
         maxDiscount: data.maxDiscount !== undefined ? new Decimal(data.maxDiscount) : null,
+        startDate: data.startDate ? new Date(data.startDate) : null,
+        endDate: data.endDate ? new Date(data.endDate) : null,
         isActive: data.isActive ?? true,
       },
     });
@@ -68,5 +89,28 @@ export class DiscountsService {
     await this.getById(organizationId, id);
     await prisma.discount.delete({ where: { id } });
     return { message: 'Discount deleted' };
+  }
+
+  static async validate(organizationId: string, discountId: string, orderAmount?: number) {
+    const discount = await prisma.discount.findFirst({ where: { id: discountId, organizationId } });
+    if (!discount) throw new NotFoundError('Discount not found');
+    if (!discount.isActive) throw new BadRequestError('Discount is inactive');
+    if (discount.startDate && new Date() < discount.startDate) throw new BadRequestError('Discount is not yet active');
+    if (discount.endDate && new Date() > discount.endDate) throw new BadRequestError('Discount has expired');
+    if (discount.minOrderAmount && orderAmount !== undefined && orderAmount < toNum(discount.minOrderAmount)) {
+      throw new BadRequestError(`Minimum order amount is ${toNum(discount.minOrderAmount)}`);
+    }
+
+    let discountAmount = 0;
+    if (orderAmount) {
+      if (discount.type === 'percentage') {
+        discountAmount = orderAmount * (toNum(discount.value) / 100);
+        if (discount.maxDiscount) discountAmount = Math.min(discountAmount, toNum(discount.maxDiscount));
+      } else {
+        discountAmount = toNum(discount.value);
+      }
+    }
+
+    return { valid: true, discount: { id: discount.id, name: discount.name, type: discount.type, value: toNum(discount.value) }, discountAmount };
   }
 }

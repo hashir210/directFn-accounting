@@ -56,4 +56,22 @@ export class SalesOrdersController {
       res.status(201).json({ success: true, data: result });
     } catch (error) { next(error); }
   }
+
+  static async listInvoices(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { page, limit } = req.query;
+      const result = await SalesOrdersService.listInvoices(req.user!.organizationId, {
+        page: page ? parseInt(page as string) : undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
+      });
+      res.status(200).json({ success: true, data: result });
+    } catch (error) { next(error); }
+  }
+
+  static async payInvoice(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await SalesOrdersService.payInvoice(req.user!.organizationId, req.params.id);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) { next(error); }
+  }
 }

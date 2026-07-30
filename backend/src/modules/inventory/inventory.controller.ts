@@ -61,5 +61,23 @@ export class InventoryController {
       next(error);
     }
   }
+
+  static async updateWarehouse(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await InventoryService.updateWarehouse(req.user!.organizationId, req.params.id, req.body);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteWarehouse(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await InventoryService.deleteWarehouse(req.user!.organizationId, req.params.id);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 

@@ -12,8 +12,7 @@ export class SalesOrdersService {
     const limit = options.limit || 20;
     const skip = (page - 1) * limit;
 
-    const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { isPlatform: true } });
-    const where: any = org?.isPlatform ? {} : { organizationId };
+    const where: any = { organizationId };
     if (options.status && options.status !== 'all') where.status = options.status;
     if (options.search) {
       where.OR = [
@@ -109,6 +108,9 @@ export class SalesOrdersService {
     if (data.discountId) {
       const discount = await prisma.discount.findFirst({ where: { id: data.discountId, organizationId, isActive: true } });
       if (!discount) throw new NotFoundError('Discount not found or inactive');
+      const now = new Date();
+      if (discount.startDate && now < discount.startDate) throw new BadRequestError('Discount is not yet active');
+      if (discount.endDate && now > discount.endDate) throw new BadRequestError('Discount has expired');
       if (discount.minOrderAmount && subtotal < toNum(discount.minOrderAmount)) throw new BadRequestError(`Minimum order amount for this discount is ${toNum(discount.minOrderAmount)}`);
       if (discount.type === 'percentage') {
         discountAmount = subtotal * (toNum(discount.value) / 100);
@@ -142,9 +144,13 @@ export class SalesOrdersService {
     const totalAmount = subtotal - discountAmount + totalTax;
 
     // Generate order number
-    const count = await prisma.salesOrder.count({ where: { organizationId } });
+    let count = await prisma.salesOrder.count({ where: { organizationId } });
     const year = new Date().getFullYear();
-    const orderNo = `SO-${year}-${String(count + 1).padStart(4, '0')}`;
+    let orderNo = `SO-${year}-${String(count + 1).padStart(4, '0')}`;
+    while (await prisma.salesOrder.findFirst({ where: { organizationId, orderNo } })) {
+      count++;
+      orderNo = `SO-${year}-${String(count + 1).padStart(4, '0')}`;
+    }
 
     const order = await prisma.salesOrder.create({
       data: {
@@ -233,9 +239,13 @@ export class SalesOrdersService {
     if (!order) throw new NotFoundError('Sales order not found');
     if (order.status !== 'Confirmed') throw new BadRequestError('Only confirmed orders can be invoiced');
 
-    const count = await prisma.salesInvoice.count({ where: { organizationId } });
+    let count = await prisma.salesInvoice.count({ where: { organizationId } });
     const year = new Date().getFullYear();
-    const invoiceNo = `SI-${year}-${String(count + 1).padStart(4, '0')}`;
+    let invoiceNo = `SI-${year}-${String(count + 1).padStart(4, '0')}`;
+    while (await prisma.salesInvoice.findFirst({ where: { organizationId, invoiceNo } })) {
+      count++;
+      invoiceNo = `SI-${year}-${String(count + 1).padStart(4, '0')}`;
+    }
 
     const invoice = await prisma.salesInvoice.create({
       data: {
@@ -283,5 +293,50 @@ export class SalesOrdersService {
     }
 
     return invoice;
+  }
+
+  static async listInvoices(organizationId: string, options: { page?: number; limit?: number }) {
+    const page = options.page || 1;
+    const limit = options.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      prisma.salesInvoice.findMany({
+        where: { organizationId },
+        include: {
+          salesOrder: {
+            select: {
+              orderNo: true,
+              customer: { select: { id: true, name: true } },
+            },
+          },
+          items: { include: { product: { select: { id: true, name: true, sku: true } } } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.salesInvoice.count({ where: { organizationId } }),
+    ]);
+
+    return {
+      items: items.map(inv => ({
+        ...inv,
+        subtotal: toNum(inv.subtotal),
+        discountAmount: toNum(inv.discountAmount),
+        taxAmount: toNum(inv.taxAmount),
+        totalAmount: toNum(inv.totalAmount),
+        items: inv.items.map(i => ({ ...i, unitPrice: toNum(i.unitPrice), discount: toNum(i.discount), taxRate: toNum(i.taxRate), lineTotal: toNum(i.lineTotal) })),
+      })),
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  static async payInvoice(organizationId: string, id: string) {
+    const invoice = await prisma.salesInvoice.findFirst({ where: { id, organizationId } });
+    if (!invoice) throw new NotFoundError('Sales invoice not found');
+    if (invoice.status !== 'Unpaid') throw new BadRequestError('Invoice is already paid or cancelled');
+
+    return prisma.salesInvoice.update({ where: { id }, data: { status: 'Paid' } });
   }
 }

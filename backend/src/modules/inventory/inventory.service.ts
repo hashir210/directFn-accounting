@@ -54,6 +54,39 @@ export class InventoryService {
     return warehouse;
   }
 
+  static async updateWarehouse(organizationId: string, id: string, data: { name?: string; code?: string; address?: string; isDefault?: boolean }) {
+    const existing = await prisma.warehouse.findFirst({ where: { id, organizationId } });
+    if (!existing) throw new NotFoundError('Warehouse not found');
+
+    if (data.isDefault) {
+      await prisma.warehouse.updateMany({
+        where: { organizationId, id: { not: id } },
+        data: { isDefault: false },
+      });
+    }
+
+    const updated = await prisma.warehouse.update({
+      where: { id },
+      data,
+    });
+    return updated;
+  }
+
+  static async deleteWarehouse(organizationId: string, id: string) {
+    const existing = await prisma.warehouse.findFirst({
+      where: { id, organizationId },
+      include: { stockMovements: true }
+    });
+    if (!existing) throw new NotFoundError('Warehouse not found');
+
+    if (existing.stockMovements.length > 0) {
+      throw new Error('Cannot delete warehouse with linked stock movements');
+    }
+
+    await prisma.warehouse.delete({ where: { id } });
+    return existing;
+  }
+
   static async list(organizationId: string, options: { page?: number; limit?: number; search?: string; type?: string }) {
     const page = options.page || 1;
     const limit = options.limit || 50;

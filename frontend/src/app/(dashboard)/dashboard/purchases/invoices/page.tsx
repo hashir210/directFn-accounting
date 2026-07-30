@@ -61,6 +61,8 @@ export default function PurchaseInvoicesPage() {
   const [dueDate, setDueDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Payment State
   const [openPay, setOpenPay] = useState(false);
@@ -71,14 +73,17 @@ export default function PurchaseInvoicesPage() {
   const fetchInvoices = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await apiFetch(`/api/v1/purchase-orders/invoices?status=all`);
-      setInvoices(res.items || []);
+      const res = await apiFetch(`/api/v1/purchase-orders/invoices?status=all&page=${page}`);
+      const data = res.data || res;
+      setInvoices(data.items || []);
+      const pag = data.pagination;
+      if (pag) setTotalPages(pag.totalPages || 1);
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [page]);
 
   const fetchPOs = async () => {
     try {
@@ -131,9 +136,10 @@ export default function PurchaseInvoicesPage() {
       await apiFetch(`/api/v1/suppliers/payments`, {
         method: 'POST',
         body: JSON.stringify({
-          supplierId: selectedInvoice.supplierId || '', // supplier ref
+          supplierId: selectedInvoice.supplierId || '',
           amount: parseFloat(paymentAmount),
           note: paymentNote,
+          purchaseBillId: selectedInvoice.id,
         }),
       });
       setOpenPay(false);
@@ -176,49 +182,58 @@ export default function PurchaseInvoicesPage() {
           ) : invoices.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">No purchase bills found.</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Bill No</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>PO Ref</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Paid Amount</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="font-bold">{inv.billNo}</TableCell>
-                    <TableCell>{inv.supplier?.name}</TableCell>
-                    <TableCell>{inv.purchaseOrder?.orderNo || 'Direct'}</TableCell>
-                    <TableCell>${inv.amount.toFixed(2)}</TableCell>
-                    <TableCell>${inv.paidAmount.toFixed(2)}</TableCell>
-                    <TableCell>{new Date(inv.dueDate).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Badge variant={inv.status === 'Paid' ? 'secondary' : 'outline'}>{inv.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {inv.status !== 'Paid' && canEdit && (
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedInvoice(inv);
-                            setOpenPay(true);
-                          }}
-                        >
-                          <DollarSign className="h-3 w-3 mr-1" /> Record Payment
-                        </Button>
-                      )}
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Bill No</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>PO Ref</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Paid Amount</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {invoices.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-bold">{inv.billNo}</TableCell>
+                      <TableCell>{inv.supplier?.name}</TableCell>
+                      <TableCell>{inv.purchaseOrder?.orderNo || 'Direct'}</TableCell>
+                      <TableCell>${inv.amount.toFixed(2)}</TableCell>
+                      <TableCell>${inv.paidAmount.toFixed(2)}</TableCell>
+                      <TableCell>{new Date(inv.dueDate).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={inv.status === 'Paid' ? 'secondary' : 'outline'}>{inv.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        {inv.status !== 'Paid' && canEdit && (
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedInvoice(inv);
+                              setOpenPay(true);
+                            }}
+                          >
+                            <DollarSign className="h-3 w-3 mr-1" /> Record Payment
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <Button size="xs" variant="outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                  <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
+                  <Button size="xs" variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
