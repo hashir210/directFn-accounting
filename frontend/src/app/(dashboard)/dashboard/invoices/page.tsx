@@ -139,7 +139,7 @@ export default function InvoicesPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalInvoiced.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold">Rs. {totalInvoiced.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground mt-1">{invoices.length} records</p>
           </CardContent>
         </Card>
@@ -150,7 +150,7 @@ export default function InvoicesPage() {
             <CheckCircle2 className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">${totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold text-primary">Rs. {totalPaid.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-primary/80 mt-1">Settled</p>
           </CardContent>
         </Card>
@@ -161,7 +161,7 @@ export default function InvoicesPage() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">${totalPending.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold text-foreground">Rs. {totalPending.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground mt-1">Awaiting payment</p>
           </CardContent>
         </Card>
@@ -232,7 +232,7 @@ export default function InvoicesPage() {
                 </TableRow>
               ) : (
                 invoices.map((inv) => (
-                  <TableRow key={`${inv.type}-${inv.id}`} className="hover:bg-muted transition-colors">
+                  <TableRow key={`Rs. ${inv.type}-${inv.id}`} className="hover:bg-muted transition-colors">
                     <TableCell className="font-semibold text-xs flex items-center gap-2">
                       <FileText className="h-4 w-4 text-primary shrink-0" />
                       {inv.invoiceNo}
@@ -251,7 +251,7 @@ export default function InvoicesPage() {
                     <TableCell className="text-xs text-muted-foreground">{inv.issuedAt}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{inv.dueAt}</TableCell>
                     <TableCell className="font-bold text-xs">
-                      ${inv.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      Rs. {inv.amount.toLocaleString('en-PK', { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
                       <Badge

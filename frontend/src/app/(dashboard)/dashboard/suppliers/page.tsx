@@ -304,7 +304,7 @@ export default function SupplierManagementPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Due Payments</CardDescription>
-            <CardTitle className="text-2xl font-bold">${totalDueSum.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl font-bold">Rs. {totalDueSum.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-xs text-amber-600 font-medium flex items-center gap-1">
@@ -374,7 +374,7 @@ export default function SupplierManagementPage() {
                       </TableCell>
                       <TableCell className="text-sm">{s.paymentTerms}</TableCell>
                       <TableCell className="text-right font-mono font-semibold text-sm">
-                        ${Number(s.dueAmount || 0).toLocaleString()}
+                        Rs. {Number(s.dueAmount || 0).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-right">
                         {canEdit && (

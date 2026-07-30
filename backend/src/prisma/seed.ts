@@ -26,7 +26,7 @@ async function main() {
   await prisma.couponUsage.deleteMany({});
   await prisma.coupon.deleteMany({});
   await prisma.discount.deleteMany({});
-  await prisma.fiscalArchive.deleteMany({});
+  // fiscalArchive removed
   await prisma.journalLine.deleteMany({});
   await prisma.journalEntry.deleteMany({});
   await prisma.income.deleteMany({});
@@ -65,7 +65,7 @@ async function main() {
   // =========================================================================
   console.log('[seed]: seeding permissions...');
   const modules = ['customers', 'invoices', 'expenses', 'products', 'suppliers', 'inventory', 'reports', 'settings', 'payments', 'sales', 'purchases', 'accounting', 'income'];
-  const actions = ['view', 'create', 'update', 'delete', 'export', 'approve'];
+  const actions = ['view', 'create', 'update', 'delete', 'export', 'approve', 'edit'];
   const permissionKeys: string[] = [
     'dashboard.view', 'notifications.view', 'users.manage', 'roles.manage', 'screens.manage',
     'platform.view', 'platform.orgs.manage', 'platform.users.manage',
@@ -92,7 +92,7 @@ async function main() {
     prisma.subscriptionPlan.create({ data: { name: 'Enterprise', description: 'Full access — custom arrangement' } }),
   ]);
 
-  const allFeatureKeys = ['dashboard', 'invoices', 'expenses', 'payments', 'sales', 'purchases', 'accounting', 'income', 'company', 'customers', 'suppliers', 'products', 'inventory', 'notifications', 'reports', 'active', 'past', 'users', 'roles', 'screens', 'plan', 'integrations', 'inbox', 'platform'];
+  const allFeatureKeys = ['dashboard', 'invoices', 'expenses', 'payments', 'sales', 'purchases', 'accounting', 'income', 'company', 'customers', 'suppliers', 'products', 'inventory', 'notifications', 'reports', 'users', 'roles', 'screens', 'plan', 'integrations', 'inbox', 'platform'];
   for (const plan of [freePlan, proPlan, enterprisePlan]) {
     const featureCount = plan === freePlan ? 8 : plan === proPlan ? 15 : allFeatureKeys.length;
     for (let i = 0; i < featureCount; i++) {
@@ -323,10 +323,10 @@ async function main() {
     }
   }
 
-  const accountantPermKeys = ['dashboard.view', 'reports.view', 'notifications.view', 'invoices.view', 'invoices.create', 'invoices.update', 'invoices.export', 'expenses.view', 'expenses.create', 'expenses.export', 'accounting.view', 'income.view', 'customers.view', 'suppliers.view', 'products.view', 'payments.view', 'payments.create', 'payments.export'];
-  const cashierPermKeys = ['dashboard.view', 'notifications.view', 'invoices.view', 'invoices.create', 'sales.view', 'customers.view', 'products.view', 'payments.view', 'payments.create'];
-  const salesPermKeys = ['dashboard.view', 'notifications.view', 'invoices.view', 'invoices.create', 'sales.view', 'customers.view', 'customers.create', 'products.view'];
-  const storePermKeys = ['dashboard.view', 'notifications.view', 'purchases.view', 'products.view', 'products.create', 'products.update', 'inventory.view', 'inventory.create', 'suppliers.view', 'suppliers.create'];
+  const accountantPermKeys = ['dashboard.view', 'reports.view', 'notifications.view', 'invoices.view', 'invoices.create', 'invoices.update', 'invoices.edit', 'invoices.export', 'expenses.view', 'expenses.create', 'expenses.export', 'accounting.view', 'income.view', 'customers.view', 'suppliers.view', 'products.view', 'payments.view', 'payments.create', 'payments.export'];
+  const cashierPermKeys = ['dashboard.view', 'notifications.view', 'invoices.view', 'invoices.create', 'invoices.edit', 'sales.view', 'customers.view', 'products.view', 'payments.view', 'payments.create'];
+  const salesPermKeys = ['dashboard.view', 'notifications.view', 'invoices.view', 'invoices.create', 'invoices.edit', 'sales.view', 'customers.view', 'customers.create', 'customers.edit', 'products.view'];
+  const storePermKeys = ['dashboard.view', 'notifications.view', 'purchases.view', 'purchases.edit', 'products.view', 'products.create', 'products.update', 'products.edit', 'inventory.view', 'inventory.create', 'inventory.edit', 'suppliers.view', 'suppliers.create', 'suppliers.edit'];
 
   if (dfnAccountantRole) for (const k of accountantPermKeys) { const p = permMap.get(k); if (p) await prisma.rolePermission.create({ data: { roleId: dfnAccountantRole.id, permissionId: p.id } }); }
   if (dfnCashierRole) for (const k of cashierPermKeys) { const p = permMap.get(k); if (p) await prisma.rolePermission.create({ data: { roleId: dfnCashierRole.id, permissionId: p.id } }); }
@@ -758,19 +758,7 @@ async function main() {
     });
   }
 
-  // DirectFN Fiscal Archives (for past metrics)
-  for (let yr = y - 3; yr < y; yr++) {
-    await prisma.fiscalArchive.create({
-      data: {
-        organizationId: dfnOrgId, year: String(yr),
-        totalRevenue: new Decimal(Math.floor(Math.random() * 500000) + 200000),
-        totalExpenses: new Decimal(Math.floor(Math.random() * 300000) + 100000),
-        netMargin: new Decimal(Math.random() * 30 + 10),
-        growth: `${(Math.random() * 20 - 5).toFixed(1)}%`,
-        auditStatus: yr % 4 === 3 ? 'Pending' : 'Completed',
-      },
-    });
-  }
+  // Fiscal Archives seeding removed
 
   // DirectFN User Screen Blocks (sample: block 'screens' for Store Manager, block 'plan' for Sales)
   const dfnUsers = await prisma.user.findMany({ where: { organizationId: dfnOrgId } });

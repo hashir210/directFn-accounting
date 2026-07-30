@@ -226,8 +226,8 @@ export default function DiscountsPage() {
                   return (
                     <TableRow key={d.id}>
                       <TableCell className="font-semibold">{d.name}</TableCell>
-                      <TableCell>{d.type === 'percentage' ? `${d.value}%` : `$${d.value.toFixed(2)}`}</TableCell>
-                      <TableCell>{d.minOrderAmount ? `$${d.minOrderAmount.toFixed(2)}` : '-'}</TableCell>
+                      <TableCell>{d.type === 'percentage' ? `Rs. ${d.value}%` : `$Rs. {d.value.toFixed(2)}`}</TableCell>
+                      <TableCell>{d.minOrderAmount ? `$Rs. {d.minOrderAmount.toFixed(2)}` : '-'}</TableCell>
                       <TableCell className="text-xs">
                         {d.startDate ? new Date(d.startDate).toLocaleDateString() : 'Any'} - {d.endDate ? new Date(d.endDate).toLocaleDateString() : '∞'}
                       </TableCell>

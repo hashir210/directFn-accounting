@@ -117,7 +117,7 @@ export default function SalesInvoicesPage() {
                       </TableCell>
                       <TableCell className="text-xs">{inv.salesOrder?.orderNo}</TableCell>
                       <TableCell className="text-xs">{inv.salesOrder?.customer?.name}</TableCell>
-                      <TableCell className="text-xs font-semibold">${Number(inv.totalAmount).toFixed(2)}</TableCell>
+                      <TableCell className="text-xs font-semibold">Rs. {Number(inv.totalAmount).toFixed(2)}</TableCell>
                       <TableCell className="text-xs">{new Date(inv.dueAt).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Badge variant={inv.status === 'Paid' ? 'secondary' : 'outline'} className="text-[10px]">{inv.status}</Badge>
@@ -172,13 +172,13 @@ export default function SalesInvoicesPage() {
                     <TableRow key={idx}>
                       <TableCell className="py-2 text-xs">{item.product?.name || 'Product'}</TableCell>
                       <TableCell className="py-2 text-xs">{item.quantity}</TableCell>
-                      <TableCell className="py-2 text-xs text-right">${Number(item.lineTotal).toFixed(2)}</TableCell>
+                      <TableCell className="py-2 text-xs text-right">Rs. {Number(item.lineTotal).toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
-            <div className="text-right text-lg font-bold">Total: ${Number(viewInvoice.totalAmount).toFixed(2)}</div>
+            <div className="text-right text-lg font-bold">Total: Rs. {Number(viewInvoice.totalAmount).toFixed(2)}</div>
             <div className="text-xs text-muted-foreground">Due: {new Date(viewInvoice.dueAt).toLocaleDateString()}</div>
             <Button className="w-full" variant="outline" onClick={() => setViewInvoice(null)}>Close</Button>
           </div>

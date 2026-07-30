@@ -96,6 +96,8 @@ export default function SalesOrdersPage() {
 
   // View dialog
   const [viewOrder, setViewOrder] = useState<SalesOrder | null>(null);
+  const [viewInvoice, setViewInvoice] = useState<any>(null);
+  const [payMethod, setPayMethod] = useState('cash');
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -264,10 +266,21 @@ export default function SalesOrdersPage() {
     }
   };
 
-  const handlePayInvoice = async (id: string) => {
+  const handlePayInvoice = async (id: string, method?: string) => {
     try {
-      await apiFetch(`/api/v1/sales-orders/${id}/pay`, { method: 'POST' });
+      await apiFetch(`/api/v1/sales-orders/${id}/pay`, { method: 'POST', body: JSON.stringify({ paymentMethod: method || payMethod }) });
+      setViewInvoice(null);
       fetchOrders();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const openInvoiceView = async (orderId: string) => {
+    try {
+      const res = await apiFetch(`/api/v1/sales-orders/${orderId}`);
+      const inv = res.salesInvoices?.[0];
+      if (inv) setViewInvoice({ ...inv, order: res });
     } catch (err) {
       console.error(err);
     }
@@ -355,7 +368,7 @@ export default function SalesOrdersPage() {
                     <TableRow key={o.id}>
                       <TableCell className="font-bold">{o.orderNo}</TableCell>
                       <TableCell>{o.customer?.name}</TableCell>
-                      <TableCell>${Number(o.totalAmount).toFixed(2)}</TableCell>
+                      <TableCell>Rs. {Number(o.totalAmount).toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge
                           variant={
@@ -380,7 +393,10 @@ export default function SalesOrdersPage() {
                           <Button size="xs" onClick={() => handleGenerateInvoice(o.id)}>Invoice</Button>
                         )}
                         {o.status === 'Invoiced' && (
-                          <Button size="xs" variant="secondary" onClick={() => handlePayInvoice(o.id)}><DollarSign className="h-3 w-3 mr-1" /> Pay</Button>
+                          <>
+                            <Button size="xs" variant="ghost" onClick={() => openInvoiceView(o.id)}><FileText className="h-3 w-3 mr-1" /> Invoice</Button>
+                            <Button size="xs" variant="secondary" onClick={() => handlePayInvoice(o.id)}><DollarSign className="h-3 w-3 mr-1" /> Pay</Button>
+                          </>
                         )}
                       </TableCell>
                     </TableRow>
@@ -406,7 +422,7 @@ export default function SalesOrdersPage() {
           <DialogHeader>
             <DialogTitle>Order {viewOrder?.orderNo}</DialogTitle>
             <DialogDescription>
-              Customer: {viewOrder?.customer?.name} | Status: {viewOrder?.status} | Total: ${Number(viewOrder?.totalAmount || 0).toFixed(2)}
+              Customer: {viewOrder?.customer?.name} | Status: {viewOrder?.status} | Total: Rs. {Number(viewOrder?.totalAmount || 0).toFixed(2)}
             </DialogDescription>
           </DialogHeader>
           {viewOrder && (
@@ -427,21 +443,80 @@ export default function SalesOrdersPage() {
                       <TableRow key={idx}>
                         <TableCell className="py-2 text-xs">{item.productName || 'Product'}</TableCell>
                         <TableCell className="py-2 text-xs">{item.quantity}</TableCell>
-                        <TableCell className="py-2 text-xs">${Number(item.unitPrice).toFixed(2)}</TableCell>
-                        <TableCell className="py-2 text-xs">${Number(item.discount).toFixed(2)}</TableCell>
-                        <TableCell className="py-2 text-xs text-right">${Number(item.lineTotal).toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">Rs. {Number(item.unitPrice).toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">Rs. {Number(item.discount).toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs text-right">Rs. {Number(item.lineTotal).toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-muted-foreground">Subtotal:</span> <span className="font-semibold">${viewOrder.subtotal.toFixed(2)}</span></div>
-                <div><span className="text-muted-foreground">Discount:</span> <span className="font-semibold">-${viewOrder.discountAmount.toFixed(2)}</span></div>
-                <div><span className="text-muted-foreground">Tax:</span> <span className="font-semibold">${viewOrder.taxAmount.toFixed(2)}</span></div>
-                <div><span className="text-muted-foreground">Total:</span> <span className="font-semibold text-primary">${viewOrder.totalAmount.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Subtotal:</span> <span className="font-semibold">Rs. {viewOrder.subtotal.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Discount:</span> <span className="font-semibold">-Rs. {viewOrder.discountAmount.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Tax:</span> <span className="font-semibold">Rs. {viewOrder.taxAmount.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Total:</span> <span className="font-semibold text-primary">Rs. {viewOrder.totalAmount.toFixed(2)}</span></div>
               </div>
               {viewOrder.notes && <p className="text-xs text-muted-foreground">Notes: {viewOrder.notes}</p>}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Invoice Dialog */}
+      <Dialog open={!!viewInvoice} onOpenChange={() => setViewInvoice(null)}>
+        <DialogContent className="max-w-xl bg-card border border-muted/40 shadow-xl">
+          <DialogHeader>
+            <DialogTitle>Invoice {viewInvoice?.invoiceNo}</DialogTitle>
+            <DialogDescription>
+              Order: {viewInvoice?.order?.orderNo} | Customer: {viewInvoice?.order?.customer?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {viewInvoice && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Badge variant={viewInvoice.status === 'Paid' ? 'secondary' : 'outline'}>{viewInvoice.status}</Badge>
+                <span className="text-xs text-muted-foreground">Due: {new Date(viewInvoice.dueAt).toLocaleDateString()}</span>
+              </div>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead className="py-2 text-xs">Item</TableHead>
+                      <TableHead className="py-2 text-xs">Qty</TableHead>
+                      <TableHead className="py-2 text-xs text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {viewInvoice.items?.map((item: any, idx: number) => (
+                      <TableRow key={idx}>
+                        <TableCell className="py-2 text-xs">{item.product?.name || item.productName || 'Product'}</TableCell>
+                        <TableCell className="py-2 text-xs">{item.quantity}</TableCell>
+                        <TableCell className="py-2 text-xs text-right">Rs. {Number(item.lineTotal || item.total).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="text-right text-lg font-bold">Total: Rs. {Number(viewInvoice.totalAmount).toFixed(2)}</div>
+              {viewInvoice.status !== 'Paid' && (
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  <Label className="text-xs">Payment Method:</Label>
+                  <select
+                    className="flex h-8 rounded-md border border-input bg-transparent px-3 py-1 text-xs"
+                    value={payMethod}
+                    onChange={(e) => setPayMethod(e.target.value)}
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="cheque">Cheque</option>
+                  </select>
+                  <Button size="sm" className="ml-auto" onClick={() => handlePayInvoice(viewInvoice.id, payMethod)}>
+                    <DollarSign className="h-3 w-3 mr-1" /> Mark Paid
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
@@ -492,7 +567,7 @@ export default function SalesOrdersPage() {
                       <SelectValue placeholder="Select Product" />
                     </SelectTrigger>
                     <SelectContent>
-                      {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} (${Number(p.sellingPrice).toFixed(2)})</SelectItem>)}
+                      {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} (Rs. {Number(p.sellingPrice).toFixed(2)})</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -539,9 +614,9 @@ export default function SalesOrdersPage() {
                       <TableRow key={idx}>
                         <TableCell className="py-2 text-xs">{item.productName}</TableCell>
                         <TableCell className="py-2 text-xs">{item.quantity}</TableCell>
-                        <TableCell className="py-2 text-xs">${item.unitPrice.toFixed(2)}</TableCell>
-                        <TableCell className="py-2 text-xs">${item.discount.toFixed(2)}</TableCell>
-                        <TableCell className="py-2 text-xs">${item.lineTotal.toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">Rs. {item.unitPrice.toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">Rs. {item.discount.toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">Rs. {item.lineTotal.toFixed(2)}</TableCell>
                         <TableCell className="py-2 text-right">
                           <Button size="xs" variant="ghost" onClick={() => handleRemoveItem(idx)}>✕</Button>
                         </TableCell>
@@ -563,7 +638,7 @@ export default function SalesOrdersPage() {
             </div>
 
             <div className="flex justify-between items-center pt-3 border-t">
-              <div className="text-sm font-semibold">Total Order Amount: <span className="text-primary">${totalCalc.toFixed(2)}</span></div>
+              <div className="text-sm font-semibold">Total Order Amount: <span className="text-primary">Rs. {totalCalc.toFixed(2)}</span></div>
               <DialogFooter className="gap-2">
                 <Button type="button" variant="outline" onClick={() => { resetForm(); setOpenAdd(false); }}>Cancel</Button>
                 <Button type="submit" disabled={isSubmitting}>

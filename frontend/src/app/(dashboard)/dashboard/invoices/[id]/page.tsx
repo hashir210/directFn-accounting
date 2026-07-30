@@ -59,7 +59,7 @@ export default function InvoiceViewerPage() {
 
       const opt = {
         margin: [15, 15, 15, 15] as [number, number, number, number],
-        filename: `${invoice.invoiceNo}.pdf`,
+        filename: `Rs. ${invoice.invoiceNo}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
@@ -76,7 +76,7 @@ export default function InvoiceViewerPage() {
     try {
       const token = localStorage.getItem('ff_access_token');
       const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
-      const res = await fetch(`${API_URL}/api/v1/pdf/invoice/${id}/pdf`, {
+      const res = await fetch(`Rs. ${API_URL}/api/v1/pdf/invoice/${id}/pdf`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       });
       if (!res.ok) {
@@ -87,7 +87,7 @@ export default function InvoiceViewerPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${invoice.invoiceNo}.pdf`;
+      a.download = `Rs. ${invoice.invoiceNo}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -115,7 +115,7 @@ export default function InvoiceViewerPage() {
   if (loading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!invoice) return <div className="p-8 text-center text-muted-foreground">Invoice not found.</div>;
 
-  const paymentUrl = typeof window !== 'undefined' ? `${window.location.origin}/pay/${invoice.id}` : `https://example.com/pay/${invoice.id}`;
+  const paymentUrl = typeof window !== 'undefined' ? `Rs. ${window.location.origin}/pay/${invoice.id}` : `https://example.com/pay/${invoice.id}`;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12 print:p-0 print:m-0 print:block">
@@ -203,18 +203,18 @@ export default function InvoiceViewerPage() {
                 <tr key={item.id} className="border-b border-gray-200">
                   <td className="py-4 text-gray-900">{item.description}</td>
                   <td className="py-4 text-gray-600 text-right">{item.quantity}</td>
-                  <td className="py-4 text-gray-600 text-right">${item.unitPrice.toFixed(2)}</td>
+                  <td className="py-4 text-gray-600 text-right">Rs. {item.unitPrice.toFixed(2)}</td>
                   <td className="py-4 text-gray-600 text-right">{item.taxRate}%</td>
-                  <td className="py-4 text-gray-900 font-medium text-right">${item.total.toFixed(2)}</td>
+                  <td className="py-4 text-gray-900 font-medium text-right">Rs. {item.total.toFixed(2)}</td>
                 </tr>
               ))}
               {(!invoice.items || invoice.items.length === 0) && (
                 <tr className="border-b border-gray-200">
                   <td className="py-4 text-gray-900">General Service</td>
                   <td className="py-4 text-gray-600 text-right">1</td>
-                  <td className="py-4 text-gray-600 text-right">${invoice.amount.toFixed(2)}</td>
+                  <td className="py-4 text-gray-600 text-right">Rs. {invoice.amount.toFixed(2)}</td>
                   <td className="py-4 text-gray-600 text-right">0%</td>
-                  <td className="py-4 text-gray-900 font-medium text-right">${invoice.amount.toFixed(2)}</td>
+                  <td className="py-4 text-gray-900 font-medium text-right">Rs. {invoice.amount.toFixed(2)}</td>
                 </tr>
               )}
             </tbody>
@@ -254,12 +254,12 @@ export default function InvoiceViewerPage() {
               {invoice.discountTotal > 0 && (
                 <div className="flex justify-between text-gray-600">
                   <span>Discount</span>
-                  <span>-${invoice.discountTotal.toFixed(2)}</span>
+                  <span>-Rs. {invoice.discountTotal.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-gray-900 text-xl font-bold border-t-2 border-gray-900 pt-4">
                 <span>Total Due</span>
-                <span>${invoice.amount.toFixed(2)}</span>
+                <span>Rs. {invoice.amount.toFixed(2)}</span>
               </div>
             </div>
           </div>

@@ -17,6 +17,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { apiFetch } from '@/lib/api';
 
 interface Product {
@@ -47,6 +63,9 @@ export default function POSPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [checkoutResult, setCheckoutResult] = useState<any>(null);
+  const [payMethod, setPayMethod] = useState('cash');
+  const [paying, setPaying] = useState(false);
 
   // Load products and customers
   useEffect(() => {
@@ -121,13 +140,30 @@ export default function POSPage() {
         body: JSON.stringify({ dueDate: new Date().toISOString() }),
       });
 
-      setSuccessMsg('Sale checked out successfully!');
       setCart([]);
       setCouponCode('');
+      const orderRes = await apiFetch(`/api/v1/sales-orders/${order.id}`);
+      setCheckoutResult({ invoice: { status: 'Unpaid' }, order: { ...orderRes, orderNo: orderRes.orderNo || order.orderNo } });
     } catch (err: any) {
       setErrorMsg(err.message || 'Checkout failed');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handlePayInvoice = async () => {
+    try {
+      setPaying(true);
+      await apiFetch(`/api/v1/sales-orders/${checkoutResult?.order?.id}/pay`, {
+        method: 'POST',
+        body: JSON.stringify({ paymentMethod: payMethod }),
+      });
+      setCheckoutResult((prev: any) => prev ? { ...prev, invoice: { ...prev.invoice, status: 'Paid' } } : null);
+      setSuccessMsg('Payment recorded!');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Payment failed');
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -171,7 +207,7 @@ export default function POSPage() {
                 <CardDescription className="text-[10px] mt-0.5">{p.sku}</CardDescription>
               </CardHeader>
               <CardContent className="p-3 pt-1 pb-2">
-                <div className="text-lg font-extrabold text-primary">${Number(p.sellingPrice).toFixed(2)}</div>
+                <div className="text-lg font-extrabold text-primary">Rs. {Number(p.sellingPrice).toFixed(2)}</div>
                 <div className="text-[10px] text-muted-foreground mt-0.5">Stock: {p.stockQuantity}</div>
               </CardContent>
             </Card>
@@ -203,7 +239,7 @@ export default function POSPage() {
                 <div key={item.product.id} className="pt-3 flex justify-between items-start gap-2">
                   <div className="flex-1 min-w-0">
                     <h4 className="text-xs font-semibold truncate">{item.product.name}</h4>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">${Number(item.product.sellingPrice).toFixed(2)} each</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Rs. {Number(item.product.sellingPrice).toFixed(2)} each</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button size="xs" variant="outline" className="h-6 w-6 p-0" onClick={() => updateQty(item.product.id, -1)}>
@@ -254,7 +290,7 @@ export default function POSPage() {
 
           <div className="w-full pt-2 flex justify-between items-center text-sm font-extrabold">
             <span>Subtotal:</span>
-            <span className="text-lg text-primary">${getSubtotal().toFixed(2)}</span>
+            <span className="text-lg text-primary">Rs. {getSubtotal().toFixed(2)}</span>
           </div>
 
           <Button onClick={handleCheckout} className="w-full" disabled={isSubmitting || cart.length === 0}>
@@ -262,6 +298,75 @@ export default function POSPage() {
           </Button>
         </CardFooter>
       </Card>
+
+      {/* Checkout Result Dialog */}
+      <Dialog open={!!checkoutResult} onOpenChange={() => { setCheckoutResult(null); setSuccessMsg(''); }}>
+        <DialogContent className="max-w-lg bg-card border border-muted/40 shadow-xl">
+          <DialogHeader>
+            <DialogTitle>Checkout Complete</DialogTitle>
+            <DialogDescription>
+              Invoice generated for {checkoutResult?.order?.customer?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {checkoutResult && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-bold">{checkoutResult.invoice?.invoiceNo || 'Invoice'}</p>
+                  <p className="text-xs text-muted-foreground">Order: {checkoutResult.order?.orderNo}</p>
+                </div>
+                <Badge variant={checkoutResult.invoice?.status === 'Paid' ? 'secondary' : 'outline'}>
+                  {checkoutResult.invoice?.status || 'Unpaid'}
+                </Badge>
+              </div>
+
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead className="py-2 text-xs">Item</TableHead>
+                      <TableHead className="py-2 text-xs">Qty</TableHead>
+                      <TableHead className="py-2 text-xs text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cart.map((item, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="py-2 text-xs">{item.product.name}</TableCell>
+                        <TableCell className="py-2 text-xs">{item.quantity}</TableCell>
+                        <TableCell className="py-2 text-xs text-right">Rs. {(Number(item.product.sellingPrice) * item.quantity).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="text-right text-lg font-bold">
+                Total: Rs. {checkoutResult.order?.totalAmount?.toFixed(2) || '0.00'}
+              </div>
+
+              {checkoutResult.invoice?.status !== 'Paid' && (
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  <Label className="text-xs">Payment Method:</Label>
+                  <select
+                    className="flex h-8 rounded-md border border-input bg-transparent px-3 py-1 text-xs"
+                    value={payMethod}
+                    onChange={(e) => setPayMethod(e.target.value)}
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="cheque">Cheque</option>
+                  </select>
+                  <Button size="sm" className="ml-auto" onClick={handlePayInvoice} disabled={paying}>
+                    {paying ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle className="h-3 w-3 mr-1" />} Mark Paid
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

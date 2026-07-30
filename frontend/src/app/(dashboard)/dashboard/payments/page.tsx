@@ -175,7 +175,7 @@ export default function PaymentsPage() {
             <TrendingUp className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalInbound.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold">Rs. {totalInbound.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-emerald-600 mt-1">{inboundPayments.length} completed transactions</p>
           </CardContent>
         </Card>
@@ -186,7 +186,7 @@ export default function PaymentsPage() {
             <CreditCard className="h-4 w-4 text-rose-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-rose-600">${totalOutbound.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold text-rose-600">Rs. {totalOutbound.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-rose-600/80 mt-1">{outboundPayments.length} completed transactions</p>
           </CardContent>
         </Card>
@@ -197,7 +197,7 @@ export default function PaymentsPage() {
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">${netSettlement.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold text-foreground">Rs. {netSettlement.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground mt-1">Total cash flow</p>
           </CardContent>
         </Card>
@@ -307,10 +307,10 @@ export default function PaymentsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {new Date(p.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(p.createdAt).toLocaleString('en-PK', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </TableCell>
                       <TableCell className={`font-bold text-xs ${p.type === 'Inbound' ? 'text-emerald-600' : 'text-foreground'}`}>
-                        {p.type === 'Inbound' ? '+' : '-'}${Number(p.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {p.type === 'Inbound' ? '+' : '-'}Rs. {Number(p.amount).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>
                         <Badge

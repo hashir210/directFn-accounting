@@ -17,7 +17,6 @@ import inventoryRoutes from './modules/inventory/inventory.routes';
 import paymentsRoutes from './modules/payments/payments.routes';
 import notificationRoutes from './modules/notification/notification.routes';
 import auditRoutes from './modules/audit/audit.routes';
-import archiveRoutes from './modules/archive/archive.routes';
 import reportsRoutes from './modules/reports/reports.routes';
 import pdfRoutes from './pdf/pdf.routes';
 import salesOrdersRoutes from './modules/sales-orders/sales-orders.routes';
@@ -75,7 +74,6 @@ app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/payments', paymentsRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
-app.use('/api/v1/archives', archiveRoutes);
 app.use('/api/v1/pdf', pdfRoutes);
 
 // Contact / Newsletter endpoint (public)

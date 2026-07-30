@@ -202,8 +202,8 @@ export default function PurchaseInvoicesPage() {
                       <TableCell className="font-bold">{inv.billNo}</TableCell>
                       <TableCell>{inv.supplier?.name}</TableCell>
                       <TableCell>{inv.purchaseOrder?.orderNo || 'Direct'}</TableCell>
-                      <TableCell>${inv.amount.toFixed(2)}</TableCell>
-                      <TableCell>${inv.paidAmount.toFixed(2)}</TableCell>
+                      <TableCell>Rs. {inv.amount.toFixed(2)}</TableCell>
+                      <TableCell>Rs. {inv.paidAmount.toFixed(2)}</TableCell>
                       <TableCell>{new Date(inv.dueDate).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Badge variant={inv.status === 'Paid' ? 'secondary' : 'outline'}>{inv.status}</Badge>
@@ -259,7 +259,7 @@ export default function PurchaseInvoicesPage() {
                     .filter((po) => ['Sent', 'Partially Received', 'Received'].includes(po.status))
                     .map((po) => (
                       <SelectItem key={po.id} value={po.id}>
-                        {po.orderNo} - {po.supplier?.name} (${Number(po.totalAmount).toFixed(2)})
+                        {po.orderNo} - {po.supplier?.name} (Rs. {Number(po.totalAmount).toFixed(2)})
                       </SelectItem>
                     ))}
                 </SelectContent>

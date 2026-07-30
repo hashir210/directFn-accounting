@@ -148,8 +148,7 @@ export default function DashboardLayout({
     if (normalized.startsWith('/purchases')) return 'purchases';
     if (normalized.startsWith('/notifications')) return 'notifications';
     if (normalized.startsWith('/reports')) return 'reports';
-    if (normalized.startsWith('/active')) return 'active';
-    if (normalized.startsWith('/past')) return 'past';
+
     if (normalized.startsWith('/settings/users')) return 'users';
     if (normalized.startsWith('/settings/roles')) return 'roles';
     if (normalized.startsWith('/settings/screens')) return 'screens';
@@ -249,18 +248,11 @@ export default function DashboardLayout({
     { href: "/dashboard/reports", label: "Reporting", icon: FileBarChart2, key: 'reports' },
   ].filter(i => isScreenAllowed(i.key));
 
-  const metricItems = [
-    { href: "/dashboard/active", label: "Active", icon: TrendingUp, badge: 1, key: 'active' },
-    { href: "/dashboard/past", label: "Past", icon: FileBarChart2, key: 'past' },
-  ].filter(i => isScreenAllowed(i.key));
-
   // Settings and Workspace section
   const settingsItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; badge?: number }[] = [];
 
   if (hasPermission('settings.view') && isScreenAllowed('settings')) {
     settingsItems.push({ href: "/dashboard/settings", label: "Settings", icon: Settings });
-    settingsItems.push({ href: "/dashboard/settings/taxes", label: "Taxes", icon: Percent });
-    settingsItems.push({ href: "/dashboard/settings/categories", label: "Categories", icon: FileText });
     settingsItems.push({ href: "/dashboard/settings/sessions", label: "Sessions", icon: Monitor });
     settingsItems.push({ href: "/dashboard/settings/audit", label: "Audit Logs", icon: ActivitySquare });
   }
@@ -271,8 +263,16 @@ export default function DashboardLayout({
     settingsItems.push({ href: "/dashboard/settings/screens", label: "Screen Access", icon: Lock });
   }
   if (user?.isPlatformOrg && !isStaff && isScreenAllowed('platform')) {
-    settingsItems.push({ href: "/admin", label: "Platform Admin", icon: Shield });
+    settingsItems.push({ href: "/admin", label: "Dashboard", icon: Shield });
+    settingsItems.push({ href: "/admin/plans", label: "Subscription Plans", icon: CreditCard });
     settingsItems.push({ href: "/dashboard/settings/organizations", label: "Organizations", icon: Building2 });
+  }
+
+  // Configuration items (hidden from platform org)
+  const configItems: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [];
+  if (!user?.isPlatformOrg && hasPermission('settings.view') && isScreenAllowed('settings')) {
+    configItems.push({ href: "/dashboard/settings/taxes", label: "Taxes", icon: Percent });
+    configItems.push({ href: "/dashboard/settings/categories", label: "Categories", icon: FileText });
   }
 
   return (
@@ -448,28 +448,6 @@ export default function DashboardLayout({
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* Metrics Section */}
-          <SidebarGroup>
-            <SidebarGroupLabel>Metrics</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {metricItems.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton render={<Link href={item.href} />} isActive={isActive} tooltip={item.label}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                      {item.badge && (
-                        <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
-                      )}
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
 
           {/* Settings Section */}
           {settingsItems.length > 0 && (
@@ -492,8 +470,30 @@ export default function DashboardLayout({
               </SidebarGroupContent>
             </SidebarGroup>
           )}
-        </SidebarContent>
 
+          {/* Configuration Section */}
+          {configItems.length > 0 && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Configuration</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {configItems.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton render={<Link href={item.href} />} isActive={isActive} tooltip={item.label}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
+        </SidebarContent>
         {/* Footer */}
         <SidebarFooter>
           <SidebarSeparator />

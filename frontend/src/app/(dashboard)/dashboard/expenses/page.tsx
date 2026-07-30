@@ -245,7 +245,7 @@ export default function ExpensesPage() {
             <TrendingDown className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalMonthlyOutflow.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold">Rs. {totalMonthlyOutflow.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground mt-1">This billing cycle</p>
           </CardContent>
         </Card>
@@ -258,7 +258,7 @@ export default function ExpensesPage() {
           <CardContent>
             <div className="text-xl font-bold text-foreground">{topCategory?.[0] || 'N/A'}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {topCategory ? `${((topCategory[1] / totalMonthlyOutflow) * 100).toFixed(1)}% of total expenses` : 'No expenses'}
+              {topCategory ? `Rs. ${((topCategory[1] / totalMonthlyOutflow) * 100).toFixed(1)}% of total expenses` : 'No expenses'}
             </p>
           </CardContent>
         </Card>
@@ -269,7 +269,7 @@ export default function ExpensesPage() {
             <FileCheck className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">${approvedExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold text-emerald-600">Rs. {approvedExpenses.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</div>
             <p className="text-xs text-emerald-600/80 mt-1">Verified & processed</p>
           </CardContent>
         </Card>
@@ -362,7 +362,7 @@ export default function ExpensesPage() {
                     <TableCell className="text-xs text-muted-foreground">{exp.description}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{exp.date}</TableCell>
                     <TableCell className="font-bold text-xs">
-                      ${exp.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      Rs. {exp.amount.toLocaleString('en-PK', { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
                       <Badge

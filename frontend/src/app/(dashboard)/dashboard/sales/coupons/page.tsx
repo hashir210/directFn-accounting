@@ -230,7 +230,7 @@ export default function CouponsPage() {
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-mono font-bold text-primary">{c.code}</TableCell>
-                      <TableCell>{c.discountType === 'percentage' ? `${c.discountValue}%` : `$${c.discountValue.toFixed(2)}`}</TableCell>
+                      <TableCell>{c.discountType === 'percentage' ? `Rs. ${c.discountValue}%` : `$Rs. {c.discountValue.toFixed(2)}`}</TableCell>
                       <TableCell>{c.usedCount} / {c.usageLimit || '∞'}</TableCell>
                       <TableCell className="text-xs">
                         {new Date(c.startDate).toLocaleDateString()} - {new Date(c.endDate).toLocaleDateString()}

@@ -328,8 +328,8 @@ export default function ProductManagementPage() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="font-mono text-sm text-muted-foreground">${Number(p.purchasePrice).toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-mono font-semibold text-sm">${Number(p.sellingPrice).toFixed(2)}</TableCell>
+                      <TableCell className="font-mono text-sm text-muted-foreground">Rs. {Number(p.purchasePrice).toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono font-semibold text-sm">Rs. {Number(p.sellingPrice).toFixed(2)}</TableCell>
                       <TableCell className="text-right">
                         {canEdit && (
                           <div className="flex items-center justify-end gap-1">

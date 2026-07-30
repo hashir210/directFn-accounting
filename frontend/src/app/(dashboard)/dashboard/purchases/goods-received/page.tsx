@@ -244,7 +244,7 @@ export default function GoodsReceivedPage() {
                 <SelectContent>
                   {purchaseOrders.map((po) => (
                     <SelectItem key={po.id} value={po.id}>
-                      {po.orderNo} - {po.supplier?.name} (${Number(po.totalAmount).toFixed(2)})
+                      {po.orderNo} - {po.supplier?.name} (Rs. {Number(po.totalAmount).toFixed(2)})
                     </SelectItem>
                   ))}
                 </SelectContent>

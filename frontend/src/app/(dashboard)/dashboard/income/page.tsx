@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 type Income = { id: string; category: string; description?: string | null; amount: number; date: string; referenceNo?: string | null };
 const categories = ['Sales', 'Services', 'Investment', 'Other Income'];
-const money = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+const money = (n: number) => n.toLocaleString('en-PK', { style: 'currency', currency: 'PKR' });
 
 export default function IncomePage() {
   const [records, setRecords] = useState<Income[]>([]);
@@ -88,7 +88,7 @@ export default function IncomePage() {
       ['Category', 'Description', 'Amount', 'Date', 'Reference'],
       ...records.map((r) => [r.category, r.description || '', r.amount, r.date, r.referenceNo || '']),
     ]
-      .map((row) => row.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(','))
+      .map((row) => row.map((v) => `"Rs. {String(v).replaceAll('"', '""')}"`).join(','))
       .join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     const link = document.createElement('a');

@@ -21,7 +21,7 @@ type Trial = { rows: { code: string; name: string; type: string; debit: number; 
 type Statement = { accounts: { code: string; name: string; balance?: number; amount?: number }[]; total: number };
 
 const types = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'];
-const money = (value = 0) => value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+const money = (value = 0) => value.toLocaleString('en-PK', { style: 'currency', currency: 'PKR' });
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function AccountingPage() {
@@ -65,7 +65,7 @@ export default function AccountingPage() {
     event.preventDefault(); if (!lines.every((line) => line.accountId) || Math.abs(debit - credit) > .001) return;
     setSaving(true); try { await apiFetch('/api/v1/journal-entries', { method: 'POST', body: JSON.stringify({ date: entryDate, description: entryDescription, lines }) }); setEntryOpen(false); setEntryDescription(''); setLines([{ accountId: '', debit: 0, credit: 0 }, { accountId: '', debit: 0, credit: 0 }]); await load(); } finally { setSaving(false); }
   }
-  async function postEntry(id: string) { setSaving(true); try { await apiFetch(`/api/v1/journal-entries/${id}/post`, { method: 'POST' }); await load(); } finally { setSaving(false); } }
+  async function postEntry(id: string) { setSaving(true); try { await apiFetch(`/api/v1/journal-entries/Rs. {id}/post`, { method: 'POST' }); await load(); } finally { setSaving(false); } }
 
   if (loading) return <div className="flex min-h-[400px] items-center justify-center"><Loader2 className="h-7 w-7 animate-spin" /></div>;
   const summary = [

@@ -98,6 +98,7 @@ export default function PurchaseOrdersPage() {
 
   // View dialog
   const [viewOrder, setViewOrder] = useState<PurchaseOrder | null>(null);
+  const [viewBill, setViewBill] = useState<any>(null);
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -332,7 +333,7 @@ export default function PurchaseOrdersPage() {
                     <TableRow key={o.id}>
                       <TableCell className="font-bold">{o.orderNo}</TableCell>
                       <TableCell>{o.supplier?.name}</TableCell>
-                      <TableCell>${Number(o.totalAmount).toFixed(2)}</TableCell>
+                      <TableCell>Rs. {Number(o.totalAmount).toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge
                           variant={
@@ -352,6 +353,11 @@ export default function PurchaseOrdersPage() {
                             <Button size="xs" variant="outline" onClick={() => handleSendOrder(o.id)}>Send</Button>
                             <Button size="xs" variant="destructive" onClick={() => handleDeleteOrder(o.id)}><Trash2 className="h-3 w-3" /></Button>
                           </>
+                        )}
+                        {(o.status === 'Billed' || o.status === 'Received') && (
+                          <Button size="xs" variant="ghost" onClick={async () => { const res = await apiFetch(`/api/v1/purchase-orders/${o.id}`); const bill = res.purchaseBills?.[0]; if (bill) setViewBill(bill); }}>
+                            <FileText className="h-3 w-3 mr-1" /> Bill
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
@@ -377,7 +383,7 @@ export default function PurchaseOrdersPage() {
           <DialogHeader>
             <DialogTitle>PO {viewOrder?.orderNo}</DialogTitle>
             <DialogDescription>
-              Supplier: {viewOrder?.supplier?.name} | Status: {viewOrder?.status} | Total: ${Number(viewOrder?.totalAmount || 0).toFixed(2)}
+              Supplier: {viewOrder?.supplier?.name} | Status: {viewOrder?.status} | Total: Rs. {Number(viewOrder?.totalAmount || 0).toFixed(2)}
               {viewOrder?.expectedDate && ` | Expected: ${new Date(viewOrder.expectedDate).toLocaleDateString()}`}
             </DialogDescription>
           </DialogHeader>
@@ -398,19 +404,42 @@ export default function PurchaseOrdersPage() {
                       <TableRow key={idx}>
                         <TableCell className="py-2 text-xs">{item.productName || 'Product'}</TableCell>
                         <TableCell className="py-2 text-xs">{item.quantity}</TableCell>
-                        <TableCell className="py-2 text-xs">${Number(item.unitPrice).toFixed(2)}</TableCell>
-                        <TableCell className="py-2 text-xs text-right">${Number(item.lineTotal).toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">Rs. {Number(item.unitPrice).toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs text-right">Rs. {Number(item.lineTotal).toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-muted-foreground">Subtotal:</span> <span className="font-semibold">${viewOrder.subtotal.toFixed(2)}</span></div>
-                <div><span className="text-muted-foreground">Tax:</span> <span className="font-semibold">${viewOrder.taxAmount.toFixed(2)}</span></div>
-                <div><span className="text-muted-foreground">Total:</span> <span className="font-semibold text-primary">${viewOrder.totalAmount.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Subtotal:</span> <span className="font-semibold">Rs. {viewOrder.subtotal.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Tax:</span> <span className="font-semibold">Rs. {viewOrder.taxAmount.toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Total:</span> <span className="font-semibold text-primary">Rs. {viewOrder.totalAmount.toFixed(2)}</span></div>
               </div>
               {viewOrder.notes && <p className="text-xs text-muted-foreground">Notes: {viewOrder.notes}</p>}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Bill Dialog */}
+      <Dialog open={!!viewBill} onOpenChange={() => setViewBill(null)}>
+        <DialogContent className="max-w-xl bg-card border border-muted/40 shadow-xl">
+          <DialogHeader>
+            <DialogTitle>Bill {viewBill?.billNo}</DialogTitle>
+            <DialogDescription>Purchase bill payment status.</DialogDescription>
+          </DialogHeader>
+          {viewBill && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Badge variant={viewBill.status === 'Paid' ? 'secondary' : 'outline'}>{viewBill.status}</Badge>
+                <span className="text-xs text-muted-foreground">Due: {viewBill.dueDate ? new Date(viewBill.dueDate).toLocaleDateString() : '-'}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><span className="text-muted-foreground">Bill Amount:</span> <span className="font-semibold">Rs. {Number(viewBill.amount).toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Paid:</span> <span className="font-semibold">Rs. {Number(viewBill.paidAmount || 0).toFixed(2)}</span></div>
+                <div><span className="text-muted-foreground">Balance:</span> <span className="font-semibold text-destructive">Rs. {(Number(viewBill.amount) - Number(viewBill.paidAmount || 0)).toFixed(2)}</span></div>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -461,7 +490,7 @@ export default function PurchaseOrdersPage() {
                       <SelectValue placeholder="Select Product" />
                     </SelectTrigger>
                     <SelectContent>
-                      {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} (Cost: ${Number(p.purchasePrice).toFixed(2)})</SelectItem>)}
+                      {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} (Cost: Rs. {Number(p.purchasePrice).toFixed(2)})</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -497,8 +526,8 @@ export default function PurchaseOrdersPage() {
                       <TableRow key={idx}>
                         <TableCell className="py-2 text-xs">{item.productName}</TableCell>
                         <TableCell className="py-2 text-xs">{item.quantity}</TableCell>
-                        <TableCell className="py-2 text-xs">${item.unitPrice.toFixed(2)}</TableCell>
-                        <TableCell className="py-2 text-xs">${item.lineTotal.toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">Rs. {item.unitPrice.toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">Rs. {item.lineTotal.toFixed(2)}</TableCell>
                         <TableCell className="py-2 text-right">
                           <Button size="xs" variant="ghost" onClick={() => handleRemoveItem(idx)}>✕</Button>
                         </TableCell>
@@ -515,7 +544,7 @@ export default function PurchaseOrdersPage() {
             </div>
 
             <div className="flex justify-between items-center pt-3 border-t">
-              <div className="text-sm font-semibold">Total Order Cost: <span className="text-primary">${totalCalc.toFixed(2)}</span></div>
+              <div className="text-sm font-semibold">Total Order Cost: <span className="text-primary">Rs. {totalCalc.toFixed(2)}</span></div>
               <DialogFooter className="gap-2">
                 <Button type="button" variant="outline" onClick={() => { resetForm(); setOpenAdd(false); }}>Cancel</Button>
                 <Button type="submit" disabled={form.formState.isSubmitting}>

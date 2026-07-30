@@ -214,7 +214,7 @@ export default function SupplierReturnsPage() {
                   <TableRow key={r.id}>
                     <TableCell className="font-bold">{r.returnNo}</TableCell>
                     <TableCell>{r.supplier?.name}</TableCell>
-                    <TableCell>${Number(r.totalAmount).toFixed(2)}</TableCell>
+                    <TableCell>Rs. {Number(r.totalAmount).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -290,7 +290,7 @@ export default function SupplierReturnsPage() {
                       <SelectValue placeholder="Select Product" />
                     </SelectTrigger>
                     <SelectContent>
-                      {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} (Cost: ${Number(p.purchasePrice).toFixed(2)})</SelectItem>)}
+                      {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} (Cost: Rs. {Number(p.purchasePrice).toFixed(2)})</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -326,8 +326,8 @@ export default function SupplierReturnsPage() {
                       <TableRow key={idx}>
                         <TableCell className="py-2 text-xs">{item.productName}</TableCell>
                         <TableCell className="py-2 text-xs">{item.quantity}</TableCell>
-                        <TableCell className="py-2 text-xs">${item.unitPrice.toFixed(2)}</TableCell>
-                        <TableCell className="py-2 text-xs">${item.lineTotal.toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">Rs. {item.unitPrice.toFixed(2)}</TableCell>
+                        <TableCell className="py-2 text-xs">Rs. {item.lineTotal.toFixed(2)}</TableCell>
                         <TableCell className="py-2 text-right">
                           <Button size="xs" variant="ghost" onClick={() => handleRemoveItem(idx)}>✕</Button>
                         </TableCell>
@@ -349,7 +349,7 @@ export default function SupplierReturnsPage() {
             </div>
 
             <div className="flex justify-between items-center pt-3 border-t">
-              <div className="text-sm font-semibold">Total Cost: <span className="text-primary">${totalCalc.toFixed(2)}</span></div>
+              <div className="text-sm font-semibold">Total Cost: <span className="text-primary">Rs. {totalCalc.toFixed(2)}</span></div>
               <DialogFooter className="gap-2">
                 <Button type="button" variant="outline" onClick={() => setOpenAdd(false)}>Cancel</Button>
                 <Button type="submit" disabled={isSubmitting}>

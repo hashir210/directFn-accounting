@@ -200,7 +200,7 @@ export default function SalesReturnsPage() {
                     <TableCell className="font-bold">{r.returnNo}</TableCell>
                     <TableCell>{r.salesInvoice?.invoiceNo}</TableCell>
                     <TableCell>{r.salesInvoice?.salesOrder?.customer?.name || 'Customer'}</TableCell>
-                    <TableCell>${Number(r.totalAmount).toFixed(2)}</TableCell>
+                    <TableCell>Rs. {Number(r.totalAmount).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -258,7 +258,7 @@ export default function SalesReturnsPage() {
                 <SelectContent>
                   {invoices.map((inv: any) => (
                     <SelectItem key={inv.id} value={inv.id}>
-                      {inv.invoiceNo} - {inv.salesOrder?.customer?.name || 'Customer'} - ${Number(inv.totalAmount).toFixed(2)}
+                      {inv.invoiceNo} - {inv.salesOrder?.customer?.name || 'Customer'} - Rs. {Number(inv.totalAmount).toFixed(2)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -273,7 +273,7 @@ export default function SalesReturnsPage() {
                     <div key={idx} className="p-3 flex justify-between items-center text-sm">
                       <div>
                         <div className="font-semibold">{item.productName}</div>
-                        <div className="text-xs text-muted-foreground">Purchased: {item.quantity} | Price: ${Number(item.unitPrice).toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground">Purchased: {item.quantity} | Price: Rs. {Number(item.unitPrice).toFixed(2)}</div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Label htmlFor={`qty-${idx}`} className="text-xs">Return Qty</Label>

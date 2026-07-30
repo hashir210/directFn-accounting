@@ -50,7 +50,7 @@ model Organization {
   notifications  Notification[]
   auditLogs      AuditLog[]
   payments       Payment[]
-  fiscalArchives FiscalArchive[]
+
   SalesOrder     SalesOrder[]
   SalesInvoice   SalesInvoice[]
   SalesReturn    SalesReturn[]
@@ -540,21 +540,6 @@ model Payment {
 
   @@index([organizationId, createdAt])
   @@index([bankAccountId])
-}
-
-model FiscalArchive {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  year           String
-  totalRevenue   Decimal      @db.Decimal(15, 2)
-  totalExpenses  Decimal      @db.Decimal(15, 2)
-  netMargin      Decimal      @db.Decimal(15, 2)
-  growth         String?
-  auditStatus    String       @default("Archived") // "Archived", "Audited & Locked"
-  createdAt      DateTime     @default(now())
-
-  @@index([organizationId, year])
 }
 
 // ===================================================================

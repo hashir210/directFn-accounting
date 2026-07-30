@@ -224,7 +224,7 @@ export default function CustomerManagementPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Outstanding Receivables</CardDescription>
-            <CardTitle className="text-2xl font-bold">${totalOutstandingSum.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl font-bold">Rs. {totalOutstandingSum.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-xs text-amber-600 flex items-center gap-1 font-medium">
@@ -288,8 +288,8 @@ export default function CustomerManagementPage() {
                           {c.status || 'Active'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-mono text-sm">${Number(c.creditLimit || 0).toLocaleString()}</TableCell>
-                      <TableCell className="font-mono font-semibold text-sm">${Number(c.outstanding || 0).toLocaleString()}</TableCell>
+                      <TableCell className="font-mono text-sm">Rs. {Number(c.creditLimit || 0).toLocaleString()}</TableCell>
+                      <TableCell className="font-mono font-semibold text-sm">Rs. {Number(c.outstanding || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           {canEdit && (
@@ -418,7 +418,7 @@ export default function CustomerManagementPage() {
                     <TableRow key={inv.id}>
                       <TableCell className="font-semibold">{inv.invoiceNo}</TableCell>
                       <TableCell className="text-xs">{new Date(inv.issuedAt).toLocaleDateString()}</TableCell>
-                      <TableCell className="font-mono">${Number(inv.amount).toFixed(2)}</TableCell>
+                      <TableCell className="font-mono">Rs. {Number(inv.amount).toFixed(2)}</TableCell>
                       <TableCell><Badge variant="secondary">{inv.status}</Badge></TableCell>
                     </TableRow>
                   ))
